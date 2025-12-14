@@ -11,6 +11,8 @@ public class Channel {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+    private String name;
+    private Boolean isPrivate;
 
     @ManyToOne
     @JoinColumn(name = "category_id")
@@ -21,11 +23,7 @@ public class Channel {
     @JoinColumn(name = "server_id", nullable = true)
     private Server server;
 
-    private String name;
-
     @Enumerated(EnumType.STRING)
     private ChannelType type; // TEXT, VOICE
-
-    private Boolean isPrivate;
 }
 
