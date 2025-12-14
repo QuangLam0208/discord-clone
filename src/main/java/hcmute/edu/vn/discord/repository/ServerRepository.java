@@ -8,5 +8,6 @@ import java.util.List;
 
 @Repository
 public interface ServerRepository extends JpaRepository<Server, Long> {
+
     List<Server> findByOwner_Id(Long ownerId);
 }

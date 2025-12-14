@@ -1,4 +1,18 @@
 package hcmute.edu.vn.discord.repository;
 
-public interface ServerMemberRepository {
+import hcmute.edu.vn.discord.entity.jpa.ServerMember;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Optional;
+
+@Repository
+public interface ServerMemberRepository extends JpaRepository<ServerMember, Long> {
+
+    Optional<ServerMember> findByServer_IdAndUser_Id(Long serverId, Long userId);
+
+    List<ServerMember> findByUser_Id(Long userId);
+
+    boolean existsByServer_IdAndUser_Id(Long serverId, Long userId);
 }
