@@ -10,11 +10,13 @@ import java.util.Optional;
 @Repository
 public interface ServerMemberRepository extends JpaRepository<ServerMember, Long> {
 
-    Optional<ServerMember> findByServer_IdAndUser_Id(Long serverId, Long userId);
+    // 1. Lấy danh sách thành viên của 1 server
+    List<ServerMember> findByServerId(Long serverId);
 
-    List<ServerMember> findByUser_Id(Long userId);
+    // 2. Kiểm tra xem user có phải là thành viên của server không
+    boolean existsByServerIdAndUserId(Long serverId, Long userId);
 
-    List<ServerMember> findByServer_Id(Long serverId);
+    // 3. Tìm chính xác dòng record để xóa (rời nhóm / kick)
+    Optional<ServerMember> findByServerIdAndUserId(Long serverId, Long userId);
 
-    boolean existsByServer_IdAndUser_Id(Long serverId, Long userId);
 }
