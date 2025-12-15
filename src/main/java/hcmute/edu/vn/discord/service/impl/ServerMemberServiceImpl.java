@@ -30,16 +30,14 @@ public class ServerMemberServiceImpl implements ServerMemberService {
     private UserRepository userRepository;
 
     @Autowired
-    private ServerRoleRepository serverRoleRepository;
+    private ServerRoleRepository serverRoleRepository; // Inject thêm repository này
 
     @Override
     public ServerMember addMemberToServer(Long serverId, Long userId) {
-        // 1. Kiểm tra xem đã là thành viên chưa
         if (isMember(serverId, userId)) {
             return null;
         }
 
-        // 2. Lấy thông tin Server và User
         Server server = serverRepository.findById(serverId).orElse(null);
         User user = userRepository.findById(userId).orElse(null);
 
@@ -47,23 +45,18 @@ public class ServerMemberServiceImpl implements ServerMemberService {
             ServerMember newMember = new ServerMember();
             newMember.setServer(server);
             newMember.setUser(user);
+            newMember.setJoinedAt(LocalDateTime.now());
+            newMember.setIsBanned(false);
+            newMember.setNickname(user.getUsername());
 
-            // A. Set các trường cơ bản còn thiếu
-            newMember.setJoinedAt(LocalDateTime.now()); // Thời gian tham gia
-            newMember.setIsBanned(false);               // Mặc định không bị ban
-            newMember.setNickname(user.getUsername());  // Mặc định nickname giống username
-
-            // B. Xử lý Role (Thay cho setRole("MEMBER"))
-            // Khởi tạo danh sách role rỗng để tránh NullPointerException
             newMember.setRoles(new ArrayList<>());
 
-            // Tìm role mặc định có tên là "Member" của server này
+            // Tìm role mặc định tên "Member" (hoặc tên khác tùy bạn đặt trong DB)
             Optional<ServerRole> defaultRole = serverRoleRepository.findByServerIdAndName(serverId, "Member");
 
-            // Nếu tìm thấy role "Member" thì gán cho user mới
+            // Nếu tìm thấy thì thêm vào list
             defaultRole.ifPresent(role -> newMember.getRoles().add(role));
 
-            // Lưu vào DB
             return serverMemberRepository.save(newMember);
         }
         return null;
