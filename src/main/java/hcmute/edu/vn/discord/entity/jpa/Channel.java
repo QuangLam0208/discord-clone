@@ -18,7 +18,6 @@ public class Channel {
     @JoinColumn(name = "category_id")
     private Category category;
 
-    // Nếu channel không thuộc category nào thì sao? Nên thêm quan hệ trực tiếp với Server
     @ManyToOne(optional = true)
     @JoinColumn(name = "server_id", nullable = true)
     private Server server;
