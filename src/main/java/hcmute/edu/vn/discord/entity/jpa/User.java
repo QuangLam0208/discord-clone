@@ -28,7 +28,7 @@ public class User {
     private String email;
 
     @Column(name = "password", nullable = false)
-    private String passwordHash;
+    private String password;
 
     private String displayName;
     private String avatarUrl;
