@@ -1,0 +1,28 @@
+package hcmute.edu.vn.discord.entity.jpa;
+
+import hcmute.edu.vn.discord.entity.enums.ChannelType;
+import jakarta.persistence.*;
+import lombok.Data;
+
+@Entity
+@Table(name = "channels")
+@Data
+public class Channel {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    private String name;
+    private Boolean isPrivate;
+
+    @ManyToOne
+    @JoinColumn(name = "category_id")
+    private Category category;
+
+    @ManyToOne(optional = true)
+    @JoinColumn(name = "server_id", nullable = true)
+    private Server server;
+
+    @Enumerated(EnumType.STRING)
+    private ChannelType type; // TEXT, VOICE
+}
+
