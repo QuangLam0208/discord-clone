@@ -8,7 +8,7 @@ import java.util.List;
 
 @Repository
 public interface ChannelRepository extends JpaRepository<Channel, Long> {
-    List<Channel> findByServerId(Long serverId);
-    List<Channel> findByCategoryId(Long categoryId);
+    List<Channel> findByServer_Id(Long serverId);
+    List<Channel> findByCategory_Id(Long categoryId);
     List<Channel> findByIsPrivate(Boolean isPrivate);
 }

@@ -55,11 +55,11 @@ public class ChannelServiceImpl implements ChannelService {
 
     @Override
     public List<Channel> getChannelsByServer(Long serverId){
-        return channelRepository.findByServerId(serverId);
+        return channelRepository.findByServer_Id(serverId);
     }
 
     @Override
     public List<Channel> getChannelsByCategory(Long categoryId){
-        return channelRepository.findByCategoryId(categoryId);
+        return channelRepository.findByCategory_Id(categoryId);
     }
 }
