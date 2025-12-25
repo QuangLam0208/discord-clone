@@ -67,7 +67,9 @@ public class MessageServiceImpl implements MessageService {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new RuntimeException("Message not found with id " + messageId));
 
+
         message.getReactions().removeIf(
+                // Type Inference: Tự suy luận kiểu
                 r -> r.getUserId().equals(userId) && r.getEmoji().equals(emoji)
         );
         return messageRepository.save(message);
