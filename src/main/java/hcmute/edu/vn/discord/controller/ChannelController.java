@@ -10,6 +10,9 @@ import hcmute.edu.vn.discord.service.UserService;
 import hcmute.edu.vn.discord.repository.ServerMemberRepository;
 import hcmute.edu.vn.discord.repository.CategoryRepository;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,12 +20,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/channels")
 public class ChannelController {
+
+    // Khởi tạo Logger để ghi log hệ thống
+    private static final Logger logger = LoggerFactory.getLogger(ChannelController.class);
 
     @Autowired
     private ChannelService channelService;
@@ -42,7 +47,7 @@ public class ChannelController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    // --- HELPER: Check quyền  ---
+    // --- HELPER: Check quyền ---
     private boolean hasManagePermission(User user, Long serverId) {
         Server server = serverService.getServerById(serverId);
         if (server == null) return false;
@@ -57,11 +62,11 @@ public class ChannelController {
         if (memberOpt.isEmpty()) return false;
         ServerMember member = memberOpt.get();
 
-        // 3. Duyệt Role & Permission (Dùng Enum EPermission để so sánh)
+        // 3. Duyệt Role & Permission
         for (ServerRole role : member.getRoles()) {
             for (Permission perm : role.getPermissions()) {
-                // Check xem code trong DB có trùng với Enum MANAGE_CHANNELS hoặc ADMIN không
                 String code = perm.getCode();
+                // Check xem code trong DB có trùng với Enum MANAGE_CHANNELS hoặc ADMIN không
                 if (EPermission.MANAGE_CHANNELS.name().equals(code) ||
                         EPermission.ADMIN.name().equals(code)) {
                     return true;
@@ -77,13 +82,14 @@ public class ChannelController {
         try {
             User user = getCurrentUser();
 
-            // Validate
+            // Validate dữ liệu
             if (request.getServerId() == null || request.getName() == null) {
                 return ResponseEntity.badRequest().body("Thiếu ServerId hoặc Tên kênh");
             }
 
             // Check quyền
             if (!hasManagePermission(user, request.getServerId())) {
+                logger.warn("User {} cố gắng tạo kênh trái phép tại Server {}", user.getUsername(), request.getServerId());
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền quản lý kênh!");
             }
 
@@ -95,58 +101,111 @@ public class ChannelController {
 
             // Set Server
             Server server = serverService.getServerById(request.getServerId());
+            if (server == null) {
+                return ResponseEntity.badRequest().body("Server không tồn tại");
+            }
             channel.setServer(server);
 
-            // Set Category (nếu có)
+            // Xử lý Category
             if (request.getCategoryId() != null) {
-                categoryRepository.findById(request.getCategoryId()).ifPresent(channel::setCategory);
+                Optional<Category> categoryOpt = categoryRepository.findById(request.getCategoryId());
+                if (categoryOpt.isEmpty()) {
+                    return ResponseEntity.badRequest().body("Category ID không tồn tại!");
+                }
+                channel.setCategory(categoryOpt.get());
             }
 
-            return ResponseEntity.ok(channelService.createChannel(channel));
+            Channel newChannel = channelService.createChannel(channel);
+            logger.info("User {} đã tạo kênh mới: {} (ID: {})", user.getUsername(), newChannel.getName(), newChannel.getId());
+
+            return ResponseEntity.ok(newChannel);
 
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Lỗi: " + e.getMessage());
+            logger.error("Lỗi khi tạo kênh mới: ", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi Server: " + e.getMessage());
         }
     }
 
-    // --- API 2: Cập nhật kênh (Sửa tên, chuyển category...) ---
+    // --- API 2: Cập nhật kênh ---
     @PutMapping("/{id}")
     public ResponseEntity<?> updateChannel(@PathVariable Long id, @RequestBody ChannelRequest request) {
-        User user = getCurrentUser();
-        Optional<Channel> channelOpt = channelService.getChannelById(id);
+        try {
+            User user = getCurrentUser();
+            Optional<Channel> channelOpt = channelService.getChannelById(id);
 
-        if (channelOpt.isEmpty()) return ResponseEntity.notFound().build();
-        Channel channel = channelOpt.get();
+            if (channelOpt.isEmpty()) return ResponseEntity.notFound().build();
+            Channel channel = channelOpt.get();
 
-        // Check quyền (dựa trên server chứa kênh đó)
-        if (!hasManagePermission(user, channel.getServer().getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Không có quyền sửa kênh này");
+            // Check quyền (dựa trên server chứa kênh đó)
+            if (!hasManagePermission(user, channel.getServer().getId())) {
+                logger.warn("User {} cố gắng sửa kênh {} trái phép", user.getUsername(), id);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Không có quyền sửa kênh này");
+            }
+
+            // Update fields
+            if (request.getName() != null) channel.setName(request.getName());
+            if (request.getIsPrivate() != null) channel.setIsPrivate(request.getIsPrivate());
+
+            // Xử lý Category khi update
+            if (request.getCategoryId() != null) {
+                Optional<Category> categoryOpt = categoryRepository.findById(request.getCategoryId());
+                if (categoryOpt.isEmpty()) {
+                    return ResponseEntity.badRequest().body("Category ID mới không tồn tại!");
+                }
+                channel.setCategory(categoryOpt.get());
+            }
+
+            Channel updated = channelService.updateChannel(id, channel);
+            logger.info("User {} cập nhật kênh ID {}", user.getUsername(), id);
+
+            return ResponseEntity.ok(updated);
+
+        } catch (Exception e) {
+            logger.error("Lỗi khi cập nhật kênh ID " + id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi Server: " + e.getMessage());
         }
-
-        // Update fields
-        if (request.getName() != null) channel.setName(request.getName());
-        if (request.getIsPrivate() != null) channel.setIsPrivate(request.getIsPrivate());
-        if (request.getCategoryId() != null) {
-            categoryRepository.findById(request.getCategoryId()).ifPresent(channel::setCategory);
-        }
-
-        return ResponseEntity.ok(channelService.updateChannel(id, channel));
     }
 
     // --- API 3: Xóa kênh ---
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteChannel(@PathVariable Long id) {
-        User user = getCurrentUser();
-        Optional<Channel> channelOpt = channelService.getChannelById(id);
+        try {
+            User user = getCurrentUser();
+            Optional<Channel> channelOpt = channelService.getChannelById(id);
 
-        if (channelOpt.isEmpty()) return ResponseEntity.notFound().build();
+            if (channelOpt.isEmpty()) return ResponseEntity.notFound().build();
 
-        // Check quyền
-        if (!hasManagePermission(user, channelOpt.get().getServer().getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Không có quyền xóa kênh");
+            // Check quyền
+            if (!hasManagePermission(user, channelOpt.get().getServer().getId())) {
+                logger.warn("User {} cố gắng xóa kênh {} trái phép", user.getUsername(), id);
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Không có quyền xóa kênh");
+            }
+
+            channelService.deleteChannel(id);
+            logger.info("User {} đã xóa kênh ID {}", user.getUsername(), id);
+
+            return ResponseEntity.ok("Đã xóa kênh");
+
+        } catch (Exception e) {
+            logger.error("Lỗi khi xóa kênh ID " + id, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi Server: " + e.getMessage());
         }
+    }
 
-        channelService.deleteChannel(id);
-        return ResponseEntity.ok("Đã xóa kênh");
+    // --- API 4: Lấy danh sách kênh ---
+    @GetMapping("/server/{serverId}")
+    public ResponseEntity<?> getChannelsByServer(@PathVariable Long serverId) {
+        try {
+            User user = getCurrentUser();
+            // Check thành viên
+            boolean isMember = serverMemberRepository.existsByServerIdAndUserId(serverId, user.getId());
+            if (!isMember) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn chưa tham gia server này");
+            }
+            return ResponseEntity.ok(channelService.getChannelsByServer(serverId));
+        } catch (Exception e) {
+            logger.error("Lỗi khi lấy danh sách kênh server ID " + serverId, e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi: " + e.getMessage());
+        }
     }
 }
