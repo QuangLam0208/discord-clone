@@ -26,7 +26,7 @@ public class Server {
     private User owner;
 
     @Enumerated(EnumType.STRING)
-    private ServerStatus status; // ACTIVE, FREEZE...
+    private ServerStatus status; // ACTIVE, FREEZE, SHADOWBAN, DELETED
 
     @OneToMany(mappedBy = "server", cascade = CascadeType.ALL,
             orphanRemoval = true)

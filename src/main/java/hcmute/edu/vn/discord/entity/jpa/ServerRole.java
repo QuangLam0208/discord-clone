@@ -1,7 +1,9 @@
 package hcmute.edu.vn.discord.entity.jpa;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.List;
 
@@ -11,6 +13,8 @@ import java.util.List;
         uniqueConstraints = @UniqueConstraint(columnNames = {"server_id", "name"})
 )
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class ServerRole {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
