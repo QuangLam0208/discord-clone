@@ -21,7 +21,7 @@ public class Permission {
 
     // Constructor tiện lợi dùng cho DataSeeder
     public Permission(String name, EPermission permissionEnum) {
-        this.name = name;
-        this.code = permissionEnum.name(); // Lấy tên Enum lưu vào String (VD: "MANAGE_CHANNELS")
+        // Explicitly delegate to the all-args constructor, leaving id as null
+        this(null, name, permissionEnum.name()); // Lấy tên Enum lưu vào String (VD: "MANAGE_CHANNELS")
     }
 }
