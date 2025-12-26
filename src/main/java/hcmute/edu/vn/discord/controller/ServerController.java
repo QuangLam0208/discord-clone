@@ -3,7 +3,6 @@ package hcmute.edu.vn.discord.controller;
 import hcmute.edu.vn.discord.dto.request.ServerRequest;
 import hcmute.edu.vn.discord.dto.response.ServerResponse;
 import hcmute.edu.vn.discord.entity.jpa.Server;
-import hcmute.edu.vn.discord.service.ChannelService;
 import hcmute.edu.vn.discord.service.ServerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +24,10 @@ public class ServerController {
     public ResponseEntity<ServerResponse> createServer(@Valid @RequestBody ServerRequest request,
                                                        Authentication authentication) {
 
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
         Server server = new Server();
         server.setName(request.getName());
         server.setDescription(request.getDescription());
@@ -38,6 +41,9 @@ public class ServerController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteServer(@PathVariable Long id, Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
         try {
             serverService.deleteServer(id, authentication.getName());
             return ResponseEntity.noContent().build();
@@ -45,6 +51,8 @@ public class ServerController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unexpected error");
         }
     }
 }
