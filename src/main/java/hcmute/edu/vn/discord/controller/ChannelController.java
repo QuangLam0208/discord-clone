@@ -146,6 +146,13 @@ public class ChannelController {
             if (request.getName() != null) channel.setName(request.getName());
             if (request.getIsPrivate() != null) channel.setIsPrivate(request.getIsPrivate());
 
+            // Validate type change - channel type cannot be changed after creation
+            if (request.getType() != null && !request.getType().equals(channel.getType())) {
+                logger.warn("User {} attempted to change channel type from {} to {} for channel ID {}",
+                        user.getUsername(), channel.getType(), request.getType(), id);
+                return ResponseEntity.badRequest().body("Không thể thay đổi loại kênh (TEXT/VOICE) sau khi đã tạo");
+            }
+
             // Xử lý Category khi update
             if (request.getCategoryId() != null) {
                 Optional<Category> categoryOpt = categoryRepository.findById(request.getCategoryId());
