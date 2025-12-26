@@ -56,7 +56,7 @@ public class ServerMemberController {
     public ResponseEntity<ServerMemberResponse> addMember(@PathVariable Long serverId, @RequestParam Long userId,
                                                           Authentication auth) {
         User current = getCurrentUser(auth);
-        if (canManageMembers(current, serverId)) {
+        if (!canManageMembers(current, serverId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
         ServerMember member = serverMemberService.addMemberToServer(serverId, userId);
@@ -100,15 +100,24 @@ public class ServerMemberController {
 
     private boolean canManageMembers(User current, Long serverId) {
         Server server = serverService.getServerById(serverId);
-        if (server != null && server.getOwner() != null
+        boolean isOwner = server != null
+                && server.getOwner() != null
                 && server.getOwner().getId() != null
-                && server.getOwner().getId().equals(current.getId())) {
-            return false;
+                && server.getOwner().getId().equals(current.getId());
+
+        if (isOwner) {
+            return true;
         }
-        return serverMemberService.userHasAnyPermission(serverId, current.getId(),
-                Set.of(EPermission.MANAGE_SERVER.name(),
+
+        return serverMemberService.userHasAnyPermission(
+                serverId,
+                current.getId(),
+                Set.of(
+                        EPermission.MANAGE_SERVER.name(),
                         EPermission.KICK_MEMBERS.name(),
                         EPermission.BAN_MEMBERS.name(),
-                        EPermission.ADMIN.name()));
+                        EPermission.ADMIN.name()
+                )
+        );
     }
 }
