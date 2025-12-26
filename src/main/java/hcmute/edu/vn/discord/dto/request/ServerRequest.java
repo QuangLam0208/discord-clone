@@ -20,5 +20,11 @@ public class ServerRequest {
 
     @Size(max = 255, message = "Icon URL không hợp lệ")
     private String iconUrl;
+
+    public void normalize() {
+        if (name != null) name = name.trim();
+        if (description != null) description = description.trim();
+        if (iconUrl != null) iconUrl = iconUrl.trim();
+    }
 }
 

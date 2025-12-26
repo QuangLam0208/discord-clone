@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(
@@ -29,13 +30,12 @@ public class ServerMember {
     private LocalDateTime joinedAt;
     private Boolean isBanned;
 
-    // Một thành viên có thể có nhiều role trong server (Owner, Admin, Member...)
     @ManyToMany
     @JoinTable(
             name = "member_roles",
             joinColumns = @JoinColumn(name = "member_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
-    private List<ServerRole> roles;
+    private Set<ServerRole> roles = new HashSet<>();
 }
 

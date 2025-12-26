@@ -1,4 +1,4 @@
-package hcmute.edu.vn.discord.dto;
+package hcmute.edu.vn.discord.dto.request;
 
 import hcmute.edu.vn.discord.entity.enums.ChannelType;
 import lombok.Data;

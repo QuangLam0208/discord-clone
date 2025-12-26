@@ -1,6 +1,7 @@
 package hcmute.edu.vn.discord.service.impl;
 
 import hcmute.edu.vn.discord.entity.enums.ChannelType;
+import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.enums.ServerStatus;
 import hcmute.edu.vn.discord.entity.jpa.*;
 import hcmute.edu.vn.discord.repository.*;
@@ -10,8 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @RequiredArgsConstructor
 @Service
@@ -22,30 +22,35 @@ public class ServerServiceImpl implements ServerService {
     private final ChannelRepository channelRepository;
     private final ServerMemberRepository serverMemberRepository;
     private final UserRepository userRepository;
+    private final PermissionRepository permissionRepository;
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Server createServer(Server server, String userName) {
         User owner = userRepository.findByUsername(userName)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         server.setOwner(owner);
         server.setStatus(ServerStatus.ACTIVE);
-
         Server savedServer = serverRepository.save(server);
+
+        Map<EPermission, Permission> permMap = bootstrapPermissions();
 
         ServerRole memberRole = new ServerRole();
         memberRole.setName("Member");
         memberRole.setPriority(1);
         memberRole.setServer(savedServer);
-        memberRole.setPermissions(new ArrayList<>());
+        memberRole.setPermissions(Set.of(
+                permMap.get(EPermission.VIEW_CHANNELS),
+                permMap.get(EPermission.SEND_MESSAGES)
+        ));
         serverRoleRepository.save(memberRole);
 
         ServerRole adminRole = new ServerRole();
         adminRole.setName("Admin");
         adminRole.setPriority(10);
         adminRole.setServer(savedServer);
-        // TODO: Bạn có thể set full permission cho adminRole ở đây
+        adminRole.setPermissions(new HashSet<>(permMap.values())); // full access
         serverRoleRepository.save(adminRole);
 
         Channel generalChat = new Channel();
@@ -61,9 +66,7 @@ public class ServerServiceImpl implements ServerService {
         ownerMember.setNickname(owner.getDisplayName());
         ownerMember.setJoinedAt(LocalDateTime.now());
         ownerMember.setIsBanned(false);
-
-        ownerMember.setRoles(new ArrayList<>());
-        ownerMember.getRoles().add(adminRole);
+        ownerMember.setRoles(new HashSet<>(Set.of(adminRole)));
 
         serverMemberRepository.save(ownerMember);
 
@@ -77,7 +80,8 @@ public class ServerServiceImpl implements ServerService {
 
     @Override
     public Server getServerById(Long id) {
-        return serverRepository.findById(id).orElse(null);
+        return serverRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Server không tồn tại"));
     }
 
     @Override
@@ -86,20 +90,28 @@ public class ServerServiceImpl implements ServerService {
     }
 
     @Override
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void deleteServer(Long serverId, String userName){
         Server server = serverRepository.findById(serverId)
-                .orElseThrow(() ->
-                        new IllegalArgumentException("Server không tồn tại"));
+                .orElseThrow(() -> new IllegalArgumentException("Server không tồn tại"));
 
         User user = userRepository.findByUsername(userName)
-                .orElseThrow(() ->
-                        new RuntimeException("User không tồn tại"));
+                .orElseThrow(() -> new RuntimeException("User không tồn tại"));
 
         if (!server.getOwner().getId().equals(user.getId())) {
             throw new IllegalStateException("Bạn không có quyền xóa server này");
         }
 
         serverRepository.delete(server);
+    }
+
+    private Map<EPermission, Permission> bootstrapPermissions() {
+        Map<EPermission, Permission> map = new EnumMap<>(EPermission.class);
+        for (EPermission ep : EPermission.values()) {
+            Permission perm = permissionRepository.findByCode(ep.name())
+                    .orElseGet(() -> permissionRepository.save(new Permission(null, ep.name(), ep.getDescription())));
+            map.put(ep, perm);
+        }
+        return map;
     }
 }
