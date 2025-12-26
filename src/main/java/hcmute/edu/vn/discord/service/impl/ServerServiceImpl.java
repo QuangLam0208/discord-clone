@@ -28,8 +28,8 @@ public class ServerServiceImpl implements ServerService {
 
     @Override
     @Transactional
-    public Server createServer(Server server, Long ownerId) {
-        User owner = userRepository.findById(ownerId)
+    public Server createServer(Server server, String userName) {
+        User owner = userRepository.findByUsername(userName)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         // 1. Set Owner và Lưu Server
@@ -85,5 +85,31 @@ public class ServerServiceImpl implements ServerService {
     @Override
     public Server getServerById(Long id) {
         return serverRepository.findById(id).orElse(null);
+    }
+
+    @Override
+    public List<Server> getServersByUsername(String userName){
+        return serverRepository.findByMemberUsername(userName);
+    }
+
+    @Override
+    @Transactional
+    public void deleteServer(Long serverId, String userName){
+        // Lấy server
+        Server server = serverRepository.findById(serverId)
+                .orElseThrow(() ->
+                        new IllegalArgumentException("Server không tồn tại"));
+
+        // Lấy user đang đăng nhập
+        User user = userRepository.findByUsername(userName)
+                .orElseThrow(() ->
+                        new RuntimeException("User không tồn tại"));
+
+        if (!server.getOwner().getId().equals(user.getId())) {
+            throw new IllegalStateException("Bạn không có quyền xóa server này");
+        }
+
+        // Xóa server
+        serverRepository.delete(server);
     }
 }
