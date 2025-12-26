@@ -15,6 +15,4 @@ public class Permission {
     private String code; // Ví dụ: SERVER_MANAGE, MESSAGE_DELETE
 
     private String description;
-
-    // Mối quan hệ N-N với ServerRole đã được khai báo ở ServerRole.java
 }
