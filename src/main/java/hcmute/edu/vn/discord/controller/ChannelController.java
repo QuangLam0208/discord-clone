@@ -53,7 +53,8 @@ public class ChannelController {
         if (server == null) return false;
 
         // 1. Nếu là Owner -> Auto có quyền
-        if (server.getOwner().getId().equals(user.getId())) {
+        User owner = server.getOwner();
+        if (owner != null && owner.getId() != null && owner.getId().equals(user.getId())) {
             return true;
         }
 
