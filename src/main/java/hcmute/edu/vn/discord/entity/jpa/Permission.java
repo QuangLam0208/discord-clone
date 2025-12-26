@@ -6,10 +6,7 @@ import hcmute.edu.vn.discord.entity.enums.EPermission;
 
 @Entity
 @Table(name = "permissions")
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
+@Data
 public class Permission {
 
     @Id
