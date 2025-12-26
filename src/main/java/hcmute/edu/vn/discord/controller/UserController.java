@@ -1,70 +1,42 @@
 package hcmute.edu.vn.discord.controller;
 
-import hcmute.edu.vn.discord.dto.request.RegisterRequest;
-import hcmute.edu.vn.discord.entity.jpa.User;
+import hcmute.edu.vn.discord.dto.response.UserResponse;
 import hcmute.edu.vn.discord.service.UserService;
-import jakarta.validation.Valid;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
-import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class UserController {
 
-    @Autowired
-    private UserService userService;
-
-    @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@Valid @RequestBody RegisterRequest request) {
-        try {
-            userService.registerUser(request);
-            Map<String, String> response = new HashMap<>();
-            response.put("message", "User registered successfully");
-            return ResponseEntity.status(HttpStatus.CREATED).body(response);
-        } catch (RuntimeException e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return ResponseEntity.status((HttpStatus.BAD_REQUEST)).body(error);
-        }
-    }
+    private final UserService userService;
 
     @GetMapping("/username/{username}")
-    public ResponseEntity<?> getUserByUserName(@PathVariable String username) {
-        Optional<User> user = userService.findByUsername(username);
-        if (user.isPresent()) {
-            return ResponseEntity.ok(user.get());
-        } else {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "User not found");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-        }
+    public ResponseEntity<UserResponse> getUserByUsername(@PathVariable @NotBlank String username) {
+        return userService.findByUsername(username)
+                .map(user -> ResponseEntity.ok(UserResponse.from(user)))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<?> getUserById(@PathVariable Long id) {
-        Optional<User> user = userService.findById(id);
-        if (user.isPresent()) {
-            return ResponseEntity.ok(user.get());
-        } else {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "User not found");
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-        }
+    public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
+        return userService.findById(id)
+                .map(user -> ResponseEntity.ok(UserResponse.from(user)))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
     }
 
     @GetMapping("/check-email")
-    public ResponseEntity<?> checkEmailExists(@RequestParam String email) {
-        boolean exists = userService.existsByEmail(email);
-        Map<String, Boolean> response = new HashMap<>();
-        response.put("exists", exists);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<Map<String, Boolean>> checkEmail(@RequestParam @Email String email) {
+        return ResponseEntity.ok(Map.of("exists", userService.existsByEmail(email)));
     }
 }
+
