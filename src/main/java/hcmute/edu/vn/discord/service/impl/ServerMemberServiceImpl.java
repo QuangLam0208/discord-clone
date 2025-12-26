@@ -1,5 +1,6 @@
 package hcmute.edu.vn.discord.service.impl;
 
+import hcmute.edu.vn.discord.entity.enums.ServerStatus;
 import hcmute.edu.vn.discord.entity.jpa.Server;
 import hcmute.edu.vn.discord.entity.jpa.ServerMember;
 import hcmute.edu.vn.discord.entity.jpa.ServerRole;
@@ -9,57 +10,54 @@ import hcmute.edu.vn.discord.repository.ServerRepository;
 import hcmute.edu.vn.discord.repository.ServerRoleRepository;
 import hcmute.edu.vn.discord.repository.UserRepository;
 import hcmute.edu.vn.discord.service.ServerMemberService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 
 @Service
+@Transactional
+@RequiredArgsConstructor
 public class ServerMemberServiceImpl implements ServerMemberService {
 
-    @Autowired
-    private ServerMemberRepository serverMemberRepository;
-
-    @Autowired
-    private ServerRepository serverRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private ServerRoleRepository serverRoleRepository; // Inject thêm repository này
+    private final ServerMemberRepository serverMemberRepository;
+    private final ServerRepository serverRepository;
+    private final UserRepository userRepository;
+    private final ServerRoleRepository serverRoleRepository;
 
     @Override
     public ServerMember addMemberToServer(Long serverId, Long userId) {
         if (isMember(serverId, userId)) {
-            return null;
+            return serverMemberRepository.findByServerIdAndUserId(serverId, userId)
+                    .orElseThrow(() -> new IllegalStateException("Membership state inconsistent"));
         }
 
-        Server server = serverRepository.findById(serverId).orElse(null);
-        User user = userRepository.findById(userId).orElse(null);
+        Server server = serverRepository.findById(serverId)
+                .orElseThrow(() -> new IllegalArgumentException("Server not found"));
 
-        if (server != null && user != null) {
-            ServerMember newMember = new ServerMember();
-            newMember.setServer(server);
-            newMember.setUser(user);
-            newMember.setJoinedAt(LocalDateTime.now());
-            newMember.setIsBanned(false);
-            newMember.setNickname(user.getUsername());
-
-            newMember.setRoles(new ArrayList<>());
-
-            // Tìm role mặc định tên "Member" (hoặc tên khác tùy bạn đặt trong DB)
-            Optional<ServerRole> defaultRole = serverRoleRepository.findByServerIdAndName(serverId, "Member");
-
-            // Nếu tìm thấy thì thêm vào list
-            defaultRole.ifPresent(role -> newMember.getRoles().add(role));
-
-            return serverMemberRepository.save(newMember);
+        if (server.getStatus() != ServerStatus.ACTIVE) {
+            throw new IllegalStateException("Server không hoạt động");
         }
-        return null;
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        ServerRole memberRole = serverRoleRepository.findByServerIdAndName(serverId, "Member")
+                .orElseThrow(() -> new IllegalStateException("Default role 'Member' not found"));
+
+        ServerMember newMember = new ServerMember();
+        newMember.setServer(server);
+        newMember.setUser(user);
+        newMember.setJoinedAt(LocalDateTime.now());
+        newMember.setIsBanned(false);
+        newMember.setNickname(user.getUsername());
+        newMember.setRoles(new HashSet<>());
+        newMember.getRoles().add(memberRole);
+
+        return serverMemberRepository.save(newMember);
     }
 
     @Override
@@ -74,7 +72,8 @@ public class ServerMemberServiceImpl implements ServerMemberService {
 
     @Override
     public void removeMember(Long serverId, Long userId) {
-        Optional<ServerMember> memberOpt = serverMemberRepository.findByServerIdAndUserId(serverId, userId);
-        memberOpt.ifPresent(member -> serverMemberRepository.delete(member));
+        ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, userId)
+                .orElseThrow(() -> new IllegalArgumentException("Member not found"));
+        serverMemberRepository.delete(member);
     }
 }

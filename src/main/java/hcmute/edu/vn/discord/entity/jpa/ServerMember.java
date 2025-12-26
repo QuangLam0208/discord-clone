@@ -2,6 +2,7 @@ package hcmute.edu.vn.discord.entity.jpa;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
@@ -19,18 +20,22 @@ public class ServerMember {
     private Long id;
 
     @ManyToOne
-    @JoinColumn(name = "server_id")
+    @JoinColumn(name = "server_id", nullable = false)
     private Server server;
 
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     private String nickname;
-    private LocalDateTime joinedAt;
-    private Boolean isBanned;
 
-    @ManyToMany
+    @CreationTimestamp
+    private LocalDateTime joinedAt;
+
+    @Column(nullable = false)
+    private Boolean isBanned = false;
+
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "member_roles",
             joinColumns = @JoinColumn(name = "member_id"),
