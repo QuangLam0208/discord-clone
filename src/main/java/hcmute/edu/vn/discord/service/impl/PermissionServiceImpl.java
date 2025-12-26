@@ -17,7 +17,6 @@ public class PermissionServiceImpl implements PermissionService {
 
     @Override
     public Permission createPermission(Permission permission) {
-        // ensure id is null so JPA will insert
         permission.setId(null);
         return permissionRepository.save(permission);
     }
@@ -27,10 +26,7 @@ public class PermissionServiceImpl implements PermissionService {
         Permission existing = permissionRepository.findById(id).orElseThrow(() ->
                 new RuntimeException("Permission not found with id " + id));
 
-        // only allow updating mutable fields
         existing.setDescription(updatedPermission.getDescription());
-        // code is updatable? in entity it's updatable = false, so avoid changing it
-
         return permissionRepository.save(existing);
     }
 

@@ -1,9 +1,13 @@
 package hcmute.edu.vn.discord.entity.jpa;
 
 import jakarta.persistence.*;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(
@@ -11,6 +15,8 @@ import java.util.List;
         uniqueConstraints = @UniqueConstraint(columnNames = {"server_id", "name"})
 )
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class ServerRole {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -29,6 +35,6 @@ public class ServerRole {
             joinColumns = @JoinColumn(name = "role_id"),
             inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
-    private List<Permission> permissions;
+    private Set<Permission> permissions = new HashSet<>();
 }
 
