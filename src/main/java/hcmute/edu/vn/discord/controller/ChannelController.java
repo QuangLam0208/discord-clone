@@ -1,6 +1,6 @@
 package hcmute.edu.vn.discord.controller;
 
-import hcmute.edu.vn.discord.dto.ChannelRequest;
+import hcmute.edu.vn.discord.dto.request.ChannelRequest;
 import hcmute.edu.vn.discord.entity.enums.ChannelType;
 import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.jpa.*;
