@@ -6,11 +6,13 @@ import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.service.ServerMemberService;
 import hcmute.edu.vn.discord.service.ServerService;
 import hcmute.edu.vn.discord.service.UserService;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -19,35 +21,30 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/servers/{serverId}/members")
+@RequiredArgsConstructor
 public class ServerMemberController {
 
     private static final Logger logger = LoggerFactory.getLogger(ServerMemberController.class);
 
-    @Autowired
-    private ServerMemberService serverMemberService;
+    private final ServerMemberService serverMemberService;
+    private final ServerService serverService;
+    private final UserService userService;
 
-    @Autowired
-    private ServerService serverService;
-
-    @Autowired
-    private UserService userService;
-
-    // Helper: get current authenticated user
     private User getCurrentUser() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
+            throw new AccessDeniedException("Not authenticated");
+        }
         return userService.findByUsername(auth.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
     }
 
-    // Helper: check if current user is owner of server
     private boolean isOwner(User user, Long serverId) {
         Server server = serverService.getServerById(serverId);
-        if (server == null) return false;
-        User owner = server.getOwner();
-        return owner != null && owner.getId() != null && owner.getId().equals(user.getId());
+        return server != null && server.getOwner() != null &&
+                server.getOwner().getId().equals(user.getId());
     }
 
-    // --- API: current user join server ---
     @PostMapping("/join")
     public ResponseEntity<?> joinServer(@PathVariable Long serverId) {
         try {
@@ -72,15 +69,11 @@ public class ServerMemberController {
         }
     }
 
-    // --- API: owner (or privileged) add member by userId ---
     @PostMapping("/add")
-    public ResponseEntity<?> addMember(
-            @PathVariable Long serverId,
-            @RequestParam Long userId
-    ) {
+    public ResponseEntity<?> addMember(@PathVariable Long serverId, @RequestParam Long userId, Authentication auth) {
         try {
             User current = getCurrentUser();
-            if (!isOwner(current, serverId)) {
+            if (isOwner(current, serverId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Chỉ owner mới có thể thêm thành viên");
             }
 
@@ -99,7 +92,6 @@ public class ServerMemberController {
         }
     }
 
-    // --- API: list members ---
     @GetMapping("")
     public ResponseEntity<?> listMembers(@PathVariable Long serverId) {
         try {
@@ -117,7 +109,6 @@ public class ServerMemberController {
         }
     }
 
-    // --- API: check membership for a user ---
     @GetMapping("/{userId}/exists")
     public ResponseEntity<?> checkMember(@PathVariable Long serverId, @PathVariable Long userId) {
         try {
@@ -129,13 +120,11 @@ public class ServerMemberController {
         }
     }
 
-    // --- API: remove member (self or owner can remove someone) ---
     @DeleteMapping("/{userId}")
     public ResponseEntity<?> removeMember(@PathVariable Long serverId, @PathVariable Long userId) {
         try {
             User current = getCurrentUser();
-            // allow if current is owner or removing self
-            if (!isOwner(current, serverId) && !current.getId().equals(userId)) {
+            if (isOwner(current, serverId) && !current.getId().equals(userId)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền xoá thành viên này");
             }
 
