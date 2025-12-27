@@ -6,8 +6,8 @@ import hcmute.edu.vn.discord.entity.jpa.Server;
 import hcmute.edu.vn.discord.service.ServerService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,7 +25,7 @@ public class ServerController {
                                                        Authentication authentication) {
 
         if (authentication == null || authentication.getName() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new AccessDeniedException("Not authenticated");
         }
 
         Server server = new Server();
@@ -42,17 +42,9 @@ public class ServerController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteServer(@PathVariable Long id, Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            throw new AccessDeniedException("Not authenticated");
         }
-        try {
-            serverService.deleteServer(id, authentication.getName());
-            return ResponseEntity.noContent().build();
-        } catch (IllegalStateException e) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(e.getMessage());
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Unexpected error");
-        }
+        serverService.deleteServer(id, authentication.getName());
+        return ResponseEntity.noContent().build();
     }
 }
