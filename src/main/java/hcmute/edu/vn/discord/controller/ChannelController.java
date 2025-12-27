@@ -1,6 +1,7 @@
 package hcmute.edu.vn.discord.controller;
 
 import hcmute.edu.vn.discord.dto.request.ChannelRequest;
+import hcmute.edu.vn.discord.dto.response.ChannelResponse;
 import hcmute.edu.vn.discord.entity.enums.ChannelType;
 import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.jpa.*;
@@ -20,6 +21,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -68,9 +70,8 @@ public class ChannelController {
     }
 
     @PostMapping
-    public ResponseEntity<?> createChannel(@Valid @RequestBody ChannelRequest request,
-                                           Authentication authentication) {
-
+    public ResponseEntity<ChannelResponse> createChannel(@Valid @RequestBody ChannelRequest request,
+                                                         Authentication authentication) {
         User user = getCurrentUser(authentication);
 
         if (request.getServerId() == null || request.getName() == null) {
@@ -100,12 +101,13 @@ public class ChannelController {
         logger.info("User {} đã tạo kênh mới: {} (ID: {})", user.getUsername(), newChannel.getName(), newChannel.getId());
 
         return ResponseEntity.created(URI.create("/api/channels/" + newChannel.getId()))
-                .body(newChannel);
+                .body(ChannelResponse.from(newChannel));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateChannel(@PathVariable Long id, @Valid @RequestBody ChannelRequest request,
-                                           Authentication authentication) {
+    public ResponseEntity<ChannelResponse> updateChannel(@PathVariable Long id,
+                                                         @Valid @RequestBody ChannelRequest request,
+                                                         Authentication authentication) {
         User user = getCurrentUser(authentication);
 
         Channel existing = channelService.getChannelById(id)
@@ -134,7 +136,7 @@ public class ChannelController {
         Channel updated = channelService.updateChannel(id, existing);
         logger.info("User {} cập nhật kênh ID {}", user.getUsername(), id);
 
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(ChannelResponse.from(updated));
     }
 
     @DeleteMapping("/{id}")
@@ -143,7 +145,6 @@ public class ChannelController {
 
         Channel existing = channelService.getChannelById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
-
 
         if (!hasManagePermission(user, existing.getServer().getId())) {
             logger.warn("User {} cố gắng xóa kênh {} trái phép", user.getUsername(), id);
@@ -157,12 +158,15 @@ public class ChannelController {
     }
 
     @GetMapping("/server/{serverId}")
-    public ResponseEntity<?> getChannelsByServer(@PathVariable Long serverId, Authentication authentication) {
+    public ResponseEntity<List<ChannelResponse>> getChannelsByServer(@PathVariable Long serverId, Authentication authentication) {
         User user = getCurrentUser(authentication);
         boolean isMember = serverMemberRepository.existsByServerIdAndUserId(serverId, user.getId());
         if (!isMember) {
             throw new AccessDeniedException("Bạn chưa tham gia server này");
         }
-        return ResponseEntity.ok(channelService.getChannelsByServer(serverId));
+        List<ChannelResponse> channels = channelService.getChannelsByServer(serverId).stream()
+                .map(ChannelResponse::from)
+                .toList();
+        return ResponseEntity.ok(channels);
     }
 }
