@@ -1,10 +1,7 @@
 package hcmute.edu.vn.discord.service.impl;
 
 import hcmute.edu.vn.discord.entity.enums.ServerStatus;
-import hcmute.edu.vn.discord.entity.jpa.Server;
-import hcmute.edu.vn.discord.entity.jpa.ServerMember;
-import hcmute.edu.vn.discord.entity.jpa.ServerRole;
-import hcmute.edu.vn.discord.entity.jpa.User;
+import hcmute.edu.vn.discord.entity.jpa.*;
 import hcmute.edu.vn.discord.repository.ServerMemberRepository;
 import hcmute.edu.vn.discord.repository.ServerRepository;
 import hcmute.edu.vn.discord.repository.ServerRoleRepository;
@@ -17,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 @Transactional
@@ -71,9 +69,19 @@ public class ServerMemberServiceImpl implements ServerMemberService {
     }
 
     @Override
-    public void removeMember(Long serverId, Long userId) {
-        ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("Member not found"));
-        serverMemberRepository.delete(member);
+    public boolean removeMember(Long serverId, Long userId) {
+        return serverMemberRepository.findByServerIdAndUserId(serverId, userId)
+                .map(member -> { serverMemberRepository.delete(member); return true; })
+                .orElse(false);
+    }
+
+    @Override
+    public boolean userHasAnyPermission(Long serverId, Long userId, Set<String> requiredCodes) {
+        return serverMemberRepository.findByServerIdAndUserId(serverId, userId)
+                .map(member -> member.getRoles().stream()
+                        .flatMap(r -> r.getPermissions().stream())
+                        .map(Permission::getCode)
+                        .anyMatch(requiredCodes::contains))
+                .orElse(false);
     }
 }

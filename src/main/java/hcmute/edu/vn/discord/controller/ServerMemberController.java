@@ -1,5 +1,7 @@
 package hcmute.edu.vn.discord.controller;
 
+import hcmute.edu.vn.discord.dto.response.ServerMemberResponse;
+import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.jpa.Server;
 import hcmute.edu.vn.discord.entity.jpa.ServerMember;
 import hcmute.edu.vn.discord.entity.jpa.User;
@@ -9,15 +11,14 @@ import hcmute.edu.vn.discord.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/servers/{serverId}/members")
@@ -30,13 +31,12 @@ public class ServerMemberController {
     private final ServerService serverService;
     private final UserService userService;
 
-    private User getCurrentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
-            throw new AccessDeniedException("Not authenticated");
+    private User getCurrentUser(Authentication auth) {
+        if (auth == null || auth.getName() == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         }
         return userService.findByUsername(auth.getName())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
     }
 
     private boolean isOwner(User user, Long serverId) {
@@ -46,67 +46,34 @@ public class ServerMemberController {
     }
 
     @PostMapping("/join")
-    public ResponseEntity<?> joinServer(@PathVariable Long serverId) {
-        try {
-            User user = getCurrentUser();
-            Server server = serverService.getServerById(serverId);
-            if (server == null) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Server không tồn tại");
-
-            if (serverMemberService.isMember(serverId, user.getId())) {
-                return ResponseEntity.badRequest().body("Bạn đã là thành viên của server");
-            }
-
-            ServerMember member = serverMemberService.addMemberToServer(serverId, user.getId());
-            if (member == null) {
-                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Không thể tham gia server");
-            }
-
-            logger.info("User {} joined server {}", user.getUsername(), serverId);
-            return ResponseEntity.ok(member);
-        } catch (Exception e) {
-            logger.error("Lỗi khi join server {}", serverId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi server: " + e.getMessage());
-        }
+    public ResponseEntity<ServerMemberResponse> joinServer(@PathVariable Long serverId, Authentication auth) {
+        User user = getCurrentUser(auth);
+        ServerMember member = serverMemberService.addMemberToServer(serverId, user.getId());
+        return ResponseEntity.ok(ServerMemberResponse.from(member));
     }
 
     @PostMapping("/add")
-    public ResponseEntity<?> addMember(@PathVariable Long serverId, @RequestParam Long userId, Authentication auth) {
-        try {
-            User current = getCurrentUser();
-            if (isOwner(current, serverId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Chỉ owner mới có thể thêm thành viên");
-            }
-
-            if (serverMemberService.isMember(serverId, userId)) {
-                return ResponseEntity.badRequest().body("Người dùng đã là thành viên");
-            }
-
-            ServerMember member = serverMemberService.addMemberToServer(serverId, userId);
-            if (member == null) return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Không thể thêm thành viên");
-
-            logger.info("Owner {} added user {} to server {}", current.getUsername(), userId, serverId);
-            return ResponseEntity.ok(member);
-        } catch (Exception e) {
-            logger.error("Lỗi khi add member to server {}", serverId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi server: " + e.getMessage());
+    public ResponseEntity<ServerMemberResponse> addMember(@PathVariable Long serverId, @RequestParam Long userId,
+                                                          Authentication auth) {
+        User current = getCurrentUser(auth);
+        if (!canManageMembers(current, serverId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+        ServerMember member = serverMemberService.addMemberToServer(serverId, userId);
+        return ResponseEntity.ok(ServerMemberResponse.from(member));
     }
 
     @GetMapping("")
-    public ResponseEntity<?> listMembers(@PathVariable Long serverId) {
-        try {
-            User current = getCurrentUser();
-            // Only allow if current user is member
-            if (!serverMemberService.isMember(serverId, current.getId())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn chưa tham gia server này");
-            }
-
-            List<ServerMember> members = serverMemberService.getMembersByServerId(serverId);
-            return ResponseEntity.ok(members);
-        } catch (Exception e) {
-            logger.error("Lỗi khi lấy danh sách thành viên server {}", serverId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi server: " + e.getMessage());
+    public ResponseEntity<List<ServerMemberResponse>> listMembers(@PathVariable Long serverId, Authentication auth) {
+        User current = getCurrentUser(auth);
+        if (!serverMemberService.isMember(serverId, current.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+        List<ServerMemberResponse> members = serverMemberService.getMembersByServerId(serverId)
+                .stream()
+                .map(ServerMemberResponse::from)
+                .toList();
+        return ResponseEntity.ok(members);
     }
 
     @GetMapping("/{userId}/exists")
@@ -121,23 +88,36 @@ public class ServerMemberController {
     }
 
     @DeleteMapping("/{userId}")
-    public ResponseEntity<?> removeMember(@PathVariable Long serverId, @PathVariable Long userId) {
-        try {
-            User current = getCurrentUser();
-            if (isOwner(current, serverId) && !current.getId().equals(userId)) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Bạn không có quyền xoá thành viên này");
-            }
-
-            if (!serverMemberService.isMember(serverId, userId)) {
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Thành viên không tồn tại");
-            }
-
-            serverMemberService.removeMember(serverId, userId);
-            logger.info("User {} removed member {} from server {}", current.getUsername(), userId, serverId);
-            return ResponseEntity.ok("Đã xóa thành viên");
-        } catch (Exception e) {
-            logger.error("Lỗi khi xóa member {} trên server {}", userId, serverId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi server: " + e.getMessage());
+    public ResponseEntity<?> removeMember(@PathVariable Long serverId, @PathVariable Long userId, Authentication auth) {
+        User current = getCurrentUser(auth);
+        if (!canManageMembers(current, serverId) && !current.getId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+        boolean removed = serverMemberService.removeMember(serverId, userId);
+        if (!removed) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        return ResponseEntity.noContent().build();
+    }
+
+    private boolean canManageMembers(User current, Long serverId) {
+        Server server = serverService.getServerById(serverId);
+        boolean isOwner = server != null
+                && server.getOwner() != null
+                && server.getOwner().getId() != null
+                && server.getOwner().getId().equals(current.getId());
+
+        if (isOwner) {
+            return true;
+        }
+
+        return serverMemberService.userHasAnyPermission(
+                serverId,
+                current.getId(),
+                Set.of(
+                        EPermission.MANAGE_SERVER.name(),
+                        EPermission.KICK_MEMBERS.name(),
+                        EPermission.BAN_MEMBERS.name(),
+                        EPermission.ADMIN.name()
+                )
+        );
     }
 }

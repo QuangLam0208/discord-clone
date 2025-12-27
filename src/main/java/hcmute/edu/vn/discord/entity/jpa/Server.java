@@ -32,7 +32,18 @@ public class Server {
             orphanRemoval = true)
     private List<Channel> channels;
 
-    @OneToMany(mappedBy = "server")
+    @OneToMany(
+            mappedBy = "server",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
     private List<ServerMember> members;
+
+    @OneToMany(
+            mappedBy = "server",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true
+    )
+    private List<ServerRole> roles;
 }
 
