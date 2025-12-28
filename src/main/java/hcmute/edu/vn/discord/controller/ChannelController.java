@@ -66,10 +66,26 @@ public class ChannelController {
     @PutMapping("/{id}")
     public ResponseEntity<Channel> updateChannel(
             @PathVariable Long id,
-            @RequestBody Channel channel,
+            @Valid @RequestBody ChannelRequest request,
             Authentication authentication) { // Thêm Auth
 
         String username = validateAndGetUsername(authentication);
+
+        Channel channel = new Channel();
+        channel.setName(request.getName());
+        channel.setIsPrivate(request.getIsPrivate());
+        channel.setType(request.getType());
+
+        if (request.getServerId() != null) {
+            Server server = serverService.getServerById(request.getServerId());
+            channel.setServer(server);
+        }
+
+        if (request.getCategoryId() != null) {
+            Category category = categoryService.getCategoryById(request.getCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Category not found"));
+            channel.setCategory(category);
+        }
         // Truyền username xuống Service để check quyền
         return ResponseEntity.ok(channelService.updateChannel(id, channel, username));
     }
