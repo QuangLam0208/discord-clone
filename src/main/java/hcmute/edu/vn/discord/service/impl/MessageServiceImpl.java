@@ -203,13 +203,25 @@ public class MessageServiceImpl implements MessageService {
     // Các hàm reaction
     @Override
     public void addReaction(String messageId, String username, String emoji) {
-        Message msg = messageRepository.findById(messageId).orElseThrow(() -> new EntityNotFoundException("Message not found"));
+        Message msg = messageRepository.findById(messageId)
+                .orElseThrow(() -> new EntityNotFoundException("Message not found"));
         User user = userRepository.findByUsername(username).orElseThrow();
-        // Logic add reaction...
+
+        if (msg.getReactions() == null) {
+            msg.setReactions(new ArrayList<>());
+        }
+
+        boolean alreadyReacted = msg.getReactions().stream()
+                .anyMatch(r -> r.getUserId().equals(user.getId()) && r.getEmoji().equals(emoji));
+
+        if (alreadyReacted) {
+            // Do not add duplicate reaction from the same user with the same emoji
+            return;
+        }
+
         Message.Reaction r = new Message.Reaction();
         r.setUserId(user.getId());
         r.setEmoji(emoji);
-        if(msg.getReactions() == null) msg.setReactions(new ArrayList<>());
         msg.getReactions().add(r);
         messageRepository.save(msg);
     }
