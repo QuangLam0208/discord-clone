@@ -15,4 +15,6 @@ public interface DirectMessageRepository extends MongoRepository<DirectMessage, 
     List<DirectMessage> findByConversationIdOrderByCreatedAtAsc(String conversationId);
 
     Page<DirectMessage> findByConversationId(String conversationId, Pageable pageable);
+
+    Page<DirectMessage> findByConversationIdAndDeletedFalseOrderByCreatedAtDesc(String conversationId, Pageable pageable);
 }
