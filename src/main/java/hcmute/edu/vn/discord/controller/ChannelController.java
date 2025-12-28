@@ -24,9 +24,9 @@ public class ChannelController {
 
     private final ChannelService channelService;
     private final ServerService serverService;
-    private final CategoryService categoryService; // Thêm service này để map Category
+    private final CategoryService categoryService;
 
-    // --- HELPER CHECK AUTHENTICATION  ---
+    // Helper Check Auth
     private String validateAndGetUsername(Authentication authentication) {
         if (authentication == null) {
             throw new BadCredentialsException("Lỗi xác thực: Token không hợp lệ hoặc thiếu.");
@@ -37,37 +37,52 @@ public class ChannelController {
         return authentication.getName();
     }
 
-    // --- SỬA ĐỔI: Hàm createChannel ---
     @PostMapping
     public ResponseEntity<Channel> createChannel(
             @Valid @RequestBody ChannelRequest request,
-            Authentication authentication) { // Thêm Authentication để lấy người tạo
+            Authentication authentication) {
 
         String username = validateAndGetUsername(authentication);
 
-        // 1. Map DTO -> Entity
         Channel channel = new Channel();
         channel.setName(request.getName());
         channel.setIsPrivate(request.getIsPrivate());
         channel.setType(request.getType());
 
-        // 2. Map Server
-        // ServerService.getServerById trả về Entity luôn (đã throw exception bên trong nếu k thấy), nên không cần .orElseThrow ở đây
         if (request.getServerId() != null) {
             Server server = serverService.getServerById(request.getServerId());
             channel.setServer(server);
         }
 
-        // 3. Map Category
-        // CategoryService.getCategoryById trả về Optional, nên CẦN .orElseThrow
         if (request.getCategoryId() != null) {
             Category category = categoryService.getCategoryById(request.getCategoryId())
                     .orElseThrow(() -> new RuntimeException("Category not found"));
             channel.setCategory(category);
         }
 
-        // 4. Gọi Service với username người tạo
         return ResponseEntity.ok(channelService.createChannel(channel, username));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Channel> updateChannel(
+            @PathVariable Long id,
+            @RequestBody Channel channel,
+            Authentication authentication) { // Thêm Auth
+
+        String username = validateAndGetUsername(authentication);
+        // Truyền username xuống Service để check quyền
+        return ResponseEntity.ok(channelService.updateChannel(id, channel, username));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteChannel(
+            @PathVariable Long id,
+            Authentication authentication) { // Thêm Auth
+
+        String username = validateAndGetUsername(authentication);
+        // Truyền username xuống Service để check quyền
+        channelService.deleteChannel(id, username);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")
@@ -75,17 +90,6 @@ public class ChannelController {
         return channelService.getChannelById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
-    }
-
-    @PutMapping("/{id}")
-    public ResponseEntity<Channel> updateChannel(@PathVariable Long id, @RequestBody Channel channel) {
-        return ResponseEntity.ok(channelService.updateChannel(id, channel));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteChannel(@PathVariable Long id) {
-        channelService.deleteChannel(id);
-        return ResponseEntity.noContent().build();
     }
 
     @GetMapping

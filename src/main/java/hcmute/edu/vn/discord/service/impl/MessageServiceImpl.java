@@ -2,13 +2,13 @@ package hcmute.edu.vn.discord.service.impl;
 
 import hcmute.edu.vn.discord.dto.request.MessageRequest;
 import hcmute.edu.vn.discord.dto.response.MessageResponse;
+import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.jpa.Channel;
 import hcmute.edu.vn.discord.entity.jpa.ServerMember;
 import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.entity.mongo.Message;
 import hcmute.edu.vn.discord.repository.*;
 import hcmute.edu.vn.discord.service.MessageService;
-import hcmute.edu.vn.discord.entity.enums.EPermission;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MessageServiceImpl implements MessageService {
 
-
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final ChannelRepository channelRepository;
@@ -33,8 +32,6 @@ public class MessageServiceImpl implements MessageService {
 
     @Override
     public MessageResponse createMessage(Long channelId, String username, MessageRequest request) {
-
-
         // 1. Tìm User (Ném lỗi cụ thể)
         User sender = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user: " + username));
@@ -76,7 +73,7 @@ public class MessageServiceImpl implements MessageService {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found: " + channelId));
 
-        // ---> THÊM DÒNG NÀY ĐỂ CHECK QUYỀN <---
+        // ---> CHECK QUYỀN XEM TIN NHẮN (WHITELIST) <---
         checkChannelAccess(user, channel);
 
         return messageRepository.findByChannelId(channelId, pageable)
@@ -124,21 +121,31 @@ public class MessageServiceImpl implements MessageService {
         User requester = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user: " + username));
 
-        // Logic Check Quyền Xóa:
+        // Logic Check Quyền Xóa (Author OR Owner OR Manage Messages):
         boolean isAuthor = message.getSenderId().equals(requester.getId());
         boolean isServerOwner = false;
+        boolean hasManageMessages = false;
 
-        // Check Owner
         if (!isAuthor) {
             Channel channel = channelRepository.findById(message.getChannelId())
                     .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
-            // Lấy server owner
+
+            // Check Server Owner
             if (channel.getServer().getOwner().getId().equals(requester.getId())) {
                 isServerOwner = true;
             }
+
+            // Check Permission MANAGE_MESSAGES
+            ServerMember member = serverMemberRepository.findByServerIdAndUserId(channel.getServer().getId(), requester.getId()).orElse(null);
+            if (member != null) {
+                hasManageMessages = member.getRoles().stream()
+                        .flatMap(r -> r.getPermissions().stream())
+                        .anyMatch(p -> p.getCode().equals("MANAGE_MESSAGES")
+                                || p.getCode().equals(EPermission.ADMIN.getCode()));
+            }
         }
 
-        if (!isAuthor && !isServerOwner) {
+        if (!isAuthor && !isServerOwner && !hasManageMessages) {
             throw new AccessDeniedException("Bạn không có quyền xóa tin nhắn này");
         }
 
@@ -148,8 +155,7 @@ public class MessageServiceImpl implements MessageService {
         messageRepository.save(message);
     }
 
-    // --- HELPER CHECK QUYỀN ---
-    // Thêm hàm này vào cuối class MessageServiceImpl
+    // --- HELPER CHECK QUYỀN (Dùng chung) ---
     private void checkChannelAccess(User user, Channel channel) {
         Long serverId = channel.getServer().getId();
 
@@ -244,7 +250,4 @@ public class MessageServiceImpl implements MessageService {
                 .replyTo(replyToResponse)
                 .build();
     }
-
-
-
 }

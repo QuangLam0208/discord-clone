@@ -7,8 +7,8 @@ import java.util.Optional;
 
 public interface ChannelService {
     Channel createChannel(Channel channel, String creatorUsername);
-    Channel updateChannel(Long id, Channel channel);
-    void deleteChannel(Long id);
+    Channel updateChannel(Long id, Channel updatedChannel, String username);
+    void deleteChannel(Long id, String username);
     Optional<Channel> getChannelById(Long id);
     List<Channel> getAllChannels();
     List<Channel> getChannelsByServer(Long serverId);
