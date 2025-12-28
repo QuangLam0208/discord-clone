@@ -66,11 +66,6 @@ public class DirectMessageServiceImpl implements DirectMessageService {
             throw new IllegalArgumentException("User is not the sender of the message");
         }
 
-        // Added specific error messages for debugging purposes.
-        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
-            throw new IllegalArgumentException("[editMessage] Message content cannot be empty or blank");
-        }
-
         message.setContent(request.getContent());
         message.setEdited(true);
         message.setUpdatedAt(new Date());
