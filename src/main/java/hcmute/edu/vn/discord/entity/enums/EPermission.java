@@ -12,6 +12,7 @@ public enum EPermission {
     // Channel
     MANAGE_CHANNELS("Create/update/delete channels"),
     SEND_MESSAGES("Send messages"),
+    MANAGE_MESSAGES("Manage messages"),
 
     // Moderation
     KICK_MEMBERS("Kick members"),
