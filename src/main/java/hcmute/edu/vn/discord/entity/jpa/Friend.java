@@ -4,6 +4,8 @@ import hcmute.edu.vn.discord.entity.enums.FriendStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "friends", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"requester_id", "receiver_id"})
@@ -24,5 +26,11 @@ public class Friend {
 
     @Enumerated(EnumType.STRING)
     private FriendStatus status; // Enum: PENDING, ACCEPTED, BLOCKED
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @Column(name = "responded_at")
+    private LocalDateTime respondedAt;
 }
 

@@ -113,7 +113,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleForbidden(AccessDeniedException ex,
                                                          HttpServletRequest request) {
-        return buildError(HttpStatus.FORBIDDEN, "Không có quyền truy cập", request);
+        String msg = (ex.getMessage() != null && !ex.getMessage().isBlank())
+                ? ex.getMessage()
+                : "Không có quyền truy cập";
+        return buildError(HttpStatus.FORBIDDEN, msg, request);
     }
 
     @ExceptionHandler(IllegalStateException.class)
