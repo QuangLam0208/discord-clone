@@ -1,16 +1,24 @@
 package hcmute.edu.vn.discord.service;
 
-import hcmute.edu.vn.discord.entity.mongo.DirectMessage;
+import hcmute.edu.vn.discord.dto.request.DirectMessageRequest;
+import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
 public interface DirectMessageService {
-    // Gửi tin nhắn giữa 2 user
-    DirectMessage sendMessage(Long senderId, Long receiverId, String content);
 
-    // Lấy lịch sử chat giữa 2 user
-    List<DirectMessage> getConversation(Long userId1, Long userId2);
+    DirectMessageResponse sendMessage(Long senderId, DirectMessageRequest request);
 
-    // Lấy danh sách user đã chat với user hiện tại
-    List<Long> getChatPartners(Long userId);
+    List<DirectMessageResponse> getMessages(String conversationId);
+
+    DirectMessageResponse editMessage(String messageId, Long userId, DirectMessageRequest request);
+
+    void deleteMessage(String messageId, Long userId);
+
+    void addReaction(String messageId, Long userId, String emoji);
+
+    void removeReaction(String messageId, Long userId);
+
+    List<DirectMessageResponse> getMessages(Long userId, String conversationId, Pageable pageable);
 }
