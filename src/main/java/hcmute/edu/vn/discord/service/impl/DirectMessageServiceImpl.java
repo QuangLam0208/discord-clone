@@ -108,6 +108,10 @@ public class DirectMessageServiceImpl implements DirectMessageService {
             throw new IllegalStateException("Edit time limit exceeded (48 hours)");
         }
 
+        // Validate new content (must not be null or blank)
+        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+            throw new IllegalArgumentException("Message content cannot be empty");
+        }
         message.setContent(request.getContent());
         message.setEdited(true);
         message.setUpdatedAt(new Date());
