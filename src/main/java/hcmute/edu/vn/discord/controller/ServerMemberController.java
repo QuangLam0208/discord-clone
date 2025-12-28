@@ -8,14 +8,14 @@ import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.service.ServerMemberService;
 import hcmute.edu.vn.discord.service.ServerService;
 import hcmute.edu.vn.discord.service.UserService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Set;
@@ -33,10 +33,10 @@ public class ServerMemberController {
 
     private User getCurrentUser(Authentication auth) {
         if (auth == null || auth.getName() == null) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+            throw new AccessDeniedException("Not authenticated");
         }
         return userService.findByUsername(auth.getName())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
     }
 
     private boolean isOwner(User user, Long serverId) {
@@ -49,6 +49,7 @@ public class ServerMemberController {
     public ResponseEntity<ServerMemberResponse> joinServer(@PathVariable Long serverId, Authentication auth) {
         User user = getCurrentUser(auth);
         ServerMember member = serverMemberService.addMemberToServer(serverId, user.getId());
+        logger.info("User {} joined server {}", user.getUsername(), serverId);
         return ResponseEntity.ok(ServerMemberResponse.from(member));
     }
 
@@ -57,9 +58,10 @@ public class ServerMemberController {
                                                           Authentication auth) {
         User current = getCurrentUser(auth);
         if (!canManageMembers(current, serverId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            throw new AccessDeniedException("Không có quyền quản lý thành viên");
         }
         ServerMember member = serverMemberService.addMemberToServer(serverId, userId);
+        logger.info("User {} added user {} to server {}", current.getUsername(), userId, serverId);
         return ResponseEntity.ok(ServerMemberResponse.from(member));
     }
 
@@ -67,7 +69,7 @@ public class ServerMemberController {
     public ResponseEntity<List<ServerMemberResponse>> listMembers(@PathVariable Long serverId, Authentication auth) {
         User current = getCurrentUser(auth);
         if (!serverMemberService.isMember(serverId, current.getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            throw new AccessDeniedException("Không có quyền xem danh sách thành viên");
         }
         List<ServerMemberResponse> members = serverMemberService.getMembersByServerId(serverId)
                 .stream()
@@ -77,24 +79,21 @@ public class ServerMemberController {
     }
 
     @GetMapping("/{userId}/exists")
-    public ResponseEntity<?> checkMember(@PathVariable Long serverId, @PathVariable Long userId) {
-        try {
-            boolean exists = serverMemberService.isMember(serverId, userId);
-            return ResponseEntity.ok(exists);
-        } catch (Exception e) {
-            logger.error("Lỗi khi check member {} on server {}", userId, serverId, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi server: " + e.getMessage());
-        }
+    public ResponseEntity<Boolean> checkMember(@PathVariable Long serverId, @PathVariable Long userId) {
+        boolean exists = serverMemberService.isMember(serverId, userId);
+        return ResponseEntity.ok(exists);
     }
 
     @DeleteMapping("/{userId}")
-    public ResponseEntity<?> removeMember(@PathVariable Long serverId, @PathVariable Long userId, Authentication auth) {
+    public ResponseEntity<?> removeMember(@PathVariable Long serverId, @PathVariable Long userId,
+                                          Authentication auth) {
         User current = getCurrentUser(auth);
+        // Người có quyền (owner/quyền quản trị) được xóa người khác; người thường chỉ tự rời
         if (!canManageMembers(current, serverId) && !current.getId().equals(userId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            throw new AccessDeniedException("Không có quyền xóa thành viên");
         }
         boolean removed = serverMemberService.removeMember(serverId, userId);
-        if (!removed) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        if (!removed) throw new EntityNotFoundException("Member not found");
         return ResponseEntity.noContent().build();
     }
 
