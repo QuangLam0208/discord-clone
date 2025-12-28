@@ -91,7 +91,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
 
     @Override
     public void removeReaction(String messageId, Long userId) {
-        // Logic for removing a reaction
+        throw new UnsupportedOperationException("Removing reactions is not yet supported.");
     }
 
     @Override
