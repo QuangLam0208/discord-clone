@@ -37,8 +37,11 @@ public class DirectMessageController {
 
     @GetMapping("/conversation/{conversationId}")
     public ResponseEntity<List<DirectMessageResponse>> getMessages(
-            @PathVariable String conversationId) {
-
+            @PathVariable String conversationId,
+            @AuthenticationPrincipal UserDetailsImpl user) {
+        if (user == null || user.getId() == null) {
+            throw new IllegalArgumentException("User is null or unauthenticated");
+        }
         return ResponseEntity.ok(
                 directMessageService.getMessages(conversationId)
         );
