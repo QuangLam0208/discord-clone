@@ -9,7 +9,7 @@ import hcmute.edu.vn.discord.repository.DirectMessageRepository;
 import hcmute.edu.vn.discord.service.DirectMessageService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -25,6 +25,10 @@ public class DirectMessageServiceImpl implements DirectMessageService {
 
     @Override
     public DirectMessageResponse sendMessage(Long senderId, DirectMessageRequest request) {
+        if (senderId == null || request.getReceiverId() == null) {
+            throw new IllegalArgumentException("Sender or receiver cannot be null");
+        }
+
         if (senderId.equals(request.getReceiverId())) {
             throw new IllegalArgumentException("Không thể nhắn tin cho chính mình");
         }
@@ -49,9 +53,15 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     }
 
     @Override
-    public List<DirectMessageResponse> getMessages(String conversationId) {
-        return messageRepo
-                .findByConversationIdOrderByCreatedAtAsc(conversationId)
+    public List<DirectMessageResponse> getMessages(String conversationId, Long userId) {
+        Conversation conversation = conversationRepo.findById(conversationId)
+                .orElseThrow(() -> new EntityNotFoundException("Conversation not found"));
+
+        if (!conversation.getUser1Id().equals(userId) && !conversation.getUser2Id().equals(userId)) {
+            throw new AccessDeniedException("User does not have permission to access this conversation");
+        }
+
+        return messageRepo.findByConversationIdOrderByCreatedAtAsc(conversationId)
                 .stream()
                 .map(this::toResponse)
                 .toList();
@@ -66,12 +76,12 @@ public class DirectMessageServiceImpl implements DirectMessageService {
             throw new IllegalArgumentException("User is not the sender of the message");
         }
 
-        // Added specific error messages for debugging purposes.
-        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+        String newContent = request.getContent();
+        if (newContent == null || newContent.trim().isEmpty()) {
             throw new IllegalArgumentException("[editMessage] Message content cannot be empty or blank");
         }
 
-        message.setContent(request.getContent());
+        message.setContent(newContent);
         message.setEdited(true);
         message.setUpdatedAt(new Date());
 
@@ -81,23 +91,41 @@ public class DirectMessageServiceImpl implements DirectMessageService {
 
     @Override
     public void deleteMessage(String messageId, Long userId) {
-        // Logic for deleting a message
+        DirectMessage message = messageRepo.findById(messageId)
+                .orElseThrow(() -> new EntityNotFoundException("Message not found"));
+
+        if (!message.getSenderId().equals(userId)) {
+            throw new AccessDeniedException("You are not allowed to delete this message");
+        }
+
+        if (message.isDeleted()) {
+            return; // Message already deleted
+        }
+
+        message.setDeleted(true);
+        message.setUpdatedAt(new Date());
+        messageRepo.save(message);
     }
 
     @Override
     public void addReaction(String messageId, Long userId, String emoji) {
-        // Logic for adding a reaction
+        DirectMessage message = messageRepo.findById(messageId)
+                .orElseThrow(() -> new EntityNotFoundException("Message not found"));
+
+        message.getReactions().put(userId, emoji);
+        message.setUpdatedAt(new Date());
+        messageRepo.save(message);
     }
 
     @Override
     public void removeReaction(String messageId, Long userId) {
-        // Logic for removing a reaction
-    }
+        DirectMessage message = messageRepo.findById(messageId)
+                .orElseThrow(() -> new EntityNotFoundException("Message not found"));
 
-    @Override
-    public List<DirectMessageResponse> getMessages(Long userId, String conversationId, Pageable pageable) {
-        // Logic for getting messages with pagination
-        return null;
+        if (message.getReactions().remove(userId) != null) {
+            message.setUpdatedAt(new Date());
+            messageRepo.save(message);
+        }
     }
 
     // ===== INTERNAL =====
@@ -128,6 +156,10 @@ public class DirectMessageServiceImpl implements DirectMessageService {
                 .receiverId(m.getReceiverId())
                 .content(m.getContent())
                 .createdAt(m.getCreatedAt())
+                .edited(m.isEdited())
+                .deleted(m.isDeleted())
+                .reactions(m.getReactions())
+                .updatedAt(m.getUpdatedAt())
                 .build();
     }
 }
