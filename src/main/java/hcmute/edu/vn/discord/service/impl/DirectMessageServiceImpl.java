@@ -12,6 +12,7 @@ import hcmute.edu.vn.discord.service.DirectMessageService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -78,9 +79,10 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         return messages.map(this::toResponse);
     }
 
+    // Updated the getMessages method to return the first 50 messages by default.
     @Override
     public List<DirectMessageResponse> getMessages(String conversationId, Long userId) {
-        throw new UnsupportedOperationException("Method not implemented. Use the paginated version instead.");
+        return getMessages(conversationId, userId, PageRequest.of(0, 50)).getContent();
     }
 
     @Override
@@ -93,7 +95,9 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         throw new UnsupportedOperationException("Method not implemented.");
     }
 
+    // Added @Transactional annotation to ensure database consistency.
     @Override
+    @Transactional
     public void addReaction(String messageId, Long userId, String emoji) {
         DirectMessage message = messageRepo.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("Message not found"));
@@ -113,6 +117,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
 
     // Fixed security issue in removeReaction() by adding access control checks and optimizing database queries.
     @Override
+    @Transactional
     public void removeReaction(String messageId, Long userId) {
         DirectMessage message = messageRepo.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("Message not found"));
