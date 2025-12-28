@@ -96,8 +96,19 @@ public class DirectMessageServiceImpl implements DirectMessageService {
 
     @Override
     public List<DirectMessageResponse> getMessages(Long userId, String conversationId, Pageable pageable) {
-        // Logic for getting messages with pagination
-        return null;
+        // Delegate to the existing method and apply in-memory pagination
+        List<DirectMessageResponse> allMessages = getMessages(conversationId);
+
+        int pageNumber = pageable.getPageNumber();
+        int pageSize = pageable.getPageSize();
+        int fromIndex = pageNumber * pageSize;
+
+        if (fromIndex >= allMessages.size()) {
+            return List.of();
+        }
+
+        int toIndex = Math.min(fromIndex + pageSize, allMessages.size());
+        return allMessages.subList(fromIndex, toIndex);
     }
 
     // ===== INTERNAL =====
