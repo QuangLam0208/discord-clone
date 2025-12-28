@@ -85,14 +85,56 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         return getMessages(conversationId, userId, PageRequest.of(0, 50)).getContent();
     }
 
+    // Implemented the editMessage and deleteMessage methods.
     @Override
+    @Transactional
     public DirectMessageResponse editMessage(String messageId, Long userId, EditMessageRequest request) {
-        throw new UnsupportedOperationException("Method not implemented.");
+        DirectMessage message = messageRepo.findById(messageId)
+                .orElseThrow(() -> new EntityNotFoundException("Message not found"));
+
+        // Check ownership
+        if (!message.getSenderId().equals(userId)) {
+            throw new AccessDeniedException("Not your message");
+        }
+
+        // Check if deleted
+        if (message.isDeleted()) {
+            throw new IllegalStateException("Cannot edit deleted message");
+        }
+
+        // Check time limit (48 hours)
+        long hoursSinceCreation = (new Date().getTime() - message.getCreatedAt().getTime()) / (1000 * 60 * 60);
+        if (hoursSinceCreation > 48) {
+            throw new IllegalStateException("Edit time limit exceeded (48 hours)");
+        }
+
+        message.setContent(request.getContent());
+        message.setEdited(true);
+        message.setUpdatedAt(new Date());
+
+        return toResponse(messageRepo.save(message));
     }
 
     @Override
+    @Transactional
     public void deleteMessage(String messageId, Long userId) {
-        throw new UnsupportedOperationException("Method not implemented.");
+        DirectMessage message = messageRepo.findById(messageId)
+                .orElseThrow(() -> new EntityNotFoundException("Message not found"));
+
+        if (!message.getSenderId().equals(userId)) {
+            throw new AccessDeniedException("Not your message");
+        }
+
+        if (message.isDeleted()) {
+            return; // Idempotent
+        }
+
+        // Soft delete: mark as deleted and clear sensitive data
+        message.setDeleted(true);
+        message.setContent("[Message deleted]"); // Clear content for privacy
+        message.setReactions(new HashMap<>()); // Clear reactions
+        message.setUpdatedAt(new Date());
+        messageRepo.save(message);
     }
 
     // Added @Transactional annotation to ensure database consistency.
