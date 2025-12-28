@@ -140,7 +140,7 @@ public class MessageServiceImpl implements MessageService {
             if (member != null) {
                 hasManageMessages = member.getRoles().stream()
                         .flatMap(r -> r.getPermissions().stream())
-                        .anyMatch(p -> p.getCode().equals("MANAGE_MESSAGES")
+                        .anyMatch(p -> p.getCode().equals(EPermission.MANAGE_MESSAGES.getCode())
                                 || p.getCode().equals(EPermission.ADMIN.getCode()));
             }
         }
