@@ -176,7 +176,11 @@ public class MessageServiceImpl implements MessageService {
         // --- LOGIC KÊNH PRIVATE ---
 
         // A. Owner Server luôn được xem
-        if (channel.getServer().getOwner().getId().equals(user.getId())) return;
+        if (channel.getServer().getOwner() != null
+                && channel.getServer().getOwner().getId() != null
+                && channel.getServer().getOwner().getId().equals(user.getId())) {
+            return;
+        }
 
         // B. Admin luôn được xem (Check permission ADMIN)
         boolean isAdmin = member.getRoles().stream()
