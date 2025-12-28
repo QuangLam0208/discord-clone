@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ChannelService {
-    Channel createChannel(Channel channel);
+    Channel createChannel(Channel channel, String creatorUsername);
     Channel updateChannel(Long id, Channel channel);
     void deleteChannel(Long id);
     Optional<Channel> getChannelById(Long id);

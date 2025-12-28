@@ -3,14 +3,13 @@ package hcmute.edu.vn.discord.service.impl;
 import hcmute.edu.vn.discord.dto.request.MessageRequest;
 import hcmute.edu.vn.discord.dto.response.MessageResponse;
 import hcmute.edu.vn.discord.entity.jpa.Channel;
-import hcmute.edu.vn.discord.entity.jpa.Server;
+import hcmute.edu.vn.discord.entity.jpa.ServerMember;
 import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.entity.mongo.Message;
-import hcmute.edu.vn.discord.repository.ChannelRepository;
-import hcmute.edu.vn.discord.repository.MessageRepository;
-import hcmute.edu.vn.discord.repository.ServerRepository;
-import hcmute.edu.vn.discord.repository.UserRepository;
+import hcmute.edu.vn.discord.repository.*;
 import hcmute.edu.vn.discord.service.MessageService;
+import hcmute.edu.vn.discord.entity.enums.EPermission;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -25,36 +24,61 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class MessageServiceImpl implements MessageService {
 
+
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
     private final ChannelRepository channelRepository;
-    private final ServerRepository serverRepository; // Dùng để tìm chủ server
+    private final ServerRepository serverRepository;
+    private final ServerMemberRepository serverMemberRepository;
 
     @Override
     public MessageResponse createMessage(Long channelId, String username, MessageRequest request) {
-        User sender = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Validate: Không được để trống cả content lẫn ảnh
-        if ((request.getContent() == null || request.getContent().trim().isEmpty())
-                && (request.getAttachments() == null || request.getAttachments().isEmpty())) {
-            throw new IllegalArgumentException("Tin nhắn phải có nội dung hoặc ảnh");
+
+        // 1. Tìm User (Ném lỗi cụ thể)
+        User sender = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user: " + username));
+
+        // 2. Tìm Channel
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy kênh với ID: " + channelId));
+
+        // 3. CHECK QUYỀN TRUY CẬP (Bảo mật)
+        checkChannelAccess(sender, channel);
+
+        // 4. Validate: Không được để trống cả content lẫn ảnh
+        boolean hasContent = request.getContent() != null && !request.getContent().trim().isEmpty();
+        boolean hasAttachments = request.getAttachments() != null && !request.getAttachments().isEmpty();
+
+        if (!hasContent && !hasAttachments) {
+            throw new IllegalArgumentException("Tin nhắn phải có nội dung hoặc ảnh đính kèm");
         }
 
         Message message = new Message();
         message.setChannelId(channelId);
         message.setSenderId(sender.getId());
-        message.setContent(request.getContent());
+        message.setContent(request.getContent() != null ? request.getContent().trim() : null);
         message.setReplyToId(request.getReplyToId()); // Lưu ID tin nhắn được reply
         message.setAttachments(request.getAttachments() != null ? request.getAttachments() : new ArrayList<>());
         message.setCreatedAt(new Date());
+        message.setDeleted(false);
+        message.setIsEdited(false);
 
         Message saved = messageRepository.save(message);
         return mapToResponse(saved, sender);
     }
 
     @Override
-    public List<MessageResponse> getMessagesByChannel(Long channelId, Pageable pageable) {
+    public List<MessageResponse> getMessagesByChannel(Long channelId, String username, Pageable pageable) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
+
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new EntityNotFoundException("Channel not found: " + channelId));
+
+        // ---> THÊM DÒNG NÀY ĐỂ CHECK QUYỀN <---
+        checkChannelAccess(user, channel);
+
         return messageRepository.findByChannelId(channelId, pageable)
                 .stream()
                 .map(msg -> {
@@ -67,20 +91,27 @@ public class MessageServiceImpl implements MessageService {
     @Override
     public MessageResponse editMessage(String messageId, String username, MessageRequest request) {
         Message message = messageRepository.findById(messageId)
-                .orElseThrow(() -> new RuntimeException("Message not found"));
-        User user = userRepository.findByUsername(username).orElseThrow();
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tin nhắn với ID: " + messageId));
 
-        // 1. Check quyền chính chủ
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user: " + username));
+
+        // 1. Validate nội dung sửa (Không được rỗng hoặc toàn dấu cách)
+        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+            throw new IllegalArgumentException("Nội dung chỉnh sửa không được để trống");
+        }
+
+        // 2. Check quyền chính chủ
         if (!message.getSenderId().equals(user.getId())) {
             throw new AccessDeniedException("Bạn không có quyền sửa tin nhắn này");
         }
 
-        // 2. FIX LOGIC: Chặn sửa tin nhắn đã bị xóa
+        // 3. FIX LOGIC: Chặn sửa tin nhắn đã bị xóa
         if (Boolean.TRUE.equals(message.getDeleted())) {
             throw new IllegalArgumentException("Không thể chỉnh sửa tin nhắn đã bị xóa");
         }
 
-        message.setContent(request.getContent());
+        message.setContent(request.getContent().trim());
         message.setIsEdited(true); // Đánh dấu đã sửa
         return mapToResponse(messageRepository.save(message), user);
     }
@@ -88,22 +119,21 @@ public class MessageServiceImpl implements MessageService {
     @Override
     public void deleteMessage(String messageId, String username) {
         Message message = messageRepository.findById(messageId)
-                .orElseThrow(() -> new RuntimeException("Message not found"));
-        User requester = userRepository.findByUsername(username).orElseThrow();
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tin nhắn với ID: " + messageId));
+
+        User requester = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user: " + username));
 
         // Logic Check Quyền Xóa:
-        // 1. Chính chủ tin nhắn
         boolean isAuthor = message.getSenderId().equals(requester.getId());
-
-        // 2. Chủ Server (Admin) cũng được quyền xóa
         boolean isServerOwner = false;
+
+        // Check Owner
         if (!isAuthor) {
             Channel channel = channelRepository.findById(message.getChannelId())
-                    .orElseThrow(() -> new RuntimeException("Channel not found"));
-            Server server = serverRepository.findById(channel.getServer().getId()) // Lấy Server từ Channel
-                    .orElseThrow(() -> new RuntimeException("Server not found"));
-
-            if (server.getOwner().getId().equals(requester.getId())) {
+                    .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
+            // Lấy server owner
+            if (channel.getServer().getOwner().getId().equals(requester.getId())) {
                 isServerOwner = true;
             }
         }
@@ -118,25 +148,82 @@ public class MessageServiceImpl implements MessageService {
         messageRepository.save(message);
     }
 
-    // Các hàm reaction giữ nguyên...
-    @Override
-    public void addReaction(String messageId, String username, String emoji) { /*...*/ }
-    @Override
-    public void removeReaction(String messageId, String username, String emoji) { /*...*/ }
+    // --- HELPER CHECK QUYỀN ---
+    // Thêm hàm này vào cuối class MessageServiceImpl
+    private void checkChannelAccess(User user, Channel channel) {
+        Long serverId = channel.getServer().getId();
 
-    // Helper mapToResponse nâng cao (Xử lý Reply)
+        // 1. Phải là thành viên Server
+        ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, user.getId())
+                .orElseThrow(() -> new AccessDeniedException("Bạn chưa tham gia Server này!"));
+
+        // 2. Nếu bị Ban thì chặn
+        if (Boolean.TRUE.equals(member.getIsBanned())) {
+            throw new AccessDeniedException("Bạn đã bị cấm khỏi server này.");
+        }
+
+        // 3. Nếu là kênh Public -> Cho qua
+        if (!Boolean.TRUE.equals(channel.getIsPrivate())) {
+            return;
+        }
+
+        // --- LOGIC KÊNH PRIVATE ---
+
+        // A. Owner Server luôn được xem
+        if (channel.getServer().getOwner().getId().equals(user.getId())) return;
+
+        // B. Admin luôn được xem (Check permission ADMIN)
+        boolean isAdmin = member.getRoles().stream()
+                .flatMap(r -> r.getPermissions().stream())
+                .anyMatch(p -> p.getCode().equals(EPermission.ADMIN.getCode()));
+        if (isAdmin) return;
+
+        // C. Check Whitelist (User hoặc Role được add vào kênh)
+        boolean isUserAllowed = channel.getAllowedMembers().stream()
+                .anyMatch(m -> m.getId().equals(member.getId()));
+
+        boolean isRoleAllowed = member.getRoles().stream()
+                .anyMatch(role -> channel.getAllowedRoles().contains(role));
+
+        if (!isUserAllowed && !isRoleAllowed) {
+            throw new AccessDeniedException("Đây là kênh riêng tư, bạn không có quyền truy cập.");
+        }
+    }
+
+    // Các hàm reaction
+    @Override
+    public void addReaction(String messageId, String username, String emoji) {
+        Message msg = messageRepository.findById(messageId).orElseThrow(() -> new EntityNotFoundException("Message not found"));
+        User user = userRepository.findByUsername(username).orElseThrow();
+        // Logic add reaction...
+        Message.Reaction r = new Message.Reaction();
+        r.setUserId(user.getId());
+        r.setEmoji(emoji);
+        if(msg.getReactions() == null) msg.setReactions(new ArrayList<>());
+        msg.getReactions().add(r);
+        messageRepository.save(msg);
+    }
+
+    @Override
+    public void removeReaction(String messageId, String username, String emoji) {
+        Message msg = messageRepository.findById(messageId).orElseThrow(() -> new EntityNotFoundException("Message not found"));
+        User user = userRepository.findByUsername(username).orElseThrow();
+        if(msg.getReactions() != null) {
+            msg.getReactions().removeIf(r -> r.getUserId().equals(user.getId()) && r.getEmoji().equals(emoji));
+            messageRepository.save(msg);
+        }
+    }
+
+    // Helper mapToResponse Xử lý Reply
     private MessageResponse mapToResponse(Message msg, User sender) {
-        // Nếu tin nhắn này có reply tin khác -> Tìm tin gốc để hiển thị preview
         MessageResponse replyToResponse = null;
         if (msg.getReplyToId() != null) {
-            // Tìm tin nhắn gốc (chấp nhận null nếu tin gốc bị xóa cứng khỏi DB)
             Message originalMsg = messageRepository.findById(msg.getReplyToId()).orElse(null);
             if (originalMsg != null) {
-                // Chỉ cần lấy thông tin cơ bản của tin gốc
                 User originalSender = userRepository.findById(originalMsg.getSenderId()).orElse(null);
                 replyToResponse = MessageResponse.builder()
                         .id(originalMsg.getId())
-                        .content(originalMsg.getDeleted() ? "Tin nhắn đã bị xóa" : originalMsg.getContent())
+                        .content(Boolean.TRUE.equals(originalMsg.getDeleted()) ? "Tin nhắn đã bị xóa" : originalMsg.getContent())
                         .senderName(originalSender != null ? originalSender.getDisplayName() : "Unknown")
                         .build();
             }
@@ -145,17 +232,19 @@ public class MessageServiceImpl implements MessageService {
         return MessageResponse.builder()
                 .id(msg.getId())
                 .channelId(msg.getChannelId())
-                // Nếu đã xóa thì ẩn nội dung
                 .content(Boolean.TRUE.equals(msg.getDeleted()) ? "Tin nhắn đã bị xóa" : msg.getContent())
                 .createdAt(msg.getCreatedAt())
                 .deleted(Boolean.TRUE.equals(msg.getDeleted()))
                 .isEdited(Boolean.TRUE.equals(msg.getIsEdited()))
                 .senderId(msg.getSenderId())
                 .senderName(sender != null ? sender.getDisplayName() : "Unknown User")
-                .senderAvatar(sender != null ? sender.getAvatarUrl() : null) // Giả sử User Entity có avatarUrl
+                .senderAvatar(sender != null ? sender.getAvatarUrl() : null)
                 .reactions(msg.getReactions())
-                .attachments(msg.getAttachments()) // Trả về list ảnh
-                .replyTo(replyToResponse) // Trả về object reply
+                .attachments(msg.getAttachments())
+                .replyTo(replyToResponse)
                 .build();
     }
+
+
+
 }

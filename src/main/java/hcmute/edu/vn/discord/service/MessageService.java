@@ -10,8 +10,7 @@ public interface MessageService {
     MessageResponse createMessage(Long channelId, String username, MessageRequest request);
 
     // 2. Lấy danh sách tin nhắn (Đã bao gồm logic map ReplyTo và Attachments trong response)
-    List<MessageResponse> getMessagesByChannel(Long channelId, Pageable pageable);
-
+    List<MessageResponse> getMessagesByChannel(Long channelId, String username, Pageable pageable);
     // 3. Sửa tin nhắn (Đã có logic chặn sửa tin đã xóa)
     MessageResponse editMessage(String messageId, String username, MessageRequest request);
 

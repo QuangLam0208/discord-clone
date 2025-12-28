@@ -9,6 +9,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,6 +23,17 @@ public class MessageController {
 
     private final MessageService messageService;
 
+    // --- HELPER CHECK AUTHENTICATION  ---
+    private String validateAndGetUsername(Authentication authentication) {
+        if (authentication == null) {
+            throw new BadCredentialsException("Lỗi xác thực: Token không hợp lệ hoặc thiếu.");
+        }
+        if (!authentication.isAuthenticated() || authentication instanceof AnonymousAuthenticationToken) {
+            throw new BadCredentialsException("Người dùng chưa đăng nhập.");
+        }
+        return authentication.getName();
+    }
+
     /**
      * 1. Lấy danh sách tin nhắn trong Channel (có phân trang)
      * URL: GET /api/channels/{channelId}/messages?page=0&size=20
@@ -29,17 +42,20 @@ public class MessageController {
     public ResponseEntity<List<MessageResponse>> getMessagesByChannel(
             @PathVariable Long channelId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") int size,
+            Authentication authentication) { // 1. Đảm bảo có Authentication
 
-        // Sắp xếp tin nhắn mới nhất lên đầu (createdAt DESC)
+        // 2. Lấy username (sử dụng hàm helper validateAndGetUsername nếu đã có, hoặc tự check null)
+        String username = validateAndGetUsername(authentication);
+
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return ResponseEntity.ok(messageService.getMessagesByChannel(channelId, pageable));
+
+        return ResponseEntity.ok(messageService.getMessagesByChannel(channelId, username, pageable));
     }
 
     /**
      * 2. Gửi tin nhắn mới vào Channel
      * URL: POST /api/channels/{channelId}/messages
-     * Body: { "content": "hello", "replyToId": "...", "attachments": ["url1", "url2"] }
      */
     @PostMapping("/channels/{channelId}/messages")
     public ResponseEntity<MessageResponse> createMessage(
@@ -47,7 +63,8 @@ public class MessageController {
             @Valid @RequestBody MessageRequest request,
             Authentication authentication) {
 
-        return ResponseEntity.ok(messageService.createMessage(channelId, authentication.getName(), request));
+        String username = validateAndGetUsername(authentication);
+        return ResponseEntity.ok(messageService.createMessage(channelId, username, request));
     }
 
     /**
@@ -60,7 +77,8 @@ public class MessageController {
             @Valid @RequestBody MessageRequest request,
             Authentication authentication) {
 
-        return ResponseEntity.ok(messageService.editMessage(id, authentication.getName(), request));
+        String username = validateAndGetUsername(authentication);
+        return ResponseEntity.ok(messageService.editMessage(id, username, request));
     }
 
     /**
@@ -72,7 +90,8 @@ public class MessageController {
             @PathVariable String id,
             Authentication authentication) {
 
-        messageService.deleteMessage(id, authentication.getName());
+        String username = validateAndGetUsername(authentication);
+        messageService.deleteMessage(id, username);
         return ResponseEntity.noContent().build();
     }
 
@@ -86,7 +105,7 @@ public class MessageController {
             @RequestParam String emoji,
             Authentication authentication) {
 
-        messageService.addReaction(id, authentication.getName(), emoji);
+        messageService.addReaction(id, validateAndGetUsername(authentication), emoji);
         return ResponseEntity.ok().build();
     }
 
@@ -100,7 +119,7 @@ public class MessageController {
             @RequestParam String emoji,
             Authentication authentication) {
 
-        messageService.removeReaction(id, authentication.getName(), emoji);
+        messageService.removeReaction(id, validateAndGetUsername(authentication), emoji);
         return ResponseEntity.ok().build();
     }
 }
