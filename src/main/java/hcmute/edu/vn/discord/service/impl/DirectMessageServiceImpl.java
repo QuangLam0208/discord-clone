@@ -3,9 +3,9 @@ package hcmute.edu.vn.discord.service.impl;
 import hcmute.edu.vn.discord.dto.request.DirectMessageRequest;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
 import hcmute.edu.vn.discord.entity.mongo.DirectMessage;
-import hcmute.edu.vn.discord.mongo.Conversation;
+import hcmute.edu.vn.discord.entity.mongo.Conversation;
+import hcmute.edu.vn.discord.repository.ConversationRepository;
 import hcmute.edu.vn.discord.repository.DirectMessageRepository;
-import hcmute.edu.vn.discord.repository.mongo.ConversationRepository;
 import hcmute.edu.vn.discord.service.DirectMessageService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -64,6 +64,11 @@ public class DirectMessageServiceImpl implements DirectMessageService {
 
         if (!message.getSenderId().equals(userId)) {
             throw new IllegalArgumentException("User is not the sender of the message");
+        }
+
+        // Added specific error messages for debugging purposes.
+        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+            throw new IllegalArgumentException("[editMessage] Message content cannot be empty or blank");
         }
 
         message.setContent(request.getContent());

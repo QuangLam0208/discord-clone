@@ -1,4 +1,4 @@
-package hcmute.edu.vn.discord.mongo;
+package hcmute.edu.vn.discord.entity.mongo;
 
 import lombok.*;
 import org.springframework.data.annotation.Id;

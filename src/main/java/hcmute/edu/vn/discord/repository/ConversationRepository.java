@@ -1,6 +1,6 @@
-package hcmute.edu.vn.discord.repository.mongo;
+package hcmute.edu.vn.discord.repository;
 
-import hcmute.edu.vn.discord.mongo.Conversation;
+import hcmute.edu.vn.discord.entity.mongo.Conversation;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 

@@ -1,6 +1,6 @@
 package hcmute.edu.vn.discord.controller;
 
-import hcmute.edu.vn.discord.dto.request.SendDirectMessageRequest;
+import hcmute.edu.vn.discord.dto.request.DirectMessageRequest;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
 import hcmute.edu.vn.discord.service.DirectMessageService;
 import jakarta.validation.Valid;
@@ -21,7 +21,10 @@ public class DirectMessageController {
     @PostMapping
     public ResponseEntity<DirectMessageResponse> sendMessage(
             Principal principal,
-            @Valid @RequestBody SendDirectMessageRequest request) {
+            @Valid @RequestBody DirectMessageRequest request) {
+        if (principal == null || principal.getName() == null) {
+            throw new IllegalArgumentException("Principal is null or unauthenticated");
+        }
         Long senderId = Long.valueOf(principal.getName());
         return ResponseEntity.ok(
                 directMessageService.sendMessage(senderId, request)
