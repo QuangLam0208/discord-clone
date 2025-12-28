@@ -45,4 +45,16 @@ public class Channel {
             inverseJoinColumns = @JoinColumn(name = "member_id")
     )
     private Set<ServerMember> allowedMembers = new HashSet<>();
+
+    public Set<ServerMember> getAllowedMembers() {
+        return new HashSet<>(allowedMembers);
+    }
+
+    public void setAllowedMembers(Set<ServerMember> allowedMembers) {
+        if (allowedMembers == null) {
+            this.allowedMembers = new HashSet<>();
+        } else {
+            this.allowedMembers = new HashSet<>(allowedMembers);
+        }
+    }
 }
