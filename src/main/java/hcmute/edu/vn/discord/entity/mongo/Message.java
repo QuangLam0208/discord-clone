@@ -29,6 +29,25 @@ public class Message {
 
     private List<Reaction> reactions = new ArrayList<>();
 
+    /**
+     * Returns a defensive copy of the reactions list to avoid exposing
+     * the internal mutable representation.
+     */
+    public List<Reaction> getReactions() {
+        return new ArrayList<>(reactions);
+    }
+
+    /**
+     * Sets the reactions list using a defensive copy to avoid retaining
+     * references to mutable lists supplied by callers.
+     */
+    public void setReactions(List<Reaction> reactions) {
+        if (reactions == null) {
+            this.reactions = new ArrayList<>();
+        } else {
+            this.reactions = new ArrayList<>(reactions);
+        }
+    }
     @Data
     public static class Reaction {
         private Long userId;
