@@ -5,16 +5,29 @@ import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
+
+    @Value("${app.websocket.allowed-origins:}")
+    private String[] allowedOriginPatterns;
+
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // Endpoint cho client connect: ws://localhost:8081/ws
-        registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*") // Cho phép mọi origin (cần siết chặt khi production)
-                .withSockJS(); // Nếu không có hỗ trợ WebSocket, tự động chuyển sang Http Polling
+        var endpointRegistration = registry.addEndpoint("/ws");
+
+        // Cấu hình origin cho phép thông qua property app.websocket.allowed-origins
+        // Ví dụ: app.websocket.allowed-origins=http://localhost:3000,https://example.com
+        if (allowedOriginPatterns != null
+                && allowedOriginPatterns.length > 0
+                && !(allowedOriginPatterns.length == 1 && allowedOriginPatterns[0].isEmpty())) {
+            endpointRegistration.setAllowedOriginPatterns(allowedOriginPatterns);
+        }
+
+        endpointRegistration.withSockJS(); // Nếu không có hỗ trợ WebSocket, tự động chuyển sang Http Polling
     }
 
     @Override
