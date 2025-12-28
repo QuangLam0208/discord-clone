@@ -112,7 +112,7 @@ public class ChannelController {
 
         Channel existing = channelService.getChannelById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
-
+     
         if (!hasManagePermission(user, existing.getServer().getId())) {
             logger.warn("User {} cố gắng sửa kênh {} trái phép", user.getUsername(), id);
             throw new AccessDeniedException("Không có quyền sửa kênh này");
