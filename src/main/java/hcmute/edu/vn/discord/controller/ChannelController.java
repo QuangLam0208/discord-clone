@@ -114,7 +114,10 @@ public class ChannelController {
     }
 
     @GetMapping("/server/{serverId}")
-    public ResponseEntity<List<Channel>> getChannelsByServer(@PathVariable Long serverId){
+    public ResponseEntity<List<Channel>> getChannelsByServer(@PathVariable Long serverId,
+                                                              Authentication authentication) {
+        // Ensure the user is authenticated before accessing server channels
+        String username = validateAndGetUsername(authentication);
         return ResponseEntity.ok(channelService.getChannelsByServer(serverId));
     }
 
