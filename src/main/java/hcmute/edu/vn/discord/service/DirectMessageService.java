@@ -1,6 +1,7 @@
 package hcmute.edu.vn.discord.service;
 
 import hcmute.edu.vn.discord.dto.request.DirectMessageRequest;
+import hcmute.edu.vn.discord.dto.request.EditMessageRequest;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
 import org.springframework.data.domain.Pageable;
 
@@ -12,7 +13,7 @@ public interface DirectMessageService {
 
     List<DirectMessageResponse> getMessages(String conversationId);
 
-    DirectMessageResponse editMessage(String messageId, Long userId, DirectMessageRequest request);
+    DirectMessageResponse editMessage(String messageId, Long userId, EditMessageRequest request);
 
     void deleteMessage(String messageId, Long userId);
 

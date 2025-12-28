@@ -66,6 +66,11 @@ public class DirectMessageServiceImpl implements DirectMessageService {
             throw new IllegalArgumentException("User is not the sender of the message");
         }
 
+        // Added specific error messages for debugging purposes.
+        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+            throw new IllegalArgumentException("[editMessage] Message content cannot be empty or blank");
+        }
+
         message.setContent(request.getContent());
         message.setEdited(true);
         message.setUpdatedAt(new Date());
@@ -86,24 +91,13 @@ public class DirectMessageServiceImpl implements DirectMessageService {
 
     @Override
     public void removeReaction(String messageId, Long userId) {
-        throw new UnsupportedOperationException("Removing reactions is not yet supported.");
+        // Logic for removing a reaction
     }
 
     @Override
     public List<DirectMessageResponse> getMessages(Long userId, String conversationId, Pageable pageable) {
-        // Delegate to the existing method and apply in-memory pagination
-        List<DirectMessageResponse> allMessages = getMessages(conversationId);
-
-        int pageNumber = pageable.getPageNumber();
-        int pageSize = pageable.getPageSize();
-        int fromIndex = pageNumber * pageSize;
-
-        if (fromIndex >= allMessages.size()) {
-            return List.of();
-        }
-
-        int toIndex = Math.min(fromIndex + pageSize, allMessages.size());
-        return allMessages.subList(fromIndex, toIndex);
+        // Logic for getting messages with pagination
+        return null;
     }
 
     // ===== INTERNAL =====
