@@ -7,7 +7,7 @@ import java.util.List;
 @Data
 public class MessageRequest {
     // Allow empty content if an image is sent (Discord allows sending images without a caption)
-    @Size(max = 2000, message = "Tin nhắn quá dài (tối đa 2000 ký tự)")
+    @Size(max = 2000, message = "Message is too long (maximum 2000 characters)")
     private String content;
 
     private String replyToId; // ID of the message being replied to
