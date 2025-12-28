@@ -43,7 +43,8 @@ public class ChannelServiceImpl implements ChannelService {
                 .orElseThrow(() -> new AccessDeniedException("Bạn không phải là thành viên của Server này"));
 
         // 3. CHECK QUYỀN: Phải là Owner hoặc có quyền MANAGE_CHANNELS / ADMIN
-        boolean isOwner = channel.getServer().getOwner().getId().equals(creator.getId());
+        User owner = channel.getServer().getOwner();
+        boolean isOwner = owner != null && owner.getId().equals(creator.getId());
 
         boolean hasPermission = member.getRoles().stream()
                 .flatMap(role -> role.getPermissions().stream())
