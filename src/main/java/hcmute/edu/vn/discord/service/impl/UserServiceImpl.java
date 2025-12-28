@@ -7,8 +7,8 @@ import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.repository.RoleRepository;
 import hcmute.edu.vn.discord.repository.UserRepository;
 import hcmute.edu.vn.discord.service.UserService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -20,24 +20,18 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private RoleRepository roleRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public User registerUser(User user) {
         if (userRepository.existsByEmail(user.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new IllegalArgumentException("Email already exists");
         }
 
-        // Gán Role mặc định (USER_DEFAULT)
         Role defaultRole = roleRepository.findByName(ERole.USER_DEFAULT)
-                .orElseThrow(() -> new RuntimeException("Error: Role is not found."));
+                .orElseThrow(() -> new EntityNotFoundException("Role user not found"));
 
         if (user.getRoles() == null) {
             user.setRoles(new HashSet<>());
@@ -51,13 +45,13 @@ public class UserServiceImpl implements UserService {
     public void registerUser(RegisterRequest request) {
 
         if (userRepository.existsByUsername(request.getUsername()))
-            throw new RuntimeException("Username already exists");
+            throw new IllegalArgumentException("Username already exists");
 
         if (userRepository.existsByEmail(request.getEmail()))
-            throw new RuntimeException("Email already exists");
+            throw new IllegalArgumentException("Email already exists");
 
         Role defaultRole = roleRepository.findByName(ERole.USER_DEFAULT)
-                .orElseThrow(() -> new RuntimeException("Role user not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Role user not found"));
 
         Set<Role> roles = new HashSet<>();
         roles.add(defaultRole);

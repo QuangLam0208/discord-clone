@@ -6,15 +6,17 @@ import hcmute.edu.vn.discord.entity.enums.ServerStatus;
 import hcmute.edu.vn.discord.entity.jpa.*;
 import hcmute.edu.vn.discord.repository.*;
 import hcmute.edu.vn.discord.service.ServerService;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.*;
 
-@RequiredArgsConstructor
 @Service
+@RequiredArgsConstructor
 public class ServerServiceImpl implements ServerService {
 
     private final ServerRepository serverRepository;
@@ -28,7 +30,7 @@ public class ServerServiceImpl implements ServerService {
     @Transactional(rollbackFor = Exception.class)
     public Server createServer(Server server, String userName) {
         User owner = userRepository.findByUsername(userName)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
         server.setOwner(owner);
         server.setStatus(ServerStatus.ACTIVE);
@@ -81,7 +83,7 @@ public class ServerServiceImpl implements ServerService {
     @Override
     public Server getServerById(Long id) {
         return serverRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Server không tồn tại"));
+                .orElseThrow(() -> new EntityNotFoundException("Server không tồn tại"));
     }
 
     @Override
@@ -93,13 +95,13 @@ public class ServerServiceImpl implements ServerService {
     @Transactional(rollbackFor = Exception.class)
     public void deleteServer(Long serverId, String userName){
         Server server = serverRepository.findById(serverId)
-                .orElseThrow(() -> new IllegalArgumentException("Server không tồn tại"));
+                .orElseThrow(() -> new EntityNotFoundException("Server không tồn tại"));
 
         User user = userRepository.findByUsername(userName)
-                .orElseThrow(() -> new RuntimeException("User không tồn tại"));
+                .orElseThrow(() -> new EntityNotFoundException("User không tồn tại"));
 
         if (!server.getOwner().getId().equals(user.getId())) {
-            throw new IllegalStateException("Bạn không có quyền xóa server này");
+            throw new AccessDeniedException("Bạn không có quyền xóa server này");
         }
 
         serverRepository.delete(server);
