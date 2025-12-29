@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Đăng nhập - Discord Clone</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+<div class="login-container">
+    <div class="login-box">
+        <h2>Chào mừng trở lại!</h2>
+        <p class="subtitle">Rất vui mừng khi được gặp lại bạn!</p>
+
+        <form id="loginForm">
+            <div class="input-group">
+                <label for="username">USERNAME</label>
+                <input type="text" id="username" required>
+            </div>
+
+            <div class="input-group">
+                <label for="password">MẬT KHẨU</label>
+                <input type="password" id="password" required>
+            </div>
+
+            <button type="submit" id="btn-login">Đăng nhập</button>
+        </form>
+
+        <p class="link-text">
+            Cần một tài khoản? <a href="/register">Đăng ký</a>
+        </p>
+    </div>
+</div>
+<script src="/js/auth.js"></script>
+</body>
+</html>
