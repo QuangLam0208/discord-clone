@@ -93,7 +93,7 @@ public class UploadController {
         } catch (IOException e) {
             log.error("Không thể upload file: {}", file.getOriginalFilename(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Không thể upload file: " + e.getMessage()));
+                    .body(Map.of("error", "Không thể upload file do lỗi hệ thống, vui lòng thử lại sau."));
         } catch (Exception e) {
             log.error("Lỗi không mong muốn trong quá trình upload", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
