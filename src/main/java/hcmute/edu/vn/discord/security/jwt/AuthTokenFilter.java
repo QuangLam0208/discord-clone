@@ -35,16 +35,17 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain)
             throws ServletException, IOException {
-        String path = request.getServletPath();
-
-        if (path.startsWith("/api/auth")) {
+        // BỎ QUA CORS PREFLIGHT
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
         }
         try {
             String jwt = parseJwt(request);
-            if (jwt != null && jwtUtils.validateJwtToken(jwt)
-                    && SecurityContextHolder.getContext().getAuthentication() == null) {
+
+            if (jwt != null
+                    && SecurityContextHolder.getContext().getAuthentication() == null
+                    && jwtUtils.validateJwtToken(jwt)) {
 
                 String username = jwtUtils.getUserNameFromJwtToken(jwt);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
@@ -63,7 +64,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
-            logger.error("Cannot set authentication for request {}", request.getRequestURI(), e);
+            logger.error("Cannot set authentication", e);
         }
 
         filterChain.doFilter(request, response);
@@ -71,9 +72,21 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
     private String parseJwt(HttpServletRequest request) {
         String headerAuth = request.getHeader("Authorization");
-        if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
-            return headerAuth.substring(7);
+
+        if (!StringUtils.hasText(headerAuth)) {
+            return null;
         }
-        return null;
+
+        if (!headerAuth.startsWith("Bearer ")) {
+            return null;
+        }
+
+        String token = headerAuth.substring(7).trim();
+
+        if (!StringUtils.hasText(token)) {
+            return null;
+        }
+
+        return token;
     }
 }
