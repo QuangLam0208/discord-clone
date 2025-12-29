@@ -8,6 +8,8 @@ import hcmute.edu.vn.discord.repository.*;
 import hcmute.edu.vn.discord.service.ServerService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,8 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class ServerServiceImpl implements ServerService {
+
+    private static final Logger log = LoggerFactory.getLogger(ServerServiceImpl.class);
 
     private final ServerRepository serverRepository;
     private final ServerRoleRepository serverRoleRepository;
@@ -72,21 +76,25 @@ public class ServerServiceImpl implements ServerService {
 
         serverMemberRepository.save(ownerMember);
 
+        log.info("Server created id={} owner={}", savedServer.getId(), owner.getUsername());
         return savedServer;
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Server> getAllServers() {
         return serverRepository.findAll();
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Server getServerById(Long id) {
         return serverRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Server không tồn tại"));
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<Server> getServersByUsername(String userName){
         return serverRepository.findByMemberUsername(userName);
     }
@@ -105,6 +113,7 @@ public class ServerServiceImpl implements ServerService {
         }
 
         serverRepository.delete(server);
+        log.info("Server deleted id={} by user={}", serverId, userName);
     }
 
     private Map<EPermission, Permission> bootstrapPermissions() {
