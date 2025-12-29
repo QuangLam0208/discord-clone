@@ -1,6 +1,8 @@
 package hcmute.edu.vn.discord.controller;
 
+import hcmute.edu.vn.discord.dto.response.PermissionResponse;
 import hcmute.edu.vn.discord.dto.response.ServerMemberResponse;
+import hcmute.edu.vn.discord.dto.response.ServerRoleResponse;
 import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.jpa.Server;
 import hcmute.edu.vn.discord.entity.jpa.ServerMember;
@@ -13,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.AccessDeniedException;
@@ -48,6 +51,7 @@ public class ServerMemberController {
     }
 
     @PostMapping("/add")
+    @PreAuthorize("@serverAuth.canManageMembers(#serverId, authentication.name)")
     public ResponseEntity<ServerMemberResponse> addMember(@PathVariable Long serverId, @RequestParam Long userId,
                                                           Authentication auth) {
         User current = getCurrentUser(auth);
@@ -60,6 +64,7 @@ public class ServerMemberController {
     }
 
     @GetMapping("")
+    @PreAuthorize("@serverAuth.isMember(#serverId, authentication.name)")
     public ResponseEntity<List<ServerMemberResponse>> listMembers(@PathVariable Long serverId, Authentication auth) {
         User current = getCurrentUser(auth);
         if (!serverMemberService.isMember(serverId, current.getId())) {
@@ -91,6 +96,33 @@ public class ServerMemberController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/me/roles")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<ServerRoleResponse>> myRoles(@PathVariable Long serverId, Authentication auth) {
+        User current = getCurrentUser(auth);
+        // yêu cầu là thành viên server
+        if (!serverMemberService.isMember(serverId, current.getId())) {
+            throw new AccessDeniedException("Bạn không phải thành viên server này");
+        }
+        var roles = serverMemberService.getRolesOfMember(serverId, current.getId()).stream()
+                .map(ServerRoleResponse::from)
+                .toList();
+        return ResponseEntity.ok(roles);
+    }
+
+    @GetMapping("/me/permissions")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<PermissionResponse>> myPermissions(@PathVariable Long serverId, Authentication auth) {
+        User current = getCurrentUser(auth);
+        if (!serverMemberService.isMember(serverId, current.getId())) {
+            throw new AccessDeniedException("Bạn không phải thành viên server này");
+        }
+        var perms = serverMemberService.getEffectivePermissions(serverId, current.getId()).stream()
+                .map(PermissionResponse::from)
+                .toList();
+        return ResponseEntity.ok(perms);
+    }
+
     private boolean canManageMembers(User current, Long serverId) {
         Server server = serverService.getServerById(serverId);
         boolean isOwner = server != null
@@ -107,7 +139,7 @@ public class ServerMemberController {
                 current.getId(),
                 Set.of(
                         EPermission.MANAGE_SERVER.name(),
-                        EPermission.KICK_MEMBERS.name(),
+                        EPermission.KICK_APPROVE_REJECT_MEMBERS.name(),
                         EPermission.BAN_MEMBERS.name(),
                         EPermission.ADMIN.name()
                 )

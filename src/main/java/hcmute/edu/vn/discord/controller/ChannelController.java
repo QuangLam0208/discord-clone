@@ -13,9 +13,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.authentication.AnonymousAuthenticationToken;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
@@ -32,19 +29,8 @@ public class ChannelController {
     private final ServerService serverService;
     private final CategoryService categoryService;
 
-    // Helper Check Auth
-    private String validateAndGetUsername(Authentication authentication) {
-        if (authentication == null) {
-            throw new BadCredentialsException("Lỗi xác thực: Token không hợp lệ hoặc thiếu.");
-        }
-        if (!authentication.isAuthenticated() || authentication instanceof AnonymousAuthenticationToken) {
-            throw new BadCredentialsException("Người dùng chưa đăng nhập.");
-        }
-        return authentication.getName();
-    }
-
     @PostMapping
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@serverAuth.canManageChannels(#request.serverId, principal.name)")
     public ResponseEntity<ChannelResponse> createChannel(
             @Valid @RequestBody ChannelRequest request,
             Principal principal) {
@@ -82,7 +68,7 @@ public class ChannelController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@serverAuth.canManageChannels(#request.serverId != null ? #request.serverId : @serverAuth.serverIdOfChannel(#id), principal.name)")
     public ResponseEntity<ChannelResponse> updateChannel(
             @PathVariable Long id,
             @Valid @RequestBody ChannelRequest request,
@@ -115,14 +101,15 @@ public class ChannelController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@serverAuth.canManageChannels(@serverAuth.serverIdOfChannel(#id), principal.name)")
     public ResponseEntity<Void> deleteChannel(@PathVariable Long id, Principal principal) {
         channelService.deleteChannel(id, principal.getName());
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ChannelResponse> getChannelById(@PathVariable Long id) {
+    @PreAuthorize("@serverAuth.canViewChannel(#id, principal.name)")
+    public ResponseEntity<ChannelResponse> getChannelById(@PathVariable Long id, Principal principal) {
         return channelService.getChannelById(id)
                 .map(ch -> ResponseEntity.ok(ChannelResponse.from(ch)))
                 .orElse(ResponseEntity.notFound().build());
@@ -137,7 +124,7 @@ public class ChannelController {
     }
 
     @GetMapping("/server/{serverId}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("@serverAuth.isMember(#serverId, principal.name)")
     public ResponseEntity<List<ChannelResponse>> getChannelsByServer(@PathVariable Long serverId,
                                                                      Principal principal) {
         List<ChannelResponse> data = channelService.getChannelsByServerVisibleToUser(serverId, principal.getName()).stream()

@@ -42,23 +42,34 @@ public class ServerServiceImpl implements ServerService {
 
         Map<EPermission, Permission> permMap = bootstrapPermissions();
 
-        ServerRole memberRole = new ServerRole();
-        memberRole.setName("Member");
-        memberRole.setPriority(1);
-        memberRole.setServer(savedServer);
-        memberRole.setPermissions(Set.of(
+        // 1) @everyone với bộ quyền cơ bản
+        ServerRole everyoneRole = new ServerRole();
+        everyoneRole.setName("@everyone");
+        everyoneRole.setPriority(0);
+        everyoneRole.setServer(savedServer);
+        everyoneRole.setPermissions(Set.of(
                 permMap.get(EPermission.VIEW_CHANNELS),
-                permMap.get(EPermission.SEND_MESSAGES)
+                permMap.get(EPermission.CREATE_EXPRESSIONS),
+                permMap.get(EPermission.CREATE_INVITE),
+                permMap.get(EPermission.CHANGE_NICKNAME),
+                permMap.get(EPermission.SEND_MESSAGES),
+                permMap.get(EPermission.EMBED_LINK),
+                permMap.get(EPermission.ATTACH_FILES),
+                permMap.get(EPermission.ADD_REACTIONS),
+                permMap.get(EPermission.MENTION_EVERYONE_HERE_ALLROLES),
+                permMap.get(EPermission.READ_MESSAGE_HISTORY)
         ));
-        serverRoleRepository.save(memberRole);
+        serverRoleRepository.save(everyoneRole);
 
+        // 2) Admin (full access)
         ServerRole adminRole = new ServerRole();
         adminRole.setName("Admin");
         adminRole.setPriority(10);
         adminRole.setServer(savedServer);
-        adminRole.setPermissions(new HashSet<>(permMap.values())); // full access
+        adminRole.setPermissions(new HashSet<>(permMap.values()));
         serverRoleRepository.save(adminRole);
 
+        // Kênh mặc định
         Channel generalChat = new Channel();
         generalChat.setName("general");
         generalChat.setType(ChannelType.TEXT);
@@ -66,14 +77,14 @@ public class ServerServiceImpl implements ServerService {
         generalChat.setIsPrivate(false);
         channelRepository.save(generalChat);
 
+        // Owner có Admin + @everyone
         ServerMember ownerMember = new ServerMember();
         ownerMember.setServer(savedServer);
         ownerMember.setUser(owner);
         ownerMember.setNickname(owner.getDisplayName());
         ownerMember.setJoinedAt(LocalDateTime.now());
         ownerMember.setIsBanned(false);
-        ownerMember.setRoles(new HashSet<>(Set.of(adminRole)));
-
+        ownerMember.setRoles(new HashSet<>(Set.of(adminRole, everyoneRole)));
         serverMemberRepository.save(ownerMember);
 
         log.info("Server created id={} owner={}", savedServer.getId(), owner.getUsername());
