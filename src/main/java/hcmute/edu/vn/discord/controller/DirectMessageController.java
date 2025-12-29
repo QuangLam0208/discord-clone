@@ -43,7 +43,7 @@ public class DirectMessageController {
             throw new IllegalArgumentException("User is null or unauthenticated");
         }
         return ResponseEntity.ok(
-                directMessageService.getMessages(conversationId)
+                directMessageService.getMessages(conversationId, user.getId())
         );
     }
 
