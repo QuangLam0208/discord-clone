@@ -39,12 +39,6 @@ public class ServerMemberController {
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
     }
 
-    private boolean isOwner(User user, Long serverId) {
-        Server server = serverService.getServerById(serverId);
-        return server != null && server.getOwner() != null &&
-                server.getOwner().getId().equals(user.getId());
-    }
-
     @PostMapping("/join")
     public ResponseEntity<ServerMemberResponse> joinServer(@PathVariable Long serverId, Authentication auth) {
         User user = getCurrentUser(auth);
