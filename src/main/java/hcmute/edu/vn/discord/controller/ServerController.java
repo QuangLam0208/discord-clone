@@ -39,6 +39,33 @@ public class ServerController {
                 .body(ServerResponse.from(saved));
     }
 
+    @GetMapping
+    public ResponseEntity<?> getAllServers() {
+        return ResponseEntity.ok(
+                serverService.getAllServers().stream()
+                        .map(ServerResponse::from)
+                        .toList()
+        );
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ServerResponse> getServerById(@PathVariable Long id) {
+        return ResponseEntity.ok(ServerResponse.from(serverService.getServerById(id)));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getMyServers(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            throw new AccessDeniedException("Not authenticated");
+        }
+
+        return ResponseEntity.ok(
+                serverService.getServersByUsername(authentication.getName()).stream()
+                        .map(ServerResponse::from)
+                        .toList()
+        );
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteServer(@PathVariable Long id, Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
