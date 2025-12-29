@@ -59,7 +59,8 @@ public class UploadController {
             // Kiểm tra loại file
             String contentType = file.getContentType();
             if (!"image/jpeg".equals(contentType) && !"image/png".equals(contentType)) {
-                return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body("Chỉ cho phép file JPEG và PNG");
+                return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                        .body(Map.of("error", "Chỉ cho phép file JPEG và PNG"));
             }
 
             // Tạo cấu trúc thư mục dựa trên ngày hiện tại
