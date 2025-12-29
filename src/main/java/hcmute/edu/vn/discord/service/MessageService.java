@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface MessageService {
+    // Lưu và phát tán message đã được dựng sẵn
     Message sendMessage(Message message);
     // 1. Gửi tin nhắn (DTO MessageRequest đã chứa content, replyToId, attachments)
     MessageResponse createMessage(Long channelId, String username, MessageRequest request);
