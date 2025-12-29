@@ -16,52 +16,67 @@ import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/upload")
 @RequiredArgsConstructor
 public class UploadController {
 
-    @Value("${server.port}")
-    private String serverPort;
+    // Đã xóa trường serverPort không sử dụng
+    // private String serverPort;
 
-    // Added baseUrl property to avoid hard-coded localhost
+    // Thêm thuộc tính baseUrl để tránh hard-code localhost
     @Value("${discord.upload.base-url}")
     private String baseUrl;
 
+    // Thư mục lưu trữ file upload
     private static final String UPLOAD_DIR = "uploads";
+    // Giới hạn kích thước file tối đa là 5MB
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
     private static final Logger log = LoggerFactory.getLogger(UploadController.class);
 
+    // Thêm tham số Authentication vào phương thức uploadFile
     @PostMapping
-    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file, Authentication authentication) {
         try {
-            // Validate file size
-            if (file.getSize() > MAX_FILE_SIZE) {
-                return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body("File size exceeds the maximum limit of 5MB");
+            // Lấy tên người dùng để ghi log/audit
+            String username = authentication != null ? authentication.getName() : "anonymous";
+            log.info("Yêu cầu upload file từ người dùng: {}", username);
+
+            // 1. Kiểm tra file rỗng
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "File rỗng"));
             }
 
-            // Validate file type
+            // 2. Kiểm tra kích thước file
+            if (file.getSize() > MAX_FILE_SIZE) {
+                return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                        .body(Map.of("error", "Kích thước file vượt quá giới hạn tối đa 5MB"));
+            }
+
+            // Kiểm tra loại file
             String contentType = file.getContentType();
             if (!"image/jpeg".equals(contentType) && !"image/png".equals(contentType)) {
-                return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body("Only JPEG and PNG files are allowed");
+                return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body("Chỉ cho phép file JPEG và PNG");
             }
 
-            // Create directory structure based on date
+            // Tạo cấu trúc thư mục dựa trên ngày hiện tại
             LocalDate today = LocalDate.now();
             String datePath = String.format("%d/%02d/%02d", today.getYear(), today.getMonthValue(), today.getDayOfMonth());
             Path uploadPath = Paths.get(UPLOAD_DIR, datePath);
             Files.createDirectories(uploadPath);
 
-            // Save file with a unique name
-            // Improved filename handling to avoid crashes when the file has no extension.
+            // Lưu file với tên duy nhất
+            // Cải thiện xử lý tên file để tránh lỗi khi file không có phần mở rộng.
             String originalFilename = file.getOriginalFilename();
             String extension = "";
 
             if (originalFilename != null && originalFilename.contains(".")) {
                 extension = originalFilename.substring(originalFilename.lastIndexOf("."));
             } else {
-                // Fallback: derive extension from content type
+                // Phương án dự phòng: lấy phần mở rộng từ loại nội dung
                 if ("image/jpeg".equals(file.getContentType())) {
                     extension = ".jpg";
                 } else if ("image/png".equals(file.getContentType())) {
@@ -73,18 +88,19 @@ public class UploadController {
             Path filePath = uploadPath.resolve(uniqueFilename);
             file.transferTo(filePath);
 
-            // Return file URL
-            // Updated fileUrl to use baseUrl from application.properties
+            // Trả về URL của file
+            // Cập nhật fileUrl để sử dụng baseUrl từ application.properties
             String fileUrl = String.format("%s/%s/%s/%s", baseUrl, UPLOAD_DIR, datePath, uniqueFilename);
+            log.info("File được upload thành công bởi {}: {}", username, fileUrl);
             return ResponseEntity.ok(Map.of("url", fileUrl));
         } catch (IOException e) {
-            log.error("Failed to upload file: {}", file.getOriginalFilename(), e);
+            log.error("Không thể upload file: {}", file.getOriginalFilename(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Failed to upload file: " + e.getMessage()));
+                    .body(Map.of("error", "Không thể upload file: " + e.getMessage()));
         } catch (Exception e) {
-            log.error("Unexpected error during upload", e);
+            log.error("Lỗi không mong muốn trong quá trình upload", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Unexpected error occurred"));
+                    .body(Map.of("error", "Đã xảy ra lỗi không mong muốn"));
         }
     }
 }

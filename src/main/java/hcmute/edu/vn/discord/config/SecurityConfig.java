@@ -49,7 +49,7 @@ public class SecurityConfig {
                         // TODO: /ws/**, /ws-test.html is temporarily public for testing. MUST secure before production.
                         .requestMatchers("/api/auth/**", "/api/test/**", "/ws/**",
                                 "/ws-test.html",
-                                "/swagger-ui/**", "/v3/api-docs/**").permitAll()
+                                "/swagger-ui/**", "/v3/api-docs/**", "/uploads/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)
