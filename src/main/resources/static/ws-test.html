@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>WebSocket Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+
+<body>
+<h2>Discord Clone WebSocket Test</h2>
+<div>
+    <label>Sender ID (Testing):</label>
+    <input type="number" id="senderId" value="1">
+</div>
+<div>
+    <label>Channel ID:</label>
+    <input type="number" id="channelId" value="1">
+</div>
+<div>
+    <button onclick="connect()">Connect</button>
+    <button onclick="disconnect()" disabled id="disconnectBtn">Disconnect</button>
+</div>
+<br />
+<div>
+    <textarea id="messageInput" placeholder="Type a message..."></textarea>
+    <button onclick="sendMessage()">Send</button>
+</div>
+<h3>Messages:</h3>
+<ul id="messagesList"></ul>
+
+<script>
+    var stompClient = null;
+
+    function connect() {
+        var socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, function (frame) {
+            console.log('Connected: ' + frame);
+            document.getElementById("disconnectBtn").disabled = false;
+
+            var channelId = document.getElementById("channelId").value;
+
+            // Subscribe to channel topic
+            stompClient.subscribe('/topic/channel/' + channelId, function (message) {
+                showMessage(JSON.parse(message.body));
+            });
+        });
+    }
+
+    function disconnect() {
+        if (stompClient !== null) {
+            stompClient.disconnect();
+        }
+        console.log("Disconnected");
+        document.getElementById("disconnectBtn").disabled = true;
+    }
+
+    function sendMessage() {
+        var content = document.getElementById("messageInput").value;
+        var channelId = document.getElementById("channelId").value;
+        var senderId = document.getElementById("senderId").value;
+
+        stompClient.send("/app/chat.sendMessage", {}, JSON.stringify({
+            'content': content,
+            'channelId': channelId,
+            'senderId': senderId // Chỉ dùng cho testing
+        }));
+    }
+
+    function showMessage(message) {
+        var list = document.getElementById("messagesList");
+        var li = document.createElement("li");
+        li.appendChild(document.createTextNode(message.senderName + ": " + message.content));
+        list.appendChild(li);
+    }
+</script>
+</body>
+
+</html>

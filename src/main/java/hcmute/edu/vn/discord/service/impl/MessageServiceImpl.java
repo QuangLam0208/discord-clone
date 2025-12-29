@@ -30,6 +30,14 @@ public class MessageServiceImpl implements MessageService {
     private final ServerRepository serverRepository;
     private final ServerMemberRepository serverMemberRepository;
 
+
+    @Override
+    public Message sendMessage(Message message) {
+        message.setCreatedAt(new Date());
+        message.setDeleted(false);
+        return messageRepository.save(message);
+    }
+
     @Override
     public MessageResponse createMessage(Long channelId, String username, MessageRequest request) {
         // 1. Tìm User (Ném lỗi cụ thể)
