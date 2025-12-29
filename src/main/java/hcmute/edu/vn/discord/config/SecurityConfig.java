@@ -47,10 +47,12 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         // TODO: /ws/**, /ws-test.html is temporarily public for testing. MUST secure before production.
-                        .requestMatchers("/api/auth/**", "/api/test/**", "/ws/**",
-                                "/ws-test.html",
-                                "/swagger-ui/**", "/v3/api-docs/**", "/uploads/**").permitAll()
-                        .anyRequest().authenticated()
+                        .requestMatchers(
+                                "/api/auth/**", "/api/test/**", "/ws/**",
+                                "/ws-test.html", "/swagger-ui/**", "/v3/api-docs/**",
+                                "/uploads/**"  // Cho phép xem file public
+                        ).permitAll()
+                        .anyRequest().authenticated()  // /api/upload yêu cầu xác thực
                 )
                 .userDetailsService(userDetailsService)
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
