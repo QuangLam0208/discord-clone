@@ -46,7 +46,10 @@ public class SecurityConfig {
                 .sessionManagement(sess -> sess
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/test/**").permitAll()
+                        // TODO: /ws/**, /ws-test.html is temporarily public for testing. MUST secure before production.
+                        .requestMatchers("/api/auth/**", "/api/test/**", "/ws/**",
+                                "/ws-test.html",
+                                "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)
