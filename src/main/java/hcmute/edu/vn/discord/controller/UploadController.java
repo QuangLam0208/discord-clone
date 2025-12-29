@@ -70,19 +70,15 @@ public class UploadController {
             Files.createDirectories(uploadPath);
 
             // Lưu file với tên duy nhất
-            // Cải thiện xử lý tên file để tránh lỗi khi file không có phần mở rộng.
-            String originalFilename = file.getOriginalFilename();
-            String extension = "";
-
-            if (originalFilename != null && originalFilename.contains(".")) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            // Luôn xác định phần mở rộng dựa trên loại nội dung đã được kiểm tra.
+            String extension;
+            if ("image/jpeg".equals(contentType)) {
+                extension = ".jpg";
+            } else if ("image/png".equals(contentType)) {
+                extension = ".png";
             } else {
-                // Phương án dự phòng: lấy phần mở rộng từ loại nội dung
-                if ("image/jpeg".equals(file.getContentType())) {
-                    extension = ".jpg";
-                } else if ("image/png".equals(file.getContentType())) {
-                    extension = ".png";
-                }
+                // Trường hợp dự phòng, không nên xảy ra vì đã kiểm tra ở trên
+                extension = "";
             }
 
             String uniqueFilename = UUID.randomUUID() + extension;
