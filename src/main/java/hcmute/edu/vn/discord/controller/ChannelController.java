@@ -1,20 +1,26 @@
 package hcmute.edu.vn.discord.controller;
 
 import hcmute.edu.vn.discord.dto.request.ChannelRequest;
+import hcmute.edu.vn.discord.dto.response.ChannelResponse;
 import hcmute.edu.vn.discord.entity.jpa.Category;
 import hcmute.edu.vn.discord.entity.jpa.Channel;
 import hcmute.edu.vn.discord.entity.jpa.Server;
 import hcmute.edu.vn.discord.service.CategoryService;
 import hcmute.edu.vn.discord.service.ChannelService;
 import hcmute.edu.vn.discord.service.ServerService;
+import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
+import java.security.Principal;
 import java.util.List;
 
 @RestController
@@ -38,91 +44,115 @@ public class ChannelController {
     }
 
     @PostMapping
-    public ResponseEntity<Channel> createChannel(
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ChannelResponse> createChannel(
             @Valid @RequestBody ChannelRequest request,
-            Authentication authentication) {
+            Principal principal) {
 
-        String username = validateAndGetUsername(authentication);
+        String username = principal.getName();
 
         Channel channel = new Channel();
         channel.setName(request.getName());
         channel.setIsPrivate(request.getIsPrivate());
         channel.setType(request.getType());
 
-        if (request.getServerId() != null) {
-            Server server = serverService.getServerById(request.getServerId());
-            channel.setServer(server);
+        if (request.getServerId() == null) {
+            throw new IllegalArgumentException("serverId là bắt buộc");
         }
+        Server server = serverService.getServerById(request.getServerId());
+        channel.setServer(server);
 
         if (request.getCategoryId() != null) {
             Category category = categoryService.getCategoryById(request.getCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Category not found"));
+                    .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+            if (!category.getServer().getId().equals(server.getId())) {
+                throw new IllegalArgumentException("Category không thuộc về server này");
+            }
             channel.setCategory(category);
         }
 
-        return ResponseEntity.ok(channelService.createChannel(channel, username));
+        Channel saved = channelService.createChannel(channel, username);
+
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(saved.getId())
+                .toUri();
+
+        return ResponseEntity.created(location).body(ChannelResponse.from(saved));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Channel> updateChannel(
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<ChannelResponse> updateChannel(
             @PathVariable Long id,
             @Valid @RequestBody ChannelRequest request,
-            Authentication authentication) { // Thêm Auth
+            Principal principal) {
 
-        String username = validateAndGetUsername(authentication);
+        String username = principal.getName();
 
         Channel channel = new Channel();
         channel.setName(request.getName());
         channel.setIsPrivate(request.getIsPrivate());
         channel.setType(request.getType());
 
+        Server server = null;
         if (request.getServerId() != null) {
-            Server server = serverService.getServerById(request.getServerId());
+            server = serverService.getServerById(request.getServerId());
             channel.setServer(server);
         }
 
         if (request.getCategoryId() != null) {
             Category category = categoryService.getCategoryById(request.getCategoryId())
-                    .orElseThrow(() -> new RuntimeException("Category not found"));
+                    .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+            if (server != null && !category.getServer().getId().equals(server.getId())) {
+                throw new IllegalArgumentException("Category không thuộc về server này");
+            }
             channel.setCategory(category);
         }
-        // Truyền username xuống Service để check quyền
-        return ResponseEntity.ok(channelService.updateChannel(id, channel, username));
+
+        Channel updated = channelService.updateChannel(id, channel, username);
+        return ResponseEntity.ok(ChannelResponse.from(updated));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteChannel(
-            @PathVariable Long id,
-            Authentication authentication) { // Thêm Auth
-
-        String username = validateAndGetUsername(authentication);
-        // Truyền username xuống Service để check quyền
-        channelService.deleteChannel(id, username);
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Void> deleteChannel(@PathVariable Long id, Principal principal) {
+        channelService.deleteChannel(id, principal.getName());
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Channel> getChannelById(@PathVariable Long id) {
+    public ResponseEntity<ChannelResponse> getChannelById(@PathVariable Long id) {
         return channelService.getChannelById(id)
-                .map(ResponseEntity::ok)
+                .map(ch -> ResponseEntity.ok(ChannelResponse.from(ch)))
                 .orElse(ResponseEntity.notFound().build());
     }
 
     @GetMapping
-    public ResponseEntity<List<Channel>> getAllChannels() {
-        return ResponseEntity.ok(channelService.getAllChannels());
+    public ResponseEntity<List<ChannelResponse>> getAllChannels() {
+        List<ChannelResponse> data = channelService.getAllChannels().stream()
+                .map(ChannelResponse::from)
+                .toList();
+        return ResponseEntity.ok(data);
     }
 
     @GetMapping("/server/{serverId}")
-    public ResponseEntity<List<Channel>> getChannelsByServer(@PathVariable Long serverId,
-                                                              Authentication authentication) {
-        // Ensure the user is authenticated before accessing server channels
-        String username = validateAndGetUsername(authentication);
-        return ResponseEntity.ok(channelService.getChannelsByServer(serverId));
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<ChannelResponse>> getChannelsByServer(@PathVariable Long serverId,
+                                                                     Principal principal) {
+        List<ChannelResponse> data = channelService.getChannelsByServerVisibleToUser(serverId, principal.getName()).stream()
+                .map(ChannelResponse::from)
+                .toList();
+        return ResponseEntity.ok(data);
     }
 
     @GetMapping("/category/{categoryId}")
-    public ResponseEntity<List<Channel>> getChannelsByCategory(@PathVariable Long categoryId){
-        return ResponseEntity.ok(channelService.getChannelsByCategory(categoryId));
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<ChannelResponse>> getChannelsByCategory(@PathVariable Long categoryId,
+                                                                       Principal principal){
+        List<ChannelResponse> data = channelService.getChannelsByCategoryVisibleToUser(categoryId, principal.getName()).stream()
+                .map(ChannelResponse::from)
+                .toList();
+        return ResponseEntity.ok(data);
     }
 }

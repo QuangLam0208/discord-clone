@@ -14,8 +14,11 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,7 +31,6 @@ public class ChannelServiceImpl implements ChannelService {
     @Override
     @Transactional
     public Channel createChannel(Channel channel, String creatorUsername) {
-        // 1. Tìm người tạo
         User creator = userRepository.findByUsername(creatorUsername)
                 .orElseThrow(() -> new EntityNotFoundException("User not found: " + creatorUsername));
 
@@ -38,13 +40,11 @@ public class ChannelServiceImpl implements ChannelService {
 
         Long serverId = channel.getServer().getId();
 
-        // 2. Kiểm tra người tạo có phải thành viên Server không
         ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, creator.getId())
                 .orElseThrow(() -> new AccessDeniedException("Bạn không phải là thành viên của Server này"));
 
-        // 3. CHECK QUYỀN: Phải là Owner hoặc có quyền MANAGE_CHANNELS / ADMIN
-        User owner = channel.getServer().getOwner();
-        boolean isOwner = owner != null && owner.getId().equals(creator.getId());
+        boolean isOwner = channel.getServer().getOwner() != null
+                && channel.getServer().getOwner().getId().equals(creator.getId());
 
         boolean hasPermission = member.getRoles().stream()
                 .flatMap(role -> role.getPermissions().stream())
@@ -55,8 +55,16 @@ public class ChannelServiceImpl implements ChannelService {
             throw new AccessDeniedException("Bạn không có quyền tạo kênh (Cần quyền MANAGE_CHANNELS)");
         }
 
-        // 4. LOGIC KÊNH PRIVATE: Tự động add người tạo vào danh sách được xem
+        if (channel.getCategory() != null
+                && channel.getCategory().getServer() != null
+                && !Objects.equals(channel.getCategory().getServer().getId(), serverId)) {
+            throw new IllegalArgumentException("Category không thuộc về server này");
+        }
+
         if (Boolean.TRUE.equals(channel.getIsPrivate())) {
+            if (channel.getAllowedMembers() == null) {
+                channel.setAllowedMembers(new HashSet<>());
+            }
             channel.getAllowedMembers().add(member);
         }
 
@@ -72,13 +80,26 @@ public class ChannelServiceImpl implements ChannelService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        // CHECK QUYỀN SỬA KÊNH
         checkManageChannelPermission(existing.getServer().getId(), user.getId());
 
+        // name, type, private, category
         existing.setName(updatedChannel.getName());
+        existing.setType(updatedChannel.getType());
         existing.setIsPrivate(updatedChannel.getIsPrivate());
-        existing.setCategory(updatedChannel.getCategory());
-        // Nếu bạn muốn update cả allowedRoles/Members thì map thêm ở đây
+
+        if (updatedChannel.getCategory() != null) {
+            if (!Objects.equals(updatedChannel.getCategory().getServer().getId(), existing.getServer().getId())) {
+                throw new IllegalArgumentException("Category không thuộc về server của channel");
+            }
+            existing.setCategory(updatedChannel.getCategory());
+        } else {
+            existing.setCategory(null);
+        }
+
+        // Nếu chuyển sang private mà allowedMembers chưa init
+        if (Boolean.TRUE.equals(existing.getIsPrivate()) && existing.getAllowedMembers() == null) {
+            existing.setAllowedMembers(new HashSet<>());
+        }
 
         return channelRepository.save(existing);
     }
@@ -92,13 +113,11 @@ public class ChannelServiceImpl implements ChannelService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        // CHECK QUYỀN XÓA KÊNH
         checkManageChannelPermission(channel.getServer().getId(), user.getId());
 
         channelRepository.deleteById(id);
     }
 
-    // --- HELPER CHECK QUYỀN QUẢN LÝ (Sửa/Xóa) ---
     private void checkManageChannelPermission(Long serverId, Long userId) {
         ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, userId)
                 .orElseThrow(() -> new AccessDeniedException("Bạn không phải thành viên server này"));
@@ -137,5 +156,57 @@ public class ChannelServiceImpl implements ChannelService {
     @Transactional(readOnly = true)
     public List<Channel> getChannelsByCategory(Long categoryId){
         return channelRepository.findByCategory_Id(categoryId);
+    }
+
+    // Hiển thị theo quyền xem
+    @Override
+    @Transactional(readOnly = true)
+    public List<Channel> getChannelsByServerVisibleToUser(Long serverId, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, user.getId())
+                .orElseThrow(() -> new AccessDeniedException("Bạn không phải thành viên server này"));
+
+        boolean canViewAll = member.getRoles().stream()
+                .flatMap(r -> r.getPermissions().stream())
+                .anyMatch(p -> p.getCode().equals(EPermission.ADMIN.getCode())
+                        || p.getCode().equals(EPermission.MANAGE_CHANNELS.getCode()))
+                || member.getServer().getOwner().getId().equals(user.getId());
+
+        List<Channel> channels = channelRepository.findByServer_Id(serverId);
+        if (canViewAll) return channels;
+
+        return channels.stream()
+                .filter(c -> Boolean.FALSE.equals(c.getIsPrivate())
+                        || (c.getAllowedMembers() != null && c.getAllowedMembers().contains(member)))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<Channel> getChannelsByCategoryVisibleToUser(Long categoryId, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        List<Channel> channels = channelRepository.findByCategory_Id(categoryId);
+        if (channels.isEmpty()) return channels;
+
+        Long serverId = channels.get(0).getServer().getId();
+        ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, user.getId())
+                .orElseThrow(() -> new AccessDeniedException("Bạn không phải thành viên server này"));
+
+        boolean canViewAll = member.getRoles().stream()
+                .flatMap(r -> r.getPermissions().stream())
+                .anyMatch(p -> p.getCode().equals(EPermission.ADMIN.getCode())
+                        || p.getCode().equals(EPermission.MANAGE_CHANNELS.getCode()))
+                || member.getServer().getOwner().getId().equals(user.getId());
+
+        if (canViewAll) return channels;
+
+        return channels.stream()
+                .filter(c -> Boolean.FALSE.equals(c.getIsPrivate())
+                        || (c.getAllowedMembers() != null && c.getAllowedMembers().contains(member)))
+                .collect(Collectors.toList());
     }
 }
