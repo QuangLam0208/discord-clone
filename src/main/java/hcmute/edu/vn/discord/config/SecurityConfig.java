@@ -60,7 +60,8 @@ public class SecurityConfig {
                                                                 "/v3/api-docs/**",
                                                                 "/swagger-resources/**",
                                                                 "/webjars/**",
-                                                                "/websocket-test.html")
+                                                                "/websocket-test.html",
+                                                                "/files/**")  // Cho phép xem file public
                                                 .permitAll()
                                                 .anyRequest().authenticated())
                                 .userDetailsService(userDetailsService)
