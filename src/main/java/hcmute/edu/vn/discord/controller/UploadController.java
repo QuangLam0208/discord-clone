@@ -54,7 +54,7 @@ public class UploadController {
             // 2. Kiểm tra kích thước file
             if (file.getSize() > MAX_FILE_SIZE) {
                 return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                        .body(Map.of("error", "Kích thước file vượt quá giới hạn tối đa 5MB"));
+                        .body(Map.of("error", "Kích thước file vượt quá giới hạn tối đa 10MB"));
             }
 
             // Kiểm tra loại file
@@ -64,23 +64,18 @@ public class UploadController {
                         .body(Map.of("error", "Chỉ cho phép file JPEG và PNG"));
             }
 
+            // Xác định phần mở rộng dựa trên loại nội dung
+            String extension = switch (contentType) {
+                case "image/jpeg" -> ".jpg";
+                case "image/png" -> ".png";
+                default -> throw new IllegalStateException("Loại nội dung không hợp lệ: " + contentType);
+            };
+
             // Tạo cấu trúc thư mục dựa trên ngày hiện tại
             LocalDate today = LocalDate.now();
             String datePath = String.format("%d/%02d/%02d", today.getYear(), today.getMonthValue(), today.getDayOfMonth());
             Path uploadPath = Paths.get(UPLOAD_DIR, datePath);
             Files.createDirectories(uploadPath);
-
-            // Lưu file với tên duy nhất
-            // Luôn xác định phần mở rộng dựa trên loại nội dung đã được kiểm tra.
-            String extension;
-            if ("image/jpeg".equals(contentType)) {
-                extension = ".jpg";
-            } else if ("image/png".equals(contentType)) {
-                extension = ".png";
-            } else {
-                // Trường hợp dự phòng, không nên xảy ra vì đã kiểm tra ở trên
-                extension = "";
-            }
 
             String uniqueFilename = UUID.randomUUID() + extension;
             Path filePath = uploadPath.resolve(uniqueFilename);
@@ -88,7 +83,7 @@ public class UploadController {
 
             // Trả về URL của file
             // Cập nhật fileUrl để sử dụng baseUrl từ application.properties
-            String fileUrl = String.format("%s/%s/%s/%s", baseUrl, UPLOAD_DIR, datePath, uniqueFilename);
+            String fileUrl = String.format("%s/files/%s/%s", baseUrl, datePath, uniqueFilename); // Updated to match WebConfig
             log.info("File được upload thành công bởi {}: {}", username, fileUrl);
             return ResponseEntity.ok(Map.of("url", fileUrl));
         } catch (IOException e) {
