@@ -78,6 +78,15 @@ public class ServerAuth {
         ));
     }
 
+    // Quản lý role: Owner hoặc ADMIN/MANAGE_ROLES
+    public boolean canManageRole(Long serverId, String username) {
+        if (isOwner(serverId, username)) return true;
+        return has(serverId, username, Set.of(
+                EPermission.ADMIN.getCode(),
+                EPermission.MANAGE_ROLES.getCode()
+        ));
+    }
+
     // Quản lý thành viên: Owner hoặc ADMIN/MANAGE_SERVER/KICK_APPROVE_REJECT_MEMBERS/BAN_MEMBERS
     public boolean canManageMembers(Long serverId, String username) {
         if (isOwner(serverId, username)) return true;

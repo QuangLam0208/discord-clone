@@ -23,7 +23,7 @@ public class ServerRoleController {
     private final ServerRoleService serverRoleService;
 
     @PostMapping
-    @PreAuthorize("@serverAuth.hasPermission(#serverId, principal.name, 'MANAGE_ROLES')")
+    @PreAuthorize("@serverAuth.canManageRole(#serverId, principal.name)")
     public ResponseEntity<ServerRoleResponse> createRole(@PathVariable Long serverId,
                                                          @Valid @RequestBody ServerRoleRequest request,
                                                          Principal principal) {
@@ -32,7 +32,7 @@ public class ServerRoleController {
     }
 
     @PutMapping("/{roleId}")
-    @PreAuthorize("@serverAuth.hasPermission(#serverId, principal.name, 'MANAGE_ROLES')")
+    @PreAuthorize("@serverAuth.canManageRole(#serverId, principal.name)")
     public ResponseEntity<ServerRoleResponse> updateRole(@PathVariable Long serverId,
                                                          @PathVariable Long roleId,
                                                          @Valid @RequestBody ServerRoleRequest request,
@@ -42,7 +42,7 @@ public class ServerRoleController {
     }
 
     @DeleteMapping("/{roleId}")
-    @PreAuthorize("@serverAuth.hasPermission(#serverId, principal.name, 'MANAGE_ROLES')")
+    @PreAuthorize("@serverAuth.canManageRole(#serverId, principal.name)")
     public ResponseEntity<Void> deleteRole(@PathVariable Long serverId,
                                            @PathVariable Long roleId,
                                            Principal principal) {
@@ -51,7 +51,7 @@ public class ServerRoleController {
     }
 
     @GetMapping
-    @PreAuthorize("@serverAuth.hasPermission(#serverId, principal.name, 'MANAGE_ROLES')")
+    @PreAuthorize("@serverAuth.canManageRole(#serverId, principal.name)")
     public ResponseEntity<List<ServerRoleResponse>> listRoles(@PathVariable Long serverId,
                                                               Principal principal) {
         List<ServerRoleResponse> data = serverRoleService.listRoles(serverId, principal.getName())
@@ -70,7 +70,7 @@ public class ServerRoleController {
     }
 
     @PostMapping("/assign")
-    @PreAuthorize("@serverAuth.hasPermission(#serverId, principal.name, 'MANAGE_ROLES')")
+    @PreAuthorize("@serverAuth.canManageRole(#serverId, principal.name)")
     public ResponseEntity<ServerMemberResponse> assignRoles(@PathVariable Long serverId,
                                                             @Valid @RequestBody AssignRolesRequest request,
                                                             Principal principal) {
