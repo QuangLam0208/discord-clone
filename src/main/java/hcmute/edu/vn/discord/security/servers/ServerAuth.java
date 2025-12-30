@@ -1,17 +1,14 @@
 package hcmute.edu.vn.discord.security.servers;
 
 import hcmute.edu.vn.discord.entity.enums.EPermission;
-import hcmute.edu.vn.discord.entity.jpa.Channel;
-import hcmute.edu.vn.discord.entity.jpa.Permission;
-import hcmute.edu.vn.discord.entity.jpa.Server;
-import hcmute.edu.vn.discord.entity.jpa.ServerMember;
-import hcmute.edu.vn.discord.entity.jpa.User;
+import hcmute.edu.vn.discord.entity.jpa.*;
 import hcmute.edu.vn.discord.entity.mongo.Message;
 import hcmute.edu.vn.discord.repository.ChannelRepository;
 import hcmute.edu.vn.discord.repository.MessageRepository;
 import hcmute.edu.vn.discord.repository.ServerMemberRepository;
 import hcmute.edu.vn.discord.repository.ServerRepository;
 import hcmute.edu.vn.discord.repository.UserRepository;
+import hcmute.edu.vn.discord.repository.CategoryRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -29,6 +26,7 @@ public class ServerAuth {
     private final ServerMemberRepository serverMemberRepository;
     private final ChannelRepository channelRepository;
     private final MessageRepository messageRepository;
+    private final CategoryRepository categoryRepository;
 
     // Helper: lấy User theo username
     private User requireUser(String username) {
@@ -62,6 +60,13 @@ public class ServerAuth {
                 .flatMap(r -> r.getPermissions().stream())
                 .map(Permission::getCode)
                 .anyMatch(codes::contains);
+    }
+
+    // Helper: Lấy ServerID từ CategoryID (dùng cho Update/Delete Category)
+    public Long serverIdOfCategory(Long categoryId) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+        return category.getServer().getId();
     }
 
     // Quản lý kênh: Owner hoặc ADMIN/MANAGE_CHANNELS

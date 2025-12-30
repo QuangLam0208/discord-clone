@@ -1,24 +1,15 @@
 package hcmute.edu.vn.discord.service;
 
-import hcmute.edu.vn.discord.entity.jpa.Channel;
-import org.springframework.transaction.annotation.Transactional;
-
+import hcmute.edu.vn.discord.dto.request.ChannelRequest;
+import hcmute.edu.vn.discord.dto.response.ChannelResponse;
 import java.util.List;
-import java.util.Optional;
 
 public interface ChannelService {
-    Channel createChannel(Channel channel, String creatorUsername);
-    Channel updateChannel(Long id, Channel updatedChannel, String username);
-    void deleteChannel(Long id, String username);
-    Optional<Channel> getChannelById(Long id);
-    List<Channel> getAllChannels();
-    List<Channel> getChannelsByServer(Long serverId);
-    List<Channel> getChannelsByCategory(Long categoryId);
+    ChannelResponse createChannel(ChannelRequest request);
+    ChannelResponse updateChannel(Long channelId, ChannelRequest request);
+    void deleteChannel(Long channelId);
 
-    // Hiển thị theo quyền xem
-    @Transactional(readOnly = true)
-    List<Channel> getChannelsByServerVisibleToUser(Long serverId, String username);
-
-    @Transactional(readOnly = true)
-    List<Channel> getChannelsByCategoryVisibleToUser(Long categoryId, String username);
+    ChannelResponse getChannelById(Long id);
+    List<ChannelResponse> getChannelsByServer(Long serverId);
+    List<ChannelResponse> getChannelsByCategory(Long categoryId);
 }

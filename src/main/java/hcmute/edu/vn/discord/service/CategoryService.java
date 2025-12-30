@@ -1,13 +1,13 @@
 package hcmute.edu.vn.discord.service;
 
-import hcmute.edu.vn.discord.entity.jpa.Category;
+import hcmute.edu.vn.discord.dto.request.CategoryRequest; // Dùng Request DTO cho gọn tham số
+import hcmute.edu.vn.discord.dto.response.CategoryResponse;
 import java.util.List;
-import java.util.Optional;
 
 public interface CategoryService {
-    Category createCategory(Long serverId, String name);
-    Category updateCategory(Long categoryId, String newName);
+    CategoryResponse createCategory(CategoryRequest request);
+    CategoryResponse updateCategory(Long categoryId, CategoryRequest request);
     void deleteCategory(Long categoryId);
-    List<Category> getCategoriesByServer(Long serverId);
-    Optional<Category> getCategoryById(Long id);
+    List<CategoryResponse> getCategoriesByServer(Long serverId);
+    CategoryResponse getCategoryById(Long id);
 }

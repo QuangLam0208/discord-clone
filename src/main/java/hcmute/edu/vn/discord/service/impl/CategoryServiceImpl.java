@@ -1,5 +1,7 @@
 package hcmute.edu.vn.discord.service.impl;
 
+import hcmute.edu.vn.discord.dto.request.CategoryRequest;
+import hcmute.edu.vn.discord.dto.response.CategoryResponse;
 import hcmute.edu.vn.discord.entity.jpa.Category;
 import hcmute.edu.vn.discord.entity.jpa.Server;
 import hcmute.edu.vn.discord.repository.CategoryRepository;
@@ -11,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -22,43 +24,57 @@ public class CategoryServiceImpl implements CategoryService {
 
     @Override
     @Transactional
-    public Category createCategory(Long serverId, String name) {
-        Server server = serverRepository.findById(serverId)
+    public CategoryResponse createCategory(CategoryRequest request) {
+        Server server = serverRepository.findById(request.getServerId())
                 .orElseThrow(() -> new EntityNotFoundException("Server not found"));
+
         Category category = new Category();
         category.setServer(server);
-        category.setName(name);
-        return categoryRepository.save(category);
+        category.setName(request.getName());
+
+        Category savedCategory = categoryRepository.save(category);
+        return CategoryResponse.from(savedCategory); // Convert ngay tại đây
     }
 
     @Override
     @Transactional
-    public Category updateCategory(Long categoryId, String newName) {
+    public CategoryResponse updateCategory(Long categoryId, CategoryRequest request) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new EntityNotFoundException("Category not found"));
-        category.setName(newName);
-        return categoryRepository.save(category);
+
+        // Logic check serverId không đổi có thể để ở Controller hoặc Service đều được
+        // Nhưng nếu để đây thì an toàn hơn
+        if (request.getServerId() != null && !request.getServerId().equals(category.getServer().getId())) {
+            throw new IllegalArgumentException("Không thể thay đổi server của category");
+        }
+
+        category.setName(request.getName());
+        return CategoryResponse.from(categoryRepository.save(category));
     }
 
     @Override
     @Transactional
     public void deleteCategory(Long categoryId) {
-        // Lưu ý: Nếu trong Category có channel, JPA cascade=ALL sẽ xóa luôn channel đó
-        // Nếu muốn giữ channel, phải set category của channel đó = null trước khi xóa
-        if (categoryRepository.existsById(categoryId)) {
-            categoryRepository.deleteById(categoryId);
+        if (!categoryRepository.existsById(categoryId)) {
+            throw new EntityNotFoundException("Category not found");
         }
+        categoryRepository.deleteById(categoryId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<Category> getCategoriesByServer(Long serverId) {
-        return categoryRepository.findByServerId(serverId);
+    public List<CategoryResponse> getCategoriesByServer(Long serverId) {
+        // Convert List<Entity> -> List<DTO>
+        return categoryRepository.findByServerId(serverId).stream()
+                .map(CategoryResponse::from)
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Optional<Category> getCategoryById(Long id) {
-        return categoryRepository.findById(id);
+    public CategoryResponse getCategoryById(Long id) {
+        Category category = categoryRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+        return CategoryResponse.from(category);
     }
 }
