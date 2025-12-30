@@ -34,7 +34,6 @@ public class ServerMemberServiceImpl implements ServerMemberService {
 
         Server server = serverRepository.findById(serverId)
                 .orElseThrow(() -> new EntityNotFoundException("Server not found"));
-
         if (server.getStatus() != ServerStatus.ACTIVE) {
             throw new IllegalStateException("Server không hoạt động");
         }
@@ -42,14 +41,14 @@ public class ServerMemberServiceImpl implements ServerMemberService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        // Nếu có logic ban, chặn join khi bị ban:
         if (serverMemberRepository.findByServerIdAndUserId(serverId, userId)
                 .map(ServerMember::getIsBanned).orElse(false)) {
             throw new IllegalStateException("User bị ban khỏi server");
         }
 
-        ServerRole memberRole = serverRoleRepository.findByServerIdAndName(serverId, "Member")
-                .orElseThrow(() -> new IllegalStateException("Default role 'Member' not found"));
+        // MẶC ĐỊNH: @everyone (không còn dùng "Member")
+        ServerRole everyoneRole = serverRoleRepository.findByServerIdAndName(serverId, "@everyone")
+                .orElseThrow(() -> new EntityNotFoundException("Role '@everyone' not found"));
 
         ServerMember newMember = new ServerMember();
         newMember.setServer(server);
@@ -58,7 +57,7 @@ public class ServerMemberServiceImpl implements ServerMemberService {
         newMember.setIsBanned(false);
         newMember.setNickname(user.getDisplayName() != null ? user.getDisplayName() : user.getUsername());
         Set<ServerRole> roles = new HashSet<>();
-        roles.add(memberRole);
+        roles.add(everyoneRole);
         newMember.setRoles(roles);
 
         try {
@@ -97,5 +96,36 @@ public class ServerMemberServiceImpl implements ServerMemberService {
                         .map(Permission::getCode)
                         .anyMatch(requiredCodes::contains))
                 .orElse(false);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<ServerRole> getRolesOfMember(Long serverId, Long userId) {
+        ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, userId)
+                .orElseThrow(() -> new EntityNotFoundException("Member not found"));
+        // đảm bảo @everyone luôn có
+        boolean hasEveryone = member.getRoles().stream().anyMatch(r -> "@everyone".equalsIgnoreCase(r.getName()));
+        if (!hasEveryone) {
+            ServerRole everyone = serverRoleRepository.findByServerIdAndName(serverId, "@everyone")
+                    .orElse(null);
+            if (everyone != null) {
+                member.getRoles().add(everyone);
+            }
+        }
+        return member.getRoles().stream().toList();
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public Set<Permission> getEffectivePermissions(Long serverId, Long userId) {
+        ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, userId)
+                .orElseThrow(() -> new EntityNotFoundException("Member not found"));
+        Set<Permission> result = new HashSet<>();
+        member.getRoles().forEach(role -> {
+            if (role.getPermissions() != null) {
+                result.addAll(role.getPermissions());
+            }
+        });
+        return result;
     }
 }
