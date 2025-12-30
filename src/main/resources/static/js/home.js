@@ -33,10 +33,30 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnLogoutAction = document.getElementById('btn-logout-action');
 
     // Toggle menu
-    if(btnSettings) {
-        btnSettings.addEventListener('click', (e) => {
-            e.stopPropagation();
+    if (btnSettings && settingsPopup) {
+        // Ensure the settings control is focusable and announced as a button
+        if (!btnSettings.hasAttribute('tabindex')) {
+            btnSettings.setAttribute('tabindex', '0');
+        }
+        if (!btnSettings.hasAttribute('role')) {
+            btnSettings.setAttribute('role', 'button');
+        }
+
+        const toggleSettingsPopup = (event) => {
+            event.stopPropagation();
             settingsPopup.classList.toggle('show');
+        };
+
+        btnSettings.addEventListener('click', (e) => {
+            toggleSettingsPopup(e);
+        });
+
+        btnSettings.addEventListener('keydown', (e) => {
+            const key = e.key || e.code;
+            if (key === 'Enter' || key === ' ' || key === 'Spacebar') {
+                e.preventDefault();
+                toggleSettingsPopup(e);
+            }
         });
     }
 
