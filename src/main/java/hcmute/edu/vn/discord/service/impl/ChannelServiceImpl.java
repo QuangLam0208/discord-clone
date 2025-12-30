@@ -1,20 +1,21 @@
 package hcmute.edu.vn.discord.service.impl;
 
+import hcmute.edu.vn.discord.dto.request.ChannelPermissionRequest;
 import hcmute.edu.vn.discord.dto.request.ChannelRequest;
 import hcmute.edu.vn.discord.dto.response.ChannelResponse;
-import hcmute.edu.vn.discord.entity.jpa.Category;
-import hcmute.edu.vn.discord.entity.jpa.Channel;
-import hcmute.edu.vn.discord.entity.jpa.Server;
-import hcmute.edu.vn.discord.repository.CategoryRepository;
-import hcmute.edu.vn.discord.repository.ChannelRepository;
-import hcmute.edu.vn.discord.repository.ServerRepository;
+import hcmute.edu.vn.discord.entity.jpa.*;
+import hcmute.edu.vn.discord.repository.*;
+import hcmute.edu.vn.discord.security.servers.ServerAuth;
 import hcmute.edu.vn.discord.service.ChannelService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +25,9 @@ public class ChannelServiceImpl implements ChannelService {
     private final ChannelRepository channelRepository;
     private final ServerRepository serverRepository;
     private final CategoryRepository categoryRepository;
+    private final ServerAuth serverAuth;
+    private final ServerMemberRepository serverMemberRepository;
+    private final ServerRoleRepository serverRoleRepository;
 
     @Override
     @Transactional
@@ -65,8 +69,6 @@ public class ChannelServiceImpl implements ChannelService {
         if (request.getIsPrivate() != null) {
             channel.setIsPrivate(request.getIsPrivate());
         }
-        // Lưu ý: Thường ít khi cho đổi Type (Text <-> Voice) sau khi tạo, tùy ông quyết định
-        // channel.setType(request.getType());
 
         // Update Category (Di chuyển channel sang category khác)
         if (request.getCategoryId() != null) {
@@ -81,11 +83,6 @@ public class ChannelServiceImpl implements ChannelService {
                 }
                 channel.setCategory(category);
             }
-        } else {
-            // Nếu request gửi null categoryId -> Có thể user muốn channel "rời khỏi" category (nằm ở ngoài)
-            // Hoặc nếu ông muốn "null nghĩa là không update" thì check null kỹ hơn.
-            // Ở đây tôi giả định null là set về null (nằm ngoài category)
-            channel.setCategory(null);
         }
 
         return ChannelResponse.from(channelRepository.save(channel));
@@ -111,7 +108,12 @@ public class ChannelServiceImpl implements ChannelService {
     @Override
     @Transactional(readOnly = true)
     public List<ChannelResponse> getChannelsByServer(Long serverId) {
+        // Lấy username hiện tại
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
         return channelRepository.findByServerId(serverId).stream()
+                // FIX: Lọc bỏ các kênh mà user không có quyền xem
+                .filter(channel -> serverAuth.canViewChannel(channel.getId(), username))
                 .map(ChannelResponse::from)
                 .collect(Collectors.toList());
     }
@@ -119,8 +121,55 @@ public class ChannelServiceImpl implements ChannelService {
     @Override
     @Transactional(readOnly = true)
     public List<ChannelResponse> getChannelsByCategory(Long categoryId) {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+
         return channelRepository.findByCategoryId(categoryId).stream()
+                // FIX: Cũng áp dụng lọc ở đây
+                .filter(channel -> serverAuth.canViewChannel(channel.getId(), username))
                 .map(ChannelResponse::from)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional
+    public ChannelResponse updateChannelPermissions(Long channelId, ChannelPermissionRequest request) {
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
+
+        if (!Boolean.TRUE.equals(channel.getIsPrivate())) {
+            throw new IllegalArgumentException("Chỉ kênh Private mới được thiết lập quyền truy cập");
+        }
+
+        Long serverId = channel.getServer().getId();
+
+        // 1. Xử lý Members
+        if (request.getMemberIds() != null) {
+            List<ServerMember> members = serverMemberRepository.findAllById(request.getMemberIds());
+
+            // Validate: Member phải thuộc server
+            Set<ServerMember> validMembers = new HashSet<>();
+            for (ServerMember m : members) {
+                if (m.getServer().getId().equals(serverId)) {
+                    validMembers.add(m);
+                }
+            }
+            channel.setAllowedMembers(validMembers);
+        }
+
+        // 2. Xử lý Roles
+        if (request.getRoleIds() != null) {
+            List<ServerRole> roles = serverRoleRepository.findAllById(request.getRoleIds());
+
+            // Validate: Role phải thuộc server
+            Set<ServerRole> validRoles = new HashSet<>();
+            for (ServerRole r : roles) {
+                if (r.getServer().getId().equals(serverId)) {
+                    validRoles.add(r);
+                }
+            }
+            channel.setAllowedRoles(validRoles);
+        }
+
+        return ChannelResponse.from(channelRepository.save(channel));
     }
 }

@@ -1,5 +1,6 @@
 package hcmute.edu.vn.discord.controller;
 
+import hcmute.edu.vn.discord.dto.request.ChannelPermissionRequest;
 import hcmute.edu.vn.discord.dto.request.ChannelRequest;
 import hcmute.edu.vn.discord.dto.response.ChannelResponse;
 import hcmute.edu.vn.discord.service.ChannelService;
@@ -59,5 +60,19 @@ public class ChannelController {
     @PreAuthorize("@serverAuth.isMember(#serverId, authentication.name)")
     public ResponseEntity<List<ChannelResponse>> getChannelsByServer(@PathVariable Long serverId) {
         return ResponseEntity.ok(channelService.getChannelsByServer(serverId));
+    }
+    // Lấy danh sách kênh theo Category
+    @GetMapping("/category/{categoryId}")
+    @PreAuthorize("@serverAuth.isMember(@serverAuth.serverIdOfCategory(#categoryId), authentication.name)")
+    public ResponseEntity<List<ChannelResponse>> getChannelsByCategory(@PathVariable Long categoryId) {
+        return ResponseEntity.ok(channelService.getChannelsByCategory(categoryId));
+    }
+
+    // Cập nhật quyền truy cập (Thêm người/role vào kênh Private)
+    @PutMapping("/{id}/permissions")
+    @PreAuthorize("@serverAuth.canManageChannels(@serverAuth.serverIdOfChannel(#id), authentication.name)")
+    public ResponseEntity<ChannelResponse> updateChannelPermissions(@PathVariable Long id,
+                                                                    @RequestBody ChannelPermissionRequest request) {
+        return ResponseEntity.ok(channelService.updateChannelPermissions(id, request));
     }
 }
