@@ -31,7 +31,7 @@ public class UploadController {
     private String baseUrl;
 
     // Thư mục lưu trữ file upload, cấu hình qua application.properties
-    @Value("${discord.upload.dir:uploads}")
+    @Value("${discord.upload.dir}")
     private String uploadDir;
     // Giới hạn kích thước file tối đa là 10MB
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
