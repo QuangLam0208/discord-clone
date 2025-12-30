@@ -50,7 +50,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/**", "/api/test/**", "/ws/**",
                                 "/ws-test.html", "/swagger-ui/**", "/v3/api-docs/**",
-                                "/uploads/**"  // Cho phép xem file public
+                                "/files/**"  // Cho phép xem file public
                         ).permitAll()
                         .anyRequest().authenticated()  // /api/upload yêu cầu xác thực
                 )
