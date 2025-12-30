@@ -37,16 +37,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (password.length < 6) {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Mật khẩu quá ngắn',
-                text: 'Mật khẩu phải có ít nhất 6 ký tự.',
-                background: '#36393f', color: '#fff'
-            });
-            return;
-        }
-
         // Khóa nút để tránh spam
         const originalBtnText = btnRegister.innerText;
         btnRegister.innerText = "Đang xử lý...";
