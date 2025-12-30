@@ -74,7 +74,7 @@ public class UploadController {
             // Tạo cấu trúc thư mục dựa trên ngày hiện tại
             LocalDate today = LocalDate.now();
             String datePath = String.format("%d/%02d/%02d", today.getYear(), today.getMonthValue(), today.getDayOfMonth());
-            Path uploadPath = Paths.get(UPLOAD_DIR, datePath);
+            Path uploadPath = Paths.get(uploadDir, datePath);
             Files.createDirectories(uploadPath);
 
             String uniqueFilename = UUID.randomUUID() + extension;
