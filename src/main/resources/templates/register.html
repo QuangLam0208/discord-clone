@@ -14,27 +14,32 @@
         <form id="registerForm">
             <div class="input-group">
                 <label for="email">EMAIL</label>
-                <input type="email" id="email" required placeholder="name@example.com">
+                <input type="email" id="email" required aria-required="true" aria-invalid="false" aria-describedby="emailError" placeholder="name@example.com">
+                <span id="emailError" class="error-message" role="alert" aria-live="polite"></span>
             </div>
 
             <div class="input-group">
                 <label for="username">USERNAME (Tên đăng nhập)</label>
-                <input type="text" id="username" required placeholder="VD: minh_dev_123">
+                <input type="text" id="username" required aria-required="true" aria-invalid="false" aria-describedby="usernameError" placeholder="VD: minh_dev_123">
+                <span id="usernameError" class="error-message" role="alert" aria-live="polite"></span>
             </div>
 
             <div class="input-group">
                 <label for="displayName">TÊN HIỂN THỊ</label>
-                <input type="text" id="displayName" placeholder="Tên sẽ hiện khi chat">
+                <input type="text" id="displayName" aria-describedby="displayNameHelp" placeholder="Tên sẽ hiện khi chat">
+                <span id="displayNameHelp" class="helper-text">Tên này sẽ hiển thị với người khác khi bạn chat.</span>
             </div>
 
             <div class="input-group">
                 <label for="password">MẬT KHẨU</label>
-                <input type="password" id="password" required>
+                <input type="password" id="password" required aria-required="true" aria-invalid="false" aria-describedby="passwordError">
+                <span id="passwordError" class="error-message" role="alert" aria-live="polite"></span>
             </div>
 
             <div class="input-group">
                 <label for="confirmPassword">NHẬP LẠI MẬT KHẨU</label>
-                <input type="password" id="confirmPassword" required>
+                <input type="password" id="confirmPassword" required aria-required="true" aria-invalid="false" aria-describedby="confirmPasswordError">
+                <span id="confirmPasswordError" class="error-message" role="alert" aria-live="polite"></span>
             </div>
 
             <button type="submit" id="btn-register">Tiếp tục</button>
