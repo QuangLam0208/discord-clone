@@ -26,6 +26,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final ServerRepository serverRepository;
     private final ChannelRepository channelRepository;
     private final ServerMemberRepository serverMemberRepository;
+    private final PermissionRepository permissionRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -37,6 +38,9 @@ public class DatabaseSeeder implements CommandLineRunner {
         }
 
         System.out.println(">>> ĐANG KHỞI TẠO DỮ LIỆU MẪU (SEEDING)...");
+
+        // 0. Tạo Permissions
+        createPermissionsIfNotExist();
 
         // 1. Tạo Roles
         createRolesIfNotExist();
@@ -64,11 +68,40 @@ public class DatabaseSeeder implements CommandLineRunner {
         System.out.println(">>> KHỞI TẠO DỮ LIỆU THÀNH CÔNG! <<<");
     }
 
+    private void createPermissionsIfNotExist() {
+        for (hcmute.edu.vn.discord.entity.enums.EPermission ePerm : hcmute.edu.vn.discord.entity.enums.EPermission
+                .values()) {
+            if (!permissionRepository.existsByCode(ePerm.getCode())) {
+                Permission p = new Permission();
+                p.setCode(ePerm.getCode());
+                p.setDescription(ePerm.getDescription());
+                permissionRepository.save(p);
+            }
+        }
+    }
+
     private void createRolesIfNotExist() {
         if (roleRepository.count() == 0) {
-            roleRepository.save(new Role(null, ERole.ADMIN));
-            roleRepository.save(new Role(null, ERole.USER_DEFAULT));
-            roleRepository.save(new Role(null, ERole.USER_PREMIUM));
+            roleRepository.save(new Role(null, ERole.ADMIN, null));
+            roleRepository.save(new Role(null, ERole.USER_DEFAULT, null));
+            roleRepository.save(new Role(null, ERole.USER_PREMIUM, null));
+        }
+
+        // Tự động gán quyền ADD_REACTIONS cho USER_DEFAULT nếu chưa có (để fix lỗi user
+        // vừa gặp)
+        Role defaultRole = roleRepository.findByName(ERole.USER_DEFAULT).orElse(null);
+        if (defaultRole != null) {
+            Permission addReaction = permissionRepository
+                    .findByCode(hcmute.edu.vn.discord.entity.enums.EPermission.ADD_REACTIONS.getCode()).orElse(null);
+            if (addReaction != null) {
+                if (defaultRole.getPermissions() == null) {
+                    defaultRole.setPermissions(new HashSet<>());
+                }
+                if (!defaultRole.getPermissions().contains(addReaction)) {
+                    defaultRole.getPermissions().add(addReaction);
+                    roleRepository.save(defaultRole);
+                }
+            }
         }
     }
 
@@ -86,8 +119,7 @@ public class DatabaseSeeder implements CommandLineRunner {
                     "user" + i,
                     "user" + i + "@gmail.com",
                     "Member " + i,
-                    Set.of(userRole)
-            ));
+                    Set.of(userRole)));
         }
         return createdUsers;
     }

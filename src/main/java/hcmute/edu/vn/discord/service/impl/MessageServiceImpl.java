@@ -10,6 +10,7 @@ import hcmute.edu.vn.discord.entity.mongo.Message;
 import hcmute.edu.vn.discord.repository.*;
 import hcmute.edu.vn.discord.service.MessageService;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@lombok.extern.slf4j.Slf4j
 public class MessageServiceImpl implements MessageService {
 
     private final MessageRepository messageRepository;
@@ -29,7 +31,6 @@ public class MessageServiceImpl implements MessageService {
     private final ChannelRepository channelRepository;
     private final ServerRepository serverRepository;
     private final ServerMemberRepository serverMemberRepository;
-
 
     @Override
     public Message sendMessage(Message message) {
@@ -39,6 +40,7 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
+    @Transactional
     public MessageResponse createMessage(Long channelId, String username, MessageRequest request) {
         User sender = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy user: " + username));
@@ -127,14 +129,20 @@ public class MessageServiceImpl implements MessageService {
         boolean hasManageMessages = false;
 
         if (!isAuthor) {
+            log.info("Checking permission for deleteMessage. MsgId: {}, ChannelId: {}", messageId,
+                    message.getChannelId());
             Channel channel = channelRepository.findById(message.getChannelId())
-                    .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
+                    .orElseThrow(() -> {
+                        log.error("Channel with ID {} not found in MySQL!", message.getChannelId());
+                        return new EntityNotFoundException("Channel not found");
+                    });
 
             if (channel.getServer().getOwner().getId().equals(requester.getId())) {
                 isServerOwner = true;
             }
 
-            ServerMember member = serverMemberRepository.findByServerIdAndUserId(channel.getServer().getId(), requester.getId()).orElse(null);
+            ServerMember member = serverMemberRepository
+                    .findByServerIdAndUserId(channel.getServer().getId(), requester.getId()).orElse(null);
             if (member != null) {
                 hasManageMessages = member.getRoles().stream()
                         .flatMap(r -> r.getPermissions().stream())
@@ -179,7 +187,9 @@ public class MessageServiceImpl implements MessageService {
         Message.Reaction r = new Message.Reaction();
         r.setUserId(user.getId());
         r.setEmoji(emoji);
-        msg.getReactions().add(r);
+        List<Message.Reaction> reactions = msg.getReactions();
+        reactions.add(r);
+        msg.setReactions(reactions);
         messageRepository.save(msg);
     }
 
@@ -195,8 +205,10 @@ public class MessageServiceImpl implements MessageService {
         checkChannelAccess(user, channel);
         ensurePermission(user.getId(), channel.getServer().getId(), EPermission.ADD_REACTIONS);
 
-        if(msg.getReactions() != null) {
-            msg.getReactions().removeIf(r -> r.getUserId().equals(user.getId()) && r.getEmoji().equals(emoji));
+        if (msg.getReactions() != null) {
+            List<Message.Reaction> reactions = msg.getReactions();
+            reactions.removeIf(r -> r.getUserId().equals(user.getId()) && r.getEmoji().equals(emoji));
+            msg.setReactions(reactions);
             messageRepository.save(msg);
         }
     }
@@ -225,7 +237,8 @@ public class MessageServiceImpl implements MessageService {
         boolean isAdmin = member.getRoles().stream()
                 .flatMap(r -> r.getPermissions().stream())
                 .anyMatch(p -> p.getCode().equals(EPermission.ADMIN.getCode()));
-        if (isAdmin) return;
+        if (isAdmin)
+            return;
 
         boolean isUserAllowed = channel.getAllowedMembers().stream()
                 .anyMatch(m -> m.getId().equals(member.getId()));
@@ -240,12 +253,20 @@ public class MessageServiceImpl implements MessageService {
 
     // --- HELPER: yêu cầu permission cụ thể trên server ---
     private void ensurePermission(Long userId, Long serverId, EPermission required) {
+        // Owner bypass
+        hcmute.edu.vn.discord.entity.jpa.Server server = serverRepository.findById(serverId)
+                .orElseThrow(() -> new EntityNotFoundException("Server not found"));
+        if (server.getOwner() != null && server.getOwner().getId().equals(userId)) {
+            return;
+        }
+
         ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, userId)
                 .orElseThrow(() -> new AccessDeniedException("Bạn không phải thành viên server này"));
 
         boolean has = member.getRoles().stream()
                 .flatMap(r -> r.getPermissions().stream())
-                .anyMatch(p -> p.getCode().equals(required.getCode()) || p.getCode().equals(EPermission.ADMIN.getCode()));
+                .anyMatch(
+                        p -> p.getCode().equals(required.getCode()) || p.getCode().equals(EPermission.ADMIN.getCode()));
 
         if (!has) {
             throw new AccessDeniedException("Thiếu quyền: " + required.getCode());
@@ -261,7 +282,8 @@ public class MessageServiceImpl implements MessageService {
                 User originalSender = userRepository.findById(originalMsg.getSenderId()).orElse(null);
                 replyToResponse = MessageResponse.builder()
                         .id(originalMsg.getId())
-                        .content(Boolean.TRUE.equals(originalMsg.getDeleted()) ? "Tin nhắn đã bị xóa" : originalMsg.getContent())
+                        .content(Boolean.TRUE.equals(originalMsg.getDeleted()) ? "Tin nhắn đã bị xóa"
+                                : originalMsg.getContent())
                         .senderName(originalSender != null ? originalSender.getDisplayName() : "Unknown")
                         .build();
             }

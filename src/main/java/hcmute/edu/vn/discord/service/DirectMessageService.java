@@ -23,4 +23,6 @@ public interface DirectMessageService {
     void addReaction(String messageId, Long userId, String emoji);
 
     void removeReaction(String messageId, Long userId);
+
+    hcmute.edu.vn.discord.dto.response.ConversationResponse getOrCreateConversation(Long senderId, Long receiverId);
 }
