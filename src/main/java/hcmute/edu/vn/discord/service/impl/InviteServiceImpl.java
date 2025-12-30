@@ -1,10 +1,11 @@
 package hcmute.edu.vn.discord.service.impl;
 
-import hcmute.edu.vn.discord.entity.jpa.Invite;
-import hcmute.edu.vn.discord.entity.jpa.Server;
-import hcmute.edu.vn.discord.entity.jpa.ServerMember;
-import hcmute.edu.vn.discord.entity.jpa.User;
+import hcmute.edu.vn.discord.entity.jpa.*;
 import hcmute.edu.vn.discord.repository.InviteRepository;
+import hcmute.edu.vn.discord.entity.jpa.ServerRole;
+import hcmute.edu.vn.discord.repository.ServerRoleRepository;
+import java.util.HashSet;
+import java.util.Set;
 import hcmute.edu.vn.discord.repository.ServerMemberRepository;
 import hcmute.edu.vn.discord.repository.ServerRepository;
 import hcmute.edu.vn.discord.repository.UserRepository;
@@ -33,6 +34,9 @@ public class InviteServiceImpl implements InviteService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ServerRoleRepository serverRoleRepository;
 
     @Override
     public Invite createInvite(Long serverId, Integer maxUses, Long expireSeconds) {
@@ -83,15 +87,24 @@ public class InviteServiceImpl implements InviteService {
 
         // 3. Kiểm tra xem người dùng đã là thành viên Server chưa
         if (serverMemberRepository.existsByServerIdAndUserId(invite.getServer().getId(), user.getId())) {
-            return; // Đã là thành viên rồi thì không cần xử lý thêm
+            return;
         }
 
-        // 4. Tạo mới ServerMember
+        // 4. Tìm Role @everyone của Server này để gán làm Role mặc định
+        // (mọi server đều có role @everyone được tạo lúc createServer)
+        ServerRole everyoneRole = serverRoleRepository.findByServerIdAndName(invite.getServer().getId(), "@everyone")
+                .orElse(null);
+
+        // 5. Tạo mới ServerMember
         ServerMember member = new ServerMember();
         member.setServer(invite.getServer());
         member.setUser(user);
         member.setIsBanned(false);
-        member.setNickname(user.getDisplayName()); // Mặc định dùng DisplayName của User
+        member.setNickname(user.getDisplayName());
+
+        if (everyoneRole != null) {
+            member.setRoles(new HashSet<>(Set.of(everyoneRole)));
+        }
 
         serverMemberRepository.save(member);
     }
