@@ -46,6 +46,15 @@ public class SecurityConfig {
                 .sessionManagement(sess -> sess
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        // API (cho Ajax gọi)
+                        .requestMatchers("/api/auth/**").permitAll()
+
+                        // View Controller (URL đẹp cho người dùng)
+                        .requestMatchers("/", "/login", "/register").permitAll()
+
+                        // Resource tĩnh (CSS, JS vẫn nằm ở static)
+                        .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
+
                         // TODO: /ws/**, /ws-test.html is temporarily public for testing. MUST secure before production.
                         .requestMatchers("/api/auth/**", "/api/test/**", "/ws/**",
                                 "/ws-test.html",
