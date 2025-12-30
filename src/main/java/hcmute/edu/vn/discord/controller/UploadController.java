@@ -34,7 +34,7 @@ public class UploadController {
     @Value("${discord.upload.dir:uploads}")
     private String UPLOAD_DIR;
     // Giới hạn kích thước file tối đa là 5MB
-    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 5MB
     private static final Logger log = LoggerFactory.getLogger(UploadController.class);
 
     // Thêm tham số Authentication vào phương thức uploadFile
