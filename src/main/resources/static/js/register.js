@@ -1,87 +1,73 @@
-document.addEventListener('DOMContentLoaded', function() {
+// register.js - gắn sự kiện cho trang đăng ký
+document.addEventListener('DOMContentLoaded', () => {
     const registerForm = document.getElementById('registerForm');
     const btnRegister = document.getElementById('btn-register');
 
-    registerForm.addEventListener('submit', function(event) {
+    if (!registerForm) return;
+
+    registerForm.addEventListener('submit', async (event) => {
         event.preventDefault();
 
-        // 1. Lấy dữ liệu
-        const email = document.getElementById('email').value.trim();
-        const username = document.getElementById('username').value.trim();
-        const password = document.getElementById('password').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
-        let displayName = document.getElementById('displayName').value.trim();
+        const emailInput = document.getElementById('email');
+        const usernameInput = document.getElementById('username');
+        const displayNameInput = document.getElementById('displayName');
+        const passwordInput = document.getElementById('password');
+        const confirmPasswordInput = document.getElementById('confirmPassword');
 
-        // Validate định dạng email đơn giản phía client
-        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailPattern.test(email)) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Email không hợp lệ',
-                text: 'Vui lòng nhập đúng định dạng email (ví dụ: ten@vidu.com).',
-                background: '#36393f', color: '#fff'
-            });
-            return;
+        const emailError = document.getElementById('emailError');
+        const usernameError = document.getElementById('usernameError');
+        const passwordError = document.getElementById('passwordError');
+        const confirmPasswordError = document.getElementById('confirmPasswordError');
+
+        [emailError, usernameError, passwordError, confirmPasswordError].forEach(el => {
+            if (el) el.textContent = '';
+        });
+        [emailInput, usernameInput, passwordInput, confirmPasswordInput].forEach(el => {
+            if (el) el.setAttribute('aria-invalid', 'false');
+        });
+
+        const email = (emailInput?.value || '').trim();
+        const username = (usernameInput?.value || '').trim();
+        const displayName = (displayNameInput?.value || username);
+        const password = passwordInput?.value || '';
+        const confirmPassword = confirmPasswordInput?.value || '';
+
+        let hasError = false;
+        if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            if (emailError) emailError.textContent = 'Email không hợp lệ';
+            if (emailInput) emailInput.setAttribute('aria-invalid', 'true');
+            hasError = true;
         }
-        // Tự động điền displayName nếu trống
-        if (!displayName) displayName = username;
-
-        // 2. Validate phía Client
+        if (!username) {
+            if (usernameError) usernameError.textContent = 'Vui lòng nhập username';
+            if (usernameInput) usernameInput.setAttribute('aria-invalid', 'true');
+            hasError = true;
+        }
+        if (!password) {
+            if (passwordError) passwordError.textContent = 'Vui lòng nhập mật khẩu';
+            if (passwordInput) passwordInput.setAttribute('aria-invalid', 'true');
+            hasError = true;
+        }
         if (password !== confirmPassword) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Mật khẩu không khớp!',
-                text: 'Vui lòng kiểm tra lại mật khẩu nhập lại.',
-                background: '#36393f', color: '#fff'
-            });
-            return;
+            if (confirmPasswordError) confirmPasswordError.textContent = 'Mật khẩu nhập lại không khớp';
+            if (confirmPasswordInput) confirmPasswordInput.setAttribute('aria-invalid', 'true');
+            hasError = true;
         }
+        if (hasError) return;
 
-        // Khóa nút để tránh spam
-        const originalBtnText = btnRegister.innerText;
-        btnRegister.innerText = "Đang xử lý...";
+        btnRegister.innerText = 'Đang xử lý...';
         btnRegister.disabled = true;
 
-        const payload = {
-            username: username,
-            email: email,
-            password: password,
-            displayName: displayName
-        };
-
-        // 3. Gọi API
-        fetch('/api/auth/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-            .then(async response => {
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.message || "Đăng ký thất bại");
-                return data;
-            })
-            .then(() => {
-                // Thành công -> Thông báo đẹp -> Chuyển trang
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Đăng ký thành công!',
-                    text: 'Bạn sẽ được chuyển đến trang đăng nhập.',
-                    background: '#36393f', color: '#fff',
-                    timer: 2000,
-                    showConfirmButton: false
-                }).then(() => {
-                    window.location.href = "/login";
-                });
-            })
-            .catch(error => {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Lỗi',
-                    text: error.message,
-                    background: '#36393f', color: '#fff'
-                });
-                btnRegister.innerText = originalBtnText;
-                btnRegister.disabled = false;
-            });
+        try {
+            // Backend trả token + user và đã đăng nhập
+            await AuthService.register(username, email, password, displayName);
+            await AuthService.showToastSuccess('Đăng ký thành công');
+            window.location.href = '/';
+        } catch (error) {
+            await AuthService.showErrorAlert(error.message, 'Đăng ký thất bại');
+        } finally {
+            btnRegister.innerText = 'Tiếp tục';
+            btnRegister.disabled = false;
+        }
     });
 });

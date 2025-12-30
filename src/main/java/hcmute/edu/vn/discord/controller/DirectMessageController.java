@@ -24,12 +24,12 @@ public class DirectMessageController {
 
     @PostMapping
     public ResponseEntity<DirectMessageResponse> sendMessage(
-            Principal principal,
+            @AuthenticationPrincipal UserDetailsImpl user,
             @Valid @RequestBody DirectMessageRequest request) {
-        if (principal == null || principal.getName() == null) {
-            throw new IllegalArgumentException("Principal is null or unauthenticated");
+        if (user == null || user.getId() == null) {
+            throw new IllegalArgumentException("User is null or unauthenticated");
         }
-        Long senderId = Long.valueOf(principal.getName());
+        Long senderId = user.getId();
         return ResponseEntity.ok(
                 directMessageService.sendMessage(senderId, request)
         );
@@ -52,6 +52,9 @@ public class DirectMessageController {
             @PathVariable String id,
             @Valid @RequestBody EditMessageRequest request,
             @AuthenticationPrincipal UserDetailsImpl user) {
+        if (user == null || user.getId() == null) {
+            throw new IllegalArgumentException("User is null or unauthenticated");
+        }
         return ResponseEntity.ok(
                 directMessageService.editMessage(id, user.getId(), request)
         );

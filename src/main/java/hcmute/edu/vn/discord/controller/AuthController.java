@@ -2,7 +2,8 @@ package hcmute.edu.vn.discord.controller;
 
 import hcmute.edu.vn.discord.dto.request.LoginRequest;
 import hcmute.edu.vn.discord.dto.request.RegisterRequest;
-import hcmute.edu.vn.discord.dto.response.JwtResponse;
+import hcmute.edu.vn.discord.dto.response.AuthResponse;
+import hcmute.edu.vn.discord.dto.response.UserResponse;
 import hcmute.edu.vn.discord.security.jwt.JwtUtils;
 import hcmute.edu.vn.discord.security.services.UserDetailsImpl;
 import hcmute.edu.vn.discord.service.UserService;
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Map;
 
 @CrossOrigin(origins = "*", maxAge = 3600)
 @RestController
@@ -31,8 +31,7 @@ public class AuthController {
     private final JwtUtils jwtUtils;
 
     @PostMapping("/login")
-    public ResponseEntity<JwtResponse> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
-
+    public ResponseEntity<AuthResponse> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         loginRequest.getUsername(), loginRequest.getPassword())
@@ -47,23 +46,40 @@ public class AuthController {
                 .map(GrantedAuthority::getAuthority)
                 .toList();
 
-        return ResponseEntity.ok(new JwtResponse(
+        var userEntity = userService.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return ResponseEntity.ok(new AuthResponse(
                 jwt,
                 "Bearer",
-                userDetails.getId(),
-                userDetails.getUsername(),
-                userDetails.getEmail(),
-                roles
+                UserResponse.from(userEntity)
         ));
     }
 
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
-
+    public ResponseEntity<AuthResponse> registerUser(@Valid @RequestBody RegisterRequest registerRequest) {
+        // Tạo user
         userService.registerUser(registerRequest);
 
+        // Đăng nhập ngay sau khi đăng ký
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        registerRequest.getUsername(), registerRequest.getPassword())
+        );
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        String jwt = jwtUtils.generateJwtToken(authentication);
+
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+        var userEntity = userService.findByUsername(userDetails.getUsername())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         return ResponseEntity.created(
-                URI.create("/api/users/username/" + registerRequest.getUsername()))
-                .body(Map.of("message", "User registered successfully"));
+                        URI.create("/api/users/username/" + userDetails.getUsername()))
+                .body(new AuthResponse(
+                        jwt,
+                        "Bearer",
+                        UserResponse.from(userEntity)
+                ));
     }
 }

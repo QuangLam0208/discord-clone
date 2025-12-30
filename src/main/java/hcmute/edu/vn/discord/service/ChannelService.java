@@ -1,6 +1,7 @@
 package hcmute.edu.vn.discord.service;
 
 import hcmute.edu.vn.discord.entity.jpa.Channel;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,4 +14,11 @@ public interface ChannelService {
     List<Channel> getAllChannels();
     List<Channel> getChannelsByServer(Long serverId);
     List<Channel> getChannelsByCategory(Long categoryId);
+
+    // Hiển thị theo quyền xem
+    @Transactional(readOnly = true)
+    List<Channel> getChannelsByServerVisibleToUser(Long serverId, String username);
+
+    @Transactional(readOnly = true)
+    List<Channel> getChannelsByCategoryVisibleToUser(Long categoryId, String username);
 }

@@ -1,72 +1,159 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const loginForm = document.getElementById('loginForm');
-    const btnLogin = document.getElementById('btn-login');
+// auth.js - service layer cho xác thực và user
+const API_AUTH = '/api/auth';
+const API_USER = '/api/users';
 
-    if(loginForm) {
-        loginForm.addEventListener('submit', function(event) {
-            event.preventDefault();
+function getToken() {
+  return localStorage.getItem('accessToken');
+}
 
-            const username = document.getElementById('username').value.trim();
-            const password = document.getElementById('password').value;
+function setAuth(data) {
+  // Backend trả về { token, type, user: { username, displayName, ... } }
+  const token = data?.token || data?.accessToken;
+  const user = data?.user;
 
-            btnLogin.innerText = "Đang đăng nhập...";
-            btnLogin.disabled = true;
+  if (token) localStorage.setItem('accessToken', token);
+  if (user?.username) localStorage.setItem('username', user.username);
+  if (user?.displayName || user?.username) {
+    localStorage.setItem('displayName', user.displayName || user.username);
+  }
+}
 
-            fetch('/api/auth/login', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username: username, password: password })
-            })
-                .then(async response => {
-                    const data = await response.json();
-                    if (!response.ok) {
-                        const serverMessage = data && (data.message || data.error);
-                        let message;
+function clearAuth() {
+  localStorage.removeItem('accessToken');
+  localStorage.removeItem('username');
+  localStorage.removeItem('displayName');
+}
 
-                        if (serverMessage) {
-                            message = serverMessage;
-                        } else if (response.status === 400 || response.status === 401 || response.status === 403) {
-                            // Lỗi xác thực: giữ nguyên thông báo hiện tại
-                            message = "Sai tài khoản hoặc mật khẩu";
-                        } else {
-                            // Lỗi khác (server, mạng, ...): thông báo chung
-                            message = "Đã xảy ra lỗi. Vui lòng thử lại sau.";
-                        }
+function normalizeError(response, data) {
+  const serverMessage = data && (data.message || data.error);
+  if (serverMessage) return serverMessage;
 
-                        throw new Error(message);
-                    }
-                    // Lưu token
-                    localStorage.setItem('accessToken', data.token || data.accessToken);
-                    localStorage.setItem('username', data.username);
+  if ([400, 401, 403].includes(response?.status)) {
+    return 'Sai tài khoản hoặc mật khẩu';
+  }
+  return 'Đã xảy ra lỗi. Vui lòng thử lại sau.';
+}
 
-                    // Thông báo nhẹ -> Chuyển trang
-                    const Toast = Swal.mixin({
-                        toast: true, position: 'top-end',
-                        showConfirmButton: false, timer: 1500,
-                        timerProgressBar: true,
-                        didOpen: (toast) => {
-                            toast.addEventListener('mouseenter', Swal.stopTimer)
-                            toast.addEventListener('mouseleave', Swal.resumeTimer)
-                        }
-                    });
+/* =======================
+   LOGIN
+======================= */
+async function login(username, password) {
+  try {
+    const response = await fetch(`${API_AUTH}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
 
-                    Toast.fire({
-                        icon: 'success',
-                        title: 'Đăng nhập thành công'
-                    }).then(() => {
-                        window.location.href = '/';
-                    });
-                })
-                .catch(error => {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Đăng nhập thất bại',
-                        text: error.message,
-                        background: '#36393f', color: '#fff'
-                    });
-                    btnLogin.innerText = "Đăng nhập";
-                    btnLogin.disabled = false;
-                });
-        });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(normalizeError(response, data));
     }
-});
+
+    setAuth(data);
+    return data;
+  } catch (error) {
+    console.error('Login error:', error);
+    throw error;
+  }
+}
+
+/* =======================
+   REGISTER
+======================= */
+async function register(username, email, password, displayName) {
+  try {
+    const response = await fetch(`${API_AUTH}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password, displayName })
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(normalizeError(response, data));
+    }
+
+    // Backend đã login ngay sau register -> setAuth luôn
+    setAuth(data);
+    return data;
+  } catch (error) {
+    console.error('Register error:', error);
+    throw error;
+  }
+}
+
+/* =======================
+   GET CURRENT USER (/me)
+======================= */
+async function getCurrentUser() {
+  const token = getToken();
+  if (!token) {
+    window.location.href = '/login';
+    return null;
+  }
+
+  const response = await fetch(`${API_USER}/me`, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}` }
+  });
+
+  if (response.status === 401) {
+    logout();
+    return null;
+  }
+
+  if (!response.ok) {
+    console.error('Failed to fetch current user');
+    return null;
+  }
+
+  const user = await response.json();
+  return user;
+}
+
+/* =======================
+   LOGOUT
+======================= */
+function logout() {
+  clearAuth();
+  window.location.href = '/login';
+}
+
+/* =======================
+   UI HELPERS (SweetAlert2)
+======================= */
+function showToastSuccess(title = 'Thành công') {
+  const Toast = Swal.mixin({
+    toast: true,
+    position: 'top-end',
+    showConfirmButton: false,
+    timer: 1500,
+    timerProgressBar: true,
+    didOpen: (toast) => {
+      toast.addEventListener('mouseenter', Swal.stopTimer);
+      toast.addEventListener('mouseleave', Swal.resumeTimer);
+    }
+  });
+  return Toast.fire({ icon: 'success', title });
+}
+
+function showErrorAlert(message, title = 'Có lỗi xảy ra') {
+  return Swal.fire({
+    icon: 'error',
+    title,
+    text: message,
+    background: '#36393f',
+    color: '#fff'
+  });
+}
+
+// Export theo global (nếu không dùng module bundler)
+window.AuthService = {
+  login,
+  register,
+  getCurrentUser,
+  logout,
+  showToastSuccess,
+  showErrorAlert
+};
