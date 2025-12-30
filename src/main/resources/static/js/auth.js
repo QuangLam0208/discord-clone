@@ -19,8 +19,22 @@ document.addEventListener('DOMContentLoaded', function() {
             })
                 .then(async response => {
                     const data = await response.json();
-                    if (!response.ok) throw new Error("Sai tài khoản hoặc mật khẩu");
+                    if (!response.ok) {
+                        const serverMessage = data && (data.message || data.error);
+                        let message;
 
+                        if (serverMessage) {
+                            message = serverMessage;
+                        } else if (response.status === 400 || response.status === 401 || response.status === 403) {
+                            // Lỗi xác thực: giữ nguyên thông báo hiện tại
+                            message = "Sai tài khoản hoặc mật khẩu";
+                        } else {
+                            // Lỗi khác (server, mạng, ...): thông báo chung
+                            message = "Đã xảy ra lỗi. Vui lòng thử lại sau.";
+                        }
+
+                        throw new Error(message);
+                    }
                     // Lưu token
                     localStorage.setItem('accessToken', data.token || data.accessToken);
                     localStorage.setItem('username', data.username);
