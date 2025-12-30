@@ -12,11 +12,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import java.security.Principal;
 import java.util.List;
 
 @RestController
 @RequestMapping("/api")
+@Tag(name = "Channel Messages", description = "Operations for messages within a specific server channel")
 @RequiredArgsConstructor
 public class MessageController {
 
@@ -26,6 +29,7 @@ public class MessageController {
      * 1. Lấy danh sách tin nhắn trong Channel (có phân trang)
      * URL: GET /api/channels/{channelId}/messages?page=0&size=20
      */
+    @Operation(summary = "Get Messages by Channel", description = "Retrieve a paginated list of messages for a given channel.")
     @GetMapping("/channels/{channelId}/messages")
     @PreAuthorize("@serverAuth.canViewChannel(#channelId, principal.name)")
     public ResponseEntity<List<MessageResponse>> getMessagesByChannel(
@@ -42,6 +46,7 @@ public class MessageController {
      * 2. Gửi tin nhắn mới vào Channel
      * URL: POST /api/channels/{channelId}/messages
      */
+    @Operation(summary = "Send Message", description = "Send a new message to a specific channel.")
     @PostMapping("/channels/{channelId}/messages")
     @PreAuthorize("@serverAuth.canSendMessage(#channelId, principal.name)")
     public ResponseEntity<MessageResponse> createMessage(
@@ -57,6 +62,7 @@ public class MessageController {
      * URL: PUT /api/messages/{id}
      * Ghi chú: quyền chỉnh sửa được kiểm tra ở service (chính chủ, chưa xóa, v.v.)
      */
+    @Operation(summary = "Update Message", description = "Edit the content of an existing message.")
     @PutMapping("/messages/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<MessageResponse> updateMessage(
@@ -70,8 +76,10 @@ public class MessageController {
     /**
      * 4. Xóa tin nhắn (Soft Delete)
      * URL: DELETE /api/messages/{id}
-     * Ghi chú: quyền xóa (chính chủ/owner/ADMIN/MANAGE_MESSAGES) được kiểm tra ở service.
+     * Ghi chú: quyền xóa (chính chủ/owner/ADMIN/MANAGE_MESSAGES) được kiểm tra ở
+     * service.
      */
+    @Operation(summary = "Delete Message", description = "Soft delete a message by ID.")
     @DeleteMapping("/messages/{id}")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<?> deleteMessage(
@@ -87,6 +95,7 @@ public class MessageController {
      * URL: POST /api/messages/{id}/reactions?emoji=👍
      * Yêu cầu quyền ADD_REACTIONS hoặc ADMIN, đồng thời phải xem được channel.
      */
+    @Operation(summary = "Add Reaction", description = "Add an emoji reaction to a message.")
     @PostMapping("/messages/{id}/reactions")
     @PreAuthorize("@serverAuth.canReactToMessage(#id, principal.name)")
     public ResponseEntity<?> addReaction(
@@ -103,6 +112,7 @@ public class MessageController {
      * URL: DELETE /api/messages/{id}/reactions?emoji=👍
      * Yêu cầu quyền ADD_REACTIONS hoặc ADMIN, đồng thời phải xem được channel.
      */
+    @Operation(summary = "Remove Reaction", description = "Remove an emoji reaction from a message.")
     @DeleteMapping("/messages/{id}/reactions")
     @PreAuthorize("@serverAuth.canReactToMessage(#id, principal.name)")
     public ResponseEntity<?> removeReaction(
