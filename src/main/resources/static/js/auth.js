@@ -53,12 +53,12 @@ async function register(username, email, password, displayName) {
             throw new Error(data.message || 'Đăng ký thất bại');
         }
 
-        alert('Đăng ký thành công! Vui lòng đăng nhập.');
+        showSuccess('Đăng ký thành công! Vui lòng đăng nhập.');
         window.location.href = '/login.html';
 
     } catch (error) {
         console.error('Register error:', error);
-        alert(error.message);
+        showError(error.message);
     }
 }
 
