@@ -2,11 +2,17 @@ package hcmute.edu.vn.discord.service.impl;
 
 import hcmute.edu.vn.discord.entity.jpa.Invite;
 import hcmute.edu.vn.discord.entity.jpa.Server;
+import hcmute.edu.vn.discord.entity.jpa.ServerMember;
+import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.repository.InviteRepository;
+import hcmute.edu.vn.discord.repository.ServerMemberRepository;
 import hcmute.edu.vn.discord.repository.ServerRepository;
+import hcmute.edu.vn.discord.repository.UserRepository;
 import hcmute.edu.vn.discord.service.InviteService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
@@ -21,6 +27,12 @@ public class InviteServiceImpl implements InviteService {
 
     @Autowired
     private ServerRepository serverRepository;
+
+    @Autowired
+    private ServerMemberRepository serverMemberRepository;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Override
     public Invite createInvite(Long serverId, Integer maxUses, Long expireSeconds) {
@@ -51,6 +63,37 @@ public class InviteServiceImpl implements InviteService {
     @Override
     public Optional<Invite> getInviteByCode(String code) {
         return inviteRepository.findByCode(code);
+    }
+
+    @Override
+    @Transactional
+    public void joinServer(String code) {
+        // 1. Kiểm tra tính hợp lệ và tăng lượt sử dụng của Invite
+        if (!useInvite(code)) {
+            throw new RuntimeException("Mã mời không hợp lệ, đã hết hạn hoặc hết lượt dùng.");
+        }
+
+        Invite invite = inviteRepository.findByCode(code)
+                .orElseThrow(() -> new RuntimeException("Invite not found"));
+
+        // 2. Lấy thông tin User hiện tại đang đăng nhập
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // 3. Kiểm tra xem người dùng đã là thành viên Server chưa
+        if (serverMemberRepository.existsByServerIdAndUserId(invite.getServer().getId(), user.getId())) {
+            return; // Đã là thành viên rồi thì không cần xử lý thêm
+        }
+
+        // 4. Tạo mới ServerMember
+        ServerMember member = new ServerMember();
+        member.setServer(invite.getServer());
+        member.setUser(user);
+        member.setIsBanned(false);
+        member.setNickname(user.getDisplayName()); // Mặc định dùng DisplayName của User
+
+        serverMemberRepository.save(member);
     }
 
     @Override
