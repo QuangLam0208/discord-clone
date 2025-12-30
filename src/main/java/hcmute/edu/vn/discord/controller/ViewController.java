@@ -2,13 +2,17 @@ package hcmute.edu.vn.discord.controller;
 
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import javax.servlet.http.HttpServletRequest;
 
 @Controller // Dùng @Controller (trả về View), KHÔNG dùng @RestController
 public class ViewController {
 
     // 1. Khi người dùng vào "/", trả về trang chủ (home.html)
     @GetMapping("/")
-    public String home() {
+    public String home(HttpServletRequest request) {
+        if (request.getUserPrincipal() == null) {
+            return "redirect:/login";
+        }
         return "home"; // Thymeleaf sẽ tự tìm file templates/home.html
     }
 
