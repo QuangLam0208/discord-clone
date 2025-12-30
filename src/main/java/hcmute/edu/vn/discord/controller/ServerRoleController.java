@@ -23,7 +23,7 @@ public class ServerRoleController {
     private final ServerRoleService serverRoleService;
 
     @PostMapping
-    @PreAuthorize("@serverAuth.isOwner(#serverId, principal.name)")
+    @PreAuthorize("@serverAuth.hasPermission(#serverId, principal.name, 'MANAGE_ROLES')")
     public ResponseEntity<ServerRoleResponse> createRole(@PathVariable Long serverId,
                                                          @Valid @RequestBody ServerRoleRequest request,
                                                          Principal principal) {
@@ -32,7 +32,7 @@ public class ServerRoleController {
     }
 
     @PutMapping("/{roleId}")
-    @PreAuthorize("@serverAuth.isOwner(#serverId, principal.name)")
+    @PreAuthorize("@serverAuth.hasPermission(#serverId, principal.name, 'MANAGE_ROLES')")
     public ResponseEntity<ServerRoleResponse> updateRole(@PathVariable Long serverId,
                                                          @PathVariable Long roleId,
                                                          @Valid @RequestBody ServerRoleRequest request,
@@ -42,7 +42,7 @@ public class ServerRoleController {
     }
 
     @DeleteMapping("/{roleId}")
-    @PreAuthorize("@serverAuth.isOwner(#serverId, principal.name)")
+    @PreAuthorize("@serverAuth.hasPermission(#serverId, principal.name, 'MANAGE_ROLES')")
     public ResponseEntity<Void> deleteRole(@PathVariable Long serverId,
                                            @PathVariable Long roleId,
                                            Principal principal) {
@@ -51,7 +51,7 @@ public class ServerRoleController {
     }
 
     @GetMapping
-    @PreAuthorize("@serverAuth.isOwner(#serverId, principal.name)")
+    @PreAuthorize("@serverAuth.hasPermission(#serverId, principal.name, 'MANAGE_ROLES')")
     public ResponseEntity<List<ServerRoleResponse>> listRoles(@PathVariable Long serverId,
                                                               Principal principal) {
         List<ServerRoleResponse> data = serverRoleService.listRoles(serverId, principal.getName())
@@ -59,8 +59,18 @@ public class ServerRoleController {
         return ResponseEntity.ok(data);
     }
 
+    // endpoint lấy danh sách Role cho user thường
+    @GetMapping("/public")
+    @PreAuthorize("@serverAuth.isMember(#serverId, principal.name)")
+    public ResponseEntity<List<ServerRoleResponse>> getPublicRoles(@PathVariable Long serverId) {
+        // Tận dụng hàm listRoles của service nhưng quyền truy cập rộng hơn
+        List<ServerRoleResponse> data = serverRoleService.listRoles(serverId, null) // Hoặc gọi hàm riêng nếu cần
+                .stream().map(ServerRoleResponse::from).toList();
+        return ResponseEntity.ok(data);
+    }
+
     @PostMapping("/assign")
-    @PreAuthorize("@serverAuth.isOwner(#serverId, principal.name)")
+    @PreAuthorize("@serverAuth.hasPermission(#serverId, principal.name, 'MANAGE_ROLES')")
     public ResponseEntity<ServerMemberResponse> assignRoles(@PathVariable Long serverId,
                                                             @Valid @RequestBody AssignRolesRequest request,
                                                             Principal principal) {
