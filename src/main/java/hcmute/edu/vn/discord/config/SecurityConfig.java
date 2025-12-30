@@ -55,6 +55,10 @@ public class SecurityConfig {
                         // Resource tĩnh (CSS, JS vẫn nằm ở static)
                         .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
 
+                        // TODO: /ws/**, /ws-test.html is temporarily public for testing. MUST secure before production.
+                        .requestMatchers("/api/auth/**", "/api/test/**", "/ws/**",
+                                "/ws-test.html",
+                                "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .userDetailsService(userDetailsService)
