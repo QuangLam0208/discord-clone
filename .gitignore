@@ -1,6 +1,10 @@
 # Ignore uploads folder
 uploads/
 
+# Ignore IDE configuration files
+.idea/
+*.iml
+
 # Existing entries
 HELP.md
 target/
