@@ -20,7 +20,7 @@ public class OpenAPIConfig {
                         .description("API documentation for the Discord Clone application. " +
                                 "This API allows users to register, login, chat, and manage servers/channels.")
                         .version("v1.0.0")
-                        .license(new License().name("Apache 2.0").url("http://springdoc.org")))
+                        .license(new License().name("Apache 2.0").url("https://springdoc.org")))
                 .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))
                 .components(new Components()
                         .addSecuritySchemes("Bearer Authentication", createAPIKeyScheme()));

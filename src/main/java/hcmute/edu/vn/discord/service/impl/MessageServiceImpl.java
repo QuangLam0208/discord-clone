@@ -4,6 +4,7 @@ import hcmute.edu.vn.discord.dto.request.MessageRequest;
 import hcmute.edu.vn.discord.dto.response.MessageResponse;
 import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.jpa.Channel;
+import hcmute.edu.vn.discord.entity.jpa.Server;
 import hcmute.edu.vn.discord.entity.jpa.ServerMember;
 import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.entity.mongo.Message;
@@ -254,7 +255,7 @@ public class MessageServiceImpl implements MessageService {
     // --- HELPER: yêu cầu permission cụ thể trên server ---
     private void ensurePermission(Long userId, Long serverId, EPermission required) {
         // Owner bypass
-        hcmute.edu.vn.discord.entity.jpa.Server server = serverRepository.findById(serverId)
+        Server server = serverRepository.findById(serverId)
                 .orElseThrow(() -> new EntityNotFoundException("Server not found"));
         if (server.getOwner() != null && server.getOwner().getId().equals(userId)) {
             return;

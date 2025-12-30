@@ -2,6 +2,7 @@ package hcmute.edu.vn.discord.controller;
 
 import hcmute.edu.vn.discord.dto.request.DirectMessageRequest;
 import hcmute.edu.vn.discord.dto.request.EditMessageRequest;
+import hcmute.edu.vn.discord.dto.response.ConversationResponse;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
 import hcmute.edu.vn.discord.service.DirectMessageService;
 import hcmute.edu.vn.discord.service.UserService;
@@ -88,7 +89,7 @@ public class DirectMessageController {
 
     @Operation(summary = "Init Conversation", description = "Get or create a conversation with a user by their ID.")
     @PostMapping("/conversation/init")
-    public ResponseEntity<hcmute.edu.vn.discord.dto.response.ConversationResponse> initConversation(
+    public ResponseEntity<ConversationResponse> initConversation(
             @AuthenticationPrincipal UserDetailsImpl user,
             @RequestParam Long receiverId) {
         if (user == null || user.getId() == null) {

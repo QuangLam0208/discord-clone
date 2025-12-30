@@ -1,6 +1,9 @@
 package hcmute.edu.vn.discord.config;
 
+import hcmute.edu.vn.discord.security.jwt.JwtChannelInterceptor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
@@ -31,8 +34,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         endpointRegistration.withSockJS(); // Nếu không có hỗ trợ WebSocket, tự động chuyển sang Http Polling
     }
 
-    @org.springframework.beans.factory.annotation.Autowired
-    private hcmute.edu.vn.discord.security.jwt.JwtChannelInterceptor jwtChannelInterceptor;
+    @Autowired
+    private JwtChannelInterceptor jwtChannelInterceptor;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
@@ -47,8 +50,7 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     @Override
-    public void configureClientInboundChannel(
-            org.springframework.messaging.simp.config.ChannelRegistration registration) {
+    public void configureClientInboundChannel(ChannelRegistration registration) {
         registration.interceptors(jwtChannelInterceptor);
     }
 }

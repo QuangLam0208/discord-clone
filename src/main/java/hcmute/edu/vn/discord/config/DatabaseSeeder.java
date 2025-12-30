@@ -1,6 +1,7 @@
 package hcmute.edu.vn.discord.config;
 
 import hcmute.edu.vn.discord.entity.enums.ChannelType;
+import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.enums.ERole;
 import hcmute.edu.vn.discord.entity.enums.ServerStatus;
 import hcmute.edu.vn.discord.entity.jpa.*;
@@ -69,7 +70,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void createPermissionsIfNotExist() {
-        for (hcmute.edu.vn.discord.entity.enums.EPermission ePerm : hcmute.edu.vn.discord.entity.enums.EPermission
+        for (EPermission ePerm : EPermission
                 .values()) {
             if (!permissionRepository.existsByCode(ePerm.getCode())) {
                 Permission p = new Permission();
@@ -92,7 +93,7 @@ public class DatabaseSeeder implements CommandLineRunner {
         Role defaultRole = roleRepository.findByName(ERole.USER_DEFAULT).orElse(null);
         if (defaultRole != null) {
             Permission addReaction = permissionRepository
-                    .findByCode(hcmute.edu.vn.discord.entity.enums.EPermission.ADD_REACTIONS.getCode()).orElse(null);
+                    .findByCode(EPermission.ADD_REACTIONS.getCode()).orElse(null);
             if (addReaction != null) {
                 if (defaultRole.getPermissions() == null) {
                     defaultRole.setPermissions(new HashSet<>());

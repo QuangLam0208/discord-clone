@@ -38,9 +38,11 @@ public class AuthController {
         private final UserService userService;
         private final JwtUtils jwtUtils;
 
-        @Operation(summary = "Login User", description = "Authenticate a user with username and password, returning a JWT token provided with user details.")
+        @Operation(summary = "Login User", description = "Authenticate a user with username and password, " +
+                "returning a JWT token provided with user details.")
         @ApiResponses({
-                        @ApiResponse(responseCode = "200", description = "Successfully authenticated", content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+                        @ApiResponse(responseCode = "200", description = "Successfully authenticated",
+                                content = @Content(schema = @Schema(implementation = AuthResponse.class))),
                         @ApiResponse(responseCode = "401", description = "Unauthorized - Invalid credentials"),
                         @ApiResponse(responseCode = "400", description = "Bad Request - Validation error")
         })
@@ -70,7 +72,8 @@ public class AuthController {
 
         @Operation(summary = "Register User", description = "Register a new user account and automatically login.")
         @ApiResponses({
-                        @ApiResponse(responseCode = "201", description = "User registered successfully", content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+                        @ApiResponse(responseCode = "201", description = "User registered successfully",
+                                content = @Content(schema = @Schema(implementation = AuthResponse.class))),
                         @ApiResponse(responseCode = "400", description = "Bad Request - Username/Email already exists")
         })
         @PostMapping("/register")

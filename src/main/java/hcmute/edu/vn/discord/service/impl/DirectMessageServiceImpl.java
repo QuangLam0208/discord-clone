@@ -2,6 +2,7 @@ package hcmute.edu.vn.discord.service.impl;
 
 import hcmute.edu.vn.discord.dto.request.DirectMessageRequest;
 import hcmute.edu.vn.discord.dto.request.EditMessageRequest;
+import hcmute.edu.vn.discord.dto.response.ConversationResponse;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
 import hcmute.edu.vn.discord.entity.mongo.DirectMessage;
 import hcmute.edu.vn.discord.entity.mongo.Conversation;
@@ -200,10 +201,10 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     }
 
     @Override
-    public hcmute.edu.vn.discord.dto.response.ConversationResponse getOrCreateConversation(Long senderId,
-            Long receiverId) {
+    public ConversationResponse getOrCreateConversation(Long senderId,
+                                                        Long receiverId) {
         Conversation conversation = findOrCreateConversation(senderId, receiverId);
-        return new hcmute.edu.vn.discord.dto.response.ConversationResponse(
+        return new ConversationResponse(
                 conversation.getId(),
                 conversation.getUser1Id(),
                 conversation.getUser2Id(),
