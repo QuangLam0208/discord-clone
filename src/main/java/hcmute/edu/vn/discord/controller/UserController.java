@@ -1,7 +1,6 @@
 package hcmute.edu.vn.discord.controller;
 
 import hcmute.edu.vn.discord.dto.response.UserResponse;
-import hcmute.edu.vn.discord.security.services.UserDetailsImpl;
 import hcmute.edu.vn.discord.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.constraints.Email;
@@ -9,7 +8,6 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,13 +50,5 @@ public class UserController {
     public ResponseEntity<Map<String, Boolean>> checkEmail(@RequestParam @Email String email) {
         boolean exists = userService.existsByEmail(email);
         return ResponseEntity.ok(Map.of("exists", exists));
-    }
-
-    @GetMapping("/me")
-    public ResponseEntity<UserResponse> getCurrentUser(
-            @AuthenticationPrincipal UserDetailsImpl userDetails) {
-        var user = userService.findById(userDetails.getId())
-                .orElseThrow(() -> new EntityNotFoundException("User not found"));
-        return ResponseEntity.ok(UserResponse.from(user));
     }
 }

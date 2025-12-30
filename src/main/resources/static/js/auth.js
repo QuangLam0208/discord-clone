@@ -7,19 +7,24 @@ function getToken() {
 }
 
 function setAuth(data) {
-  // Hỗ trợ cả data.token và data.accessToken
-  const token = data?.accessToken || data?.token;
+  // Backend trả về { token, type, user: { username, displayName, ... } }
+  const token = data?.token || data?.accessToken;
+  const user = data?.user;
+
   if (token) localStorage.setItem('accessToken', token);
-  if (data?.username) localStorage.setItem('username', data.username);
+  if (user?.username) localStorage.setItem('username', user.username);
+  if (user?.displayName || user?.username) {
+    localStorage.setItem('displayName', user.displayName || user.username);
+  }
 }
 
 function clearAuth() {
   localStorage.removeItem('accessToken');
   localStorage.removeItem('username');
+  localStorage.removeItem('displayName');
 }
 
 function normalizeError(response, data) {
-  // Ưu tiên message từ server, fallback theo mã lỗi, cuối cùng là thông báo chung
   const serverMessage = data && (data.message || data.error);
   if (serverMessage) return serverMessage;
 
@@ -69,6 +74,8 @@ async function register(username, email, password, displayName) {
       throw new Error(normalizeError(response, data));
     }
 
+    // Backend đã login ngay sau register -> setAuth luôn
+    setAuth(data);
     return data;
   } catch (error) {
     console.error('Register error:', error);
@@ -82,8 +89,7 @@ async function register(username, email, password, displayName) {
 async function getCurrentUser() {
   const token = getToken();
   if (!token) {
-    // Không có token, quay về đăng nhập
-    window.location.href = '/login.html';
+    window.location.href = '/login';
     return null;
   }
 
@@ -93,7 +99,6 @@ async function getCurrentUser() {
   });
 
   if (response.status === 401) {
-    // Token sai/ hết hạn => xóa và về đăng nhập
     logout();
     return null;
   }
@@ -104,11 +109,6 @@ async function getCurrentUser() {
   }
 
   const user = await response.json();
-  // Đồng bộ với home.html (id="user-display")
-  const displayEl = document.getElementById('user-display');
-  if (displayEl) {
-    displayEl.textContent = user.displayName || user.username || 'User';
-  }
   return user;
 }
 
@@ -117,7 +117,7 @@ async function getCurrentUser() {
 ======================= */
 function logout() {
   clearAuth();
-  window.location.href = '/login.html';
+  window.location.href = '/login';
 }
 
 /* =======================
