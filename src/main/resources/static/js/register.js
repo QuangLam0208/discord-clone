@@ -12,6 +12,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const confirmPassword = document.getElementById('confirmPassword').value;
         let displayName = document.getElementById('displayName').value.trim();
 
+        // Validate định dạng email đơn giản phía client
+        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailPattern.test(email)) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Email không hợp lệ',
+                text: 'Vui lòng nhập đúng định dạng email (ví dụ: ten@vidu.com).',
+                background: '#36393f', color: '#fff'
+            });
+            return;
+        }
         // Tự động điền displayName nếu trống
         if (!displayName) displayName = username;
 
