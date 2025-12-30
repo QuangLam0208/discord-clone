@@ -17,7 +17,7 @@ public class CategoryRequest {
     private Long serverId;
 
     @NotBlank(message = "Tên category không được để trống")
-    @Size(max = 100, message = "Tên category không được dài quá 100 ký tự")
+    @Size(min = 1, max = 100, message = "Tên category phải từ 1 đến 100 ký tự")
     private String name;
 
     public void normalize() {

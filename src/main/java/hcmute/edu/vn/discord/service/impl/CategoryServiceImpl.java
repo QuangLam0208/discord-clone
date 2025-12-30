@@ -3,8 +3,10 @@ package hcmute.edu.vn.discord.service.impl;
 import hcmute.edu.vn.discord.dto.request.CategoryRequest;
 import hcmute.edu.vn.discord.dto.response.CategoryResponse;
 import hcmute.edu.vn.discord.entity.jpa.Category;
+import hcmute.edu.vn.discord.entity.jpa.Channel;
 import hcmute.edu.vn.discord.entity.jpa.Server;
 import hcmute.edu.vn.discord.repository.CategoryRepository;
+import hcmute.edu.vn.discord.repository.ChannelRepository;
 import hcmute.edu.vn.discord.repository.ServerRepository;
 import hcmute.edu.vn.discord.service.CategoryService;
 import jakarta.persistence.EntityNotFoundException;
@@ -21,6 +23,7 @@ public class CategoryServiceImpl implements CategoryService {
 
     private final CategoryRepository categoryRepository;
     private final ServerRepository serverRepository;
+    private final ChannelRepository channelRepository;
 
     @Override
     @Transactional
@@ -43,7 +46,6 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new EntityNotFoundException("Category not found"));
 
         // Logic check serverId không đổi có thể để ở Controller hoặc Service đều được
-        // Nhưng nếu để đây thì an toàn hơn
         if (request.getServerId() != null && !request.getServerId().equals(category.getServer().getId())) {
             throw new IllegalArgumentException("Không thể thay đổi server của category");
         }
@@ -58,6 +60,14 @@ public class CategoryServiceImpl implements CategoryService {
         if (!categoryRepository.existsById(categoryId)) {
             throw new EntityNotFoundException("Category not found");
         }
+
+        List<Channel> channels = channelRepository.findByCategoryId(categoryId);
+        for (Channel channel : channels) {
+            channel.setCategory(null); // Kênh sẽ nhảy ra ngoài, không bị xóa theo
+        }
+        channelRepository.saveAll(channels);
+
+        // Sau đó mới xóa Category
         categoryRepository.deleteById(categoryId);
     }
 
