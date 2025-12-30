@@ -8,73 +8,111 @@
 </head>
 
 <body>
-<h2>Discord Clone WebSocket Test</h2>
-<div>
-    <label>Sender ID (Testing):</label>
-    <input type="number" id="senderId" value="1">
-</div>
-<div>
-    <label>Channel ID:</label>
-    <input type="number" id="channelId" value="1">
-</div>
-<div>
-    <button onclick="connect()">Connect</button>
-    <button onclick="disconnect()" disabled id="disconnectBtn">Disconnect</button>
-</div>
-<br />
-<div>
-    <textarea id="messageInput" placeholder="Type a message..."></textarea>
-    <button onclick="sendMessage()">Send</button>
-</div>
-<h3>Messages:</h3>
-<ul id="messagesList"></ul>
+    <h2>Discord Clone WebSocket Test</h2>
+    <div>
+        <label>Sender ID (Testing):</label>
+        <input type="number" id="senderId" value="1">
+    </div>
+    <div>
+        <label>Channel ID:</label>
+        <input type="number" id="channelId" value="1">
+    </div>
+    <div>
+        <button onclick="connect()" id="connectBtn">Connect</button>
+        <button onclick="disconnect()" disabled id="disconnectBtn">Disconnect</button>
+    </div>
+    <br />
+    <div>
+        <textarea id="messageInput" placeholder="Type a message..."></textarea>
+        <button onclick="sendMessage()">Send</button>
+    </div>
+    <h3>Messages:</h3>
+    <ul id="messagesList"></ul>
 
-<script>
-    var stompClient = null;
+    <script>
+        var stompClient = null;
 
-    function connect() {
-        var socket = new SockJS('/ws');
-        stompClient = Stomp.over(socket);
-        stompClient.connect({}, function (frame) {
-            console.log('Connected: ' + frame);
-            document.getElementById("disconnectBtn").disabled = false;
+        function connect() {
+            if (stompClient !== null) {
+                stompClient.disconnect();
+            }
+            document.getElementById("connectBtn").disabled = true;
 
-            var channelId = document.getElementById("channelId").value;
+            var socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            stompClient.connect({}, function (frame) {
+                console.log('Connected: ' + frame);
+                document.getElementById("disconnectBtn").disabled = false;
 
-            // Subscribe to channel topic
-            stompClient.subscribe('/topic/channel/' + channelId, function (message) {
-                showMessage(JSON.parse(message.body));
+                var channelId = document.getElementById("channelId").value;
+
+                // Subscribe to channel topic
+                stompClient.subscribe('/topic/channel/' + channelId, function (message) {
+                    showMessage(JSON.parse(message.body));
+                });
+
+                // Load existing history
+                var senderId = document.getElementById("senderId").value;
+                loadHistory(channelId, senderId);
+            }, function (error) {
+                console.log("Connection error: " + error);
+                document.getElementById("connectBtn").disabled = false;
             });
-        });
-    }
-
-    function disconnect() {
-        if (stompClient !== null) {
-            stompClient.disconnect();
         }
-        console.log("Disconnected");
-        document.getElementById("disconnectBtn").disabled = true;
-    }
 
-    function sendMessage() {
-        var content = document.getElementById("messageInput").value;
-        var channelId = document.getElementById("channelId").value;
-        var senderId = document.getElementById("senderId").value;
+        function disconnect() {
+            if (stompClient !== null) {
+                stompClient.disconnect();
+            }
+            console.log("Disconnected");
+            document.getElementById("disconnectBtn").disabled = true;
+            document.getElementById("connectBtn").disabled = false;
+        }
 
-        stompClient.send("/app/chat.sendMessage", {}, JSON.stringify({
-            'content': content,
-            'channelId': channelId,
-            'senderId': senderId // Chỉ dùng cho testing
-        }));
-    }
+        function sendMessage() {
+            var content = document.getElementById("messageInput").value;
+            var channelId = document.getElementById("channelId").value;
+            var senderId = document.getElementById("senderId").value;
 
-    function showMessage(message) {
-        var list = document.getElementById("messagesList");
-        var li = document.createElement("li");
-        li.appendChild(document.createTextNode(message.senderName + ": " + message.content));
-        list.appendChild(li);
-    }
-</script>
+            stompClient.send("/app/chat.sendMessage", {}, JSON.stringify({
+                'content': content,
+                'channelId': channelId,
+                'senderId': senderId // Chỉ dùng cho testing
+            }));
+        }
+
+        function showMessage(message) {
+            var list = document.getElementById("messagesList");
+            var li = document.createElement("li");
+            li.appendChild(document.createTextNode(message.senderName + ": " + message.content));
+            list.appendChild(li);
+        }
+        function loadHistory(channelId, senderId) {
+            // Call the new API
+            var url = '/api/chat/history/' + channelId + '?senderId=' + senderId;
+            console.log("Fetching history from: " + url);
+
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        alert("Error loading history: " + response.status + " " + response.statusText);
+                        throw new Error("Failed to load history: " + response.status);
+                    }
+                    return response.json();
+                })
+                .then(messages => {
+                    var list = document.getElementById("messagesList");
+                    // Clear list or handle as you wish, here sending generic log
+                    console.log("Loaded " + messages.length + " messages");
+                    // Data from API is Pageable, but getMessagesByChannel returns List<MessageResponse>
+                    // Sort order from API is ASC (as I set it), so simply append
+                    messages.forEach(msg => {
+                        showMessage(msg);
+                    });
+                })
+                .catch(err => console.error(err));
+        }
+    </script>
 </body>
 
 </html>

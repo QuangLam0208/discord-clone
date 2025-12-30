@@ -2,6 +2,7 @@ package hcmute.edu.vn.discord.service.impl;
 
 import hcmute.edu.vn.discord.dto.request.DirectMessageRequest;
 import hcmute.edu.vn.discord.dto.request.EditMessageRequest;
+import hcmute.edu.vn.discord.dto.response.ConversationResponse;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
 import hcmute.edu.vn.discord.entity.mongo.DirectMessage;
 import hcmute.edu.vn.discord.entity.mongo.Conversation;
@@ -45,7 +46,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
             throw new IllegalArgumentException("Cannot message yourself");
         }
 
-        Conversation conversation = getOrCreateConversation(senderId, request.getReceiverId());
+        Conversation conversation = findOrCreateConversation(senderId, request.getReceiverId());
 
         DirectMessage message = messageRepo.save(
                 DirectMessage.builder()
@@ -58,8 +59,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
                         .reactions(new HashMap<>())
                         .createdAt(new Date())
                         .updatedAt(new Date())
-                        .build()
-        );
+                        .build());
 
         return toResponse(message);
     }
@@ -161,7 +161,8 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         messageRepo.save(message);
     }
 
-    // Fixed security issue in removeReaction() by adding access control checks and optimizing database queries.
+    // Fixed security issue in removeReaction() by adding access control checks and
+    // optimizing database queries.
     @Override
     @Transactional
     public void removeReaction(String messageId, Long userId) {
@@ -184,24 +185,6 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         }
     }
 
-    private Conversation getOrCreateConversation(Long u1, Long u2) {
-        Long user1 = Math.min(u1, u2);
-        Long user2 = Math.max(u1, u2);
-
-        return conversationRepo
-                .findByUser1IdAndUser2Id(user1, user2)
-                .orElseGet(() ->
-                        conversationRepo.save(
-                                Conversation.builder()
-                                        .user1Id(user1)
-                                        .user2Id(user2)
-                                        .createdAt(new Date())
-                                        .updatedAt(new Date())
-                                        .build()
-                        )
-                );
-    }
-
     private DirectMessageResponse toResponse(DirectMessage m) {
         return DirectMessageResponse.builder()
                 .id(m.getId())
@@ -215,5 +198,31 @@ public class DirectMessageServiceImpl implements DirectMessageService {
                 .reactions(m.getReactions())
                 .updatedAt(m.getUpdatedAt())
                 .build();
+    }
+
+    @Override
+    public ConversationResponse getOrCreateConversation(Long senderId,
+                                                        Long receiverId) {
+        Conversation conversation = findOrCreateConversation(senderId, receiverId);
+        return new ConversationResponse(
+                conversation.getId(),
+                conversation.getUser1Id(),
+                conversation.getUser2Id(),
+                conversation.getUpdatedAt());
+    }
+
+    private Conversation findOrCreateConversation(Long u1, Long u2) {
+        Long user1 = Math.min(u1, u2);
+        Long user2 = Math.max(u1, u2);
+
+        return conversationRepo
+                .findByUser1IdAndUser2Id(user1, user2)
+                .orElseGet(() -> conversationRepo.save(
+                        Conversation.builder()
+                                .user1Id(user1)
+                                .user2Id(user2)
+                                .createdAt(new Date())
+                                .updatedAt(new Date())
+                                .build()));
     }
 }

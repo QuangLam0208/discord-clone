@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.Principal;
 import java.util.Map;
 
 @Validated
@@ -20,6 +21,16 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> getMe(Principal principal) {
+        if (principal == null || principal.getName() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        var user = userService.findByUsername(principal.getName())
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        return ResponseEntity.ok(UserResponse.from(user));
+    }
 
     @GetMapping("/username/{username}")
     public ResponseEntity<UserResponse> getUserByUsername(@PathVariable @NotBlank String username) {
@@ -41,4 +52,3 @@ public class UserController {
         return ResponseEntity.ok(Map.of("exists", exists));
     }
 }
-

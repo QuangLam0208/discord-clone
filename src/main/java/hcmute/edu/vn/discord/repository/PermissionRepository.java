@@ -10,4 +10,7 @@ import java.util.Optional;
 public interface PermissionRepository extends JpaRepository<Permission, Long> {
     // Tìm quyền theo mã code (VD: MESSAGE_DELETE)
     Optional<Permission> findByCode(String code);
+
+    // Check tồn tại
+    boolean existsByCode(String code);
 }
