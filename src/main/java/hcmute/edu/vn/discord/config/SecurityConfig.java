@@ -50,6 +50,7 @@ public class SecurityConfig {
                                                 // secure before production.
                                                 .requestMatchers(
                                                                 "/api/auth/**",
+                                                                "/api/chat/history/**",
                                                                 "/api/test/**",
                                                                 "/ws/**",
                                                                 "/ws-test.html",
@@ -57,7 +58,8 @@ public class SecurityConfig {
                                                                 "/swagger-ui/**",
                                                                 "/v3/api-docs/**",
                                                                 "/swagger-resources/**",
-                                                                "/webjars/**")
+                                                                "/webjars/**",
+                                                                "/websocket-test.html")
                                                 .permitAll()
                                                 .anyRequest().authenticated())
                                 .userDetailsService(userDetailsService)

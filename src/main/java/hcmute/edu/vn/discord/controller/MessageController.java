@@ -10,6 +10,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,21 +26,23 @@ public class MessageController {
 
     private final MessageService messageService;
 
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
+
     /**
      * 1. Lấy danh sách tin nhắn trong Channel (có phân trang)
      * URL: GET /api/channels/{channelId}/messages?page=0&size=20
      */
     @Operation(summary = "Get Messages by Channel", description = "Retrieve a paginated list of messages for a given channel.")
     @GetMapping("/channels/{channelId}/messages")
-    @PreAuthorize("@serverAuth.canViewChannel(#channelId, principal.name)")
+    @PreAuthorize("@serverAuth.canViewChannel(#channelId, authentication.name)")
     public ResponseEntity<List<MessageResponse>> getMessagesByChannel(
             @PathVariable Long channelId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            Principal principal) {
+            Authentication authentication) {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
-        return ResponseEntity.ok(messageService.getMessagesByChannel(channelId, principal.getName(), pageable));
+        return ResponseEntity.ok(messageService.getMessagesByChannel(channelId, authentication.getName(), pageable));
     }
 
     /**
@@ -48,13 +51,18 @@ public class MessageController {
      */
     @Operation(summary = "Send Message", description = "Send a new message to a specific channel.")
     @PostMapping("/channels/{channelId}/messages")
-    @PreAuthorize("@serverAuth.canSendMessage(#channelId, principal.name)")
+    @PreAuthorize("@serverAuth.canSendMessage(#channelId, authentication.name)")
     public ResponseEntity<MessageResponse> createMessage(
             @PathVariable Long channelId,
             @Valid @RequestBody MessageRequest request,
-            Principal principal) {
+            Authentication authentication) {
 
-        return ResponseEntity.ok(messageService.createMessage(channelId, principal.getName(), request));
+        MessageResponse response = messageService.createMessage(channelId, authentication.getName(), request);
+
+        // Broadcast to WebSocket subscribers
+        messagingTemplate.convertAndSend("/topic/channel/" + channelId, response);
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -97,13 +105,13 @@ public class MessageController {
      */
     @Operation(summary = "Add Reaction", description = "Add an emoji reaction to a message.")
     @PostMapping("/messages/{id}/reactions")
-    @PreAuthorize("@serverAuth.canReactToMessage(#id, principal.name)")
+    @PreAuthorize("@serverAuth.canReactToMessage(#id, authentication.name)")
     public ResponseEntity<?> addReaction(
             @PathVariable String id,
             @RequestParam String emoji,
-            Principal principal) {
+            Authentication authentication) {
 
-        messageService.addReaction(id, principal.getName(), emoji);
+        messageService.addReaction(id, authentication.getName(), emoji);
         return ResponseEntity.ok().build();
     }
 
