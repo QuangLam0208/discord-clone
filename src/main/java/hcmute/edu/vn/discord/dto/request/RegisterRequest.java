@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 public class RegisterRequest {
     @NotBlank(message = "Username không được để trống")
-    @Size(min = 3, max = 30, message = "Username phải từ 3-20 ký tự")
+    @Size(min = 3, max = 30, message = "Username phải từ 3-30 ký tự")
     private String username;
 
     @NotBlank(message = "Email không được để trống")
@@ -16,7 +16,7 @@ public class RegisterRequest {
     private String email;
 
     @NotBlank(message = "Mật khẩu không được để trống")
-    @Size(min = 6, message = "Mật khẩu phải có ít nhất 5 ký tự")
+    @Size(min = 6, message = "Mật khẩu phải có ít nhất 6 ký tự")
     private String password;
 
     private String displayName;

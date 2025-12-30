@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Discord Clone</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+<div class="app-layout" id="app" style="display: none;">
+    <nav class="servers-sidebar">
+        <div class="server-icon active">D</div>
+        <div class="server-icon">+</div>
+    </nav>
+
+    <aside class="channels-sidebar">
+        <div class="channel-header"><h4>Server Test</h4></div>
+        <div class="channel-list">
+            <div class="channel-item active"><i class="fa-solid fa-hashtag"></i> kênh-chung</div>
+        </div>
+
+        <div class="user-bar">
+            <div class="user-wrapper">
+                <div class="user-avatar"></div>
+                <div class="user-info">
+                    <span id="user-display" class="username">User</span>
+                    <span class="usertag">#1234</span>
+                </div>
+            </div>
+            <div class="user-actions">
+                <button class="btn-icon" id="btn-settings"><i class="fa-solid fa-gear"></i></button>
+            </div>
+            <div class="settings-popup" id="settings-popup">
+                <div class="menu-item logout" id="btn-logout-action">
+                    <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="chat-content">
+    </main>
+</div>
+
+<script src="/js/home.js"></script>
+</body>
+</html>

@@ -52,4 +52,3 @@ public class UserController {
         return ResponseEntity.ok(Map.of("exists", exists));
     }
 }
-
