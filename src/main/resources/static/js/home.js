@@ -7,6 +7,24 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
     }
 
+    // Utility: authenticated fetch that attaches the Authorization header
+    function authFetch(url, options = {}) {
+        const headers = options.headers instanceof Headers
+            ? options.headers
+            : new Headers(options.headers || {});
+
+        if (token) {
+            headers.set('Authorization', 'Bearer ' + token);
+        }
+
+        return fetch(url, {
+            ...options,
+            headers
+        });
+    }
+
+    // Expose helper globally for other scripts on the home page
+    window.authFetch = authFetch;
     // Hiện giao diện
     document.getElementById('app').style.display = 'flex';
 
