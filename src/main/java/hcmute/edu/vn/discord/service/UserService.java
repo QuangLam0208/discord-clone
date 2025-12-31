@@ -10,4 +10,4 @@ public interface UserService {
     Optional<User> findByUsername(String username);
     Optional<User> findById(Long id);
     boolean existsByEmail(String email);
-}
+} 

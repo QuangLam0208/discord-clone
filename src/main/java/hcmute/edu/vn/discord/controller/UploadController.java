@@ -31,7 +31,7 @@ public class UploadController {
     private String baseUrl;
 
     // Thư mục lưu trữ file upload, cấu hình qua application.properties
-    @Value("${discord.upload.dir:uploads}")
+    @Value("${discord.upload.dir}")
     private String uploadDir;
     // Giới hạn kích thước file tối đa là 10MB
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -74,7 +74,7 @@ public class UploadController {
             // Tạo cấu trúc thư mục dựa trên ngày hiện tại
             LocalDate today = LocalDate.now();
             String datePath = String.format("%d/%02d/%02d", today.getYear(), today.getMonthValue(), today.getDayOfMonth());
-            Path uploadPath = Paths.get(UPLOAD_DIR, datePath);
+            Path uploadPath = Paths.get(uploadDir, datePath);
             Files.createDirectories(uploadPath);
 
             String uniqueFilename = UUID.randomUUID() + extension;
