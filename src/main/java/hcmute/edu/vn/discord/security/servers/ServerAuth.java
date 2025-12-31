@@ -243,4 +243,5 @@ public class ServerAuth {
         Long serverId = serverIdOfChannel(channelId);
         return canManageChannels(serverId, username);
     }
+
 }

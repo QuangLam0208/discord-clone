@@ -4,13 +4,15 @@ import hcmute.edu.vn.discord.entity.jpa.*;
 import hcmute.edu.vn.discord.repository.InviteRepository;
 import hcmute.edu.vn.discord.entity.jpa.ServerRole;
 import hcmute.edu.vn.discord.repository.ServerRoleRepository;
+import jakarta.persistence.EntityNotFoundException;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import hcmute.edu.vn.discord.repository.ServerMemberRepository;
 import hcmute.edu.vn.discord.repository.ServerRepository;
 import hcmute.edu.vn.discord.repository.UserRepository;
 import hcmute.edu.vn.discord.service.InviteService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,22 +23,14 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
 public class InviteServiceImpl implements InviteService {
 
-    @Autowired
-    private InviteRepository inviteRepository;
-
-    @Autowired
-    private ServerRepository serverRepository;
-
-    @Autowired
-    private ServerMemberRepository serverMemberRepository;
-
-    @Autowired
-    private UserRepository userRepository;
-
-    @Autowired
-    private ServerRoleRepository serverRoleRepository;
+    private final InviteRepository inviteRepository;
+    private final ServerRepository serverRepository;
+    private final ServerMemberRepository serverMemberRepository;
+    private final UserRepository userRepository;
+    private final ServerRoleRepository serverRoleRepository;
 
     @Override
     public Invite createInvite(Long serverId, Integer maxUses, Long expireSeconds) {
@@ -72,35 +66,36 @@ public class InviteServiceImpl implements InviteService {
     @Override
     @Transactional
     public void joinServer(String code) {
-        // 1. Kiểm tra tính hợp lệ và tăng lượt sử dụng của Invite
-        if (!useInvite(code)) {
-            throw new RuntimeException("Mã mời không hợp lệ, đã hết hạn hoặc hết lượt dùng.");
-        }
-
-        Invite invite = inviteRepository.findByCode(code)
-                .orElseThrow(() -> new RuntimeException("Invite not found"));
-
-        // 2. Lấy thông tin User hiện tại đang đăng nhập
+        // 1. Lấy User hiện tại
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy thông tin người dùng."));
 
-        // 3. Kiểm tra xem người dùng đã là thành viên Server chưa
+        // 2. Lấy Invite
+        Invite invite = inviteRepository.findByCode(code)
+                .orElseThrow(() -> new EntityNotFoundException("Mã mời không tồn tại hoặc sai mã."));
+
+        // 3. [FIX] Throw lỗi thay vì return im lặng
         if (serverMemberRepository.existsByServerIdAndUserId(invite.getServer().getId(), user.getId())) {
-            return;
+            throw new IllegalStateException("Bạn đã là thành viên của máy chủ này rồi!");
         }
 
-        // 4. Tìm Role @everyone của Server này để gán làm Role mặc định
-        // (mọi server đều có role @everyone được tạo lúc createServer)
+        // 4. Kiểm tra và trừ lượt dùng
+        if (!useInvite(code)) {
+            throw new IllegalStateException("Mã mời không hợp lệ, đã hết hạn hoặc hết lượt sử dụng.");
+        }
+
+        // 5. Tìm Role mặc định (@everyone)
         ServerRole everyoneRole = serverRoleRepository.findByServerIdAndName(invite.getServer().getId(), "@everyone")
                 .orElse(null);
 
-        // 5. Tạo mới ServerMember
+        // 6. Tạo Member mới
         ServerMember member = new ServerMember();
         member.setServer(invite.getServer());
         member.setUser(user);
         member.setIsBanned(false);
         member.setNickname(user.getDisplayName());
+        member.setJoinedAt(LocalDateTime.now());
 
         if (everyoneRole != null) {
             member.setRoles(new HashSet<>(Set.of(everyoneRole)));
