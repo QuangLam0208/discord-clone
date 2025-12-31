@@ -1,9 +1,16 @@
 package hcmute.edu.vn.discord.controller;
 
+import hcmute.edu.vn.discord.dto.response.ErrorResponse;
+import hcmute.edu.vn.discord.dto.response.UploadResponse;
+import hcmute.edu.vn.discord.service.FileValidationService;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -12,88 +19,148 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.Set;
 import java.util.UUID;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.security.core.Authentication;
 
 @RestController
 @RequestMapping("/api/upload")
 @RequiredArgsConstructor
 public class UploadController {
 
-    // Đã xóa trường serverPort không sử dụng
-    // private String serverPort;
+    private static final Logger log = LoggerFactory.getLogger(UploadController.class);
 
-    // Thêm thuộc tính baseUrl để tránh hard-code localhost
+    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+    private static final String TYPE_JPEG = "image/jpeg";
+    private static final String TYPE_PNG  = "image/png";
+    private static final String TYPE_WEBP = "image/webp";
+
+    private static final Set<String> ALLOWED_TYPES = Set.of(TYPE_JPEG, TYPE_PNG, TYPE_WEBP);
+
     @Value("${discord.upload.base-url}")
     private String baseUrl;
 
-    // Thư mục lưu trữ file upload, cấu hình qua application.properties
-    @Value("${discord.upload.dir}")
+    @Value("${discord.upload.dir:uploads}")
     private String uploadDir;
-    // Giới hạn kích thước file tối đa là 10MB
-    private static final long MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-    private static final Logger log = LoggerFactory.getLogger(UploadController.class);
 
-    // Thêm tham số Authentication vào phương thức uploadFile
+    private final FileValidationService fileValidationService;
+
     @PostMapping
-    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file, Authentication authentication) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> uploadFile( @RequestParam("file") MultipartFile file,
+                                         Authentication authentication) {
         try {
-            // Lấy tên người dùng để ghi log/audit
             String username = authentication != null ? authentication.getName() : "anonymous";
-            log.info("Yêu cầu upload file từ người dùng: {}", username);
+            log.info("Yêu cầu upload từ user={} fileName={} size={}", username, file.getOriginalFilename(), file.getSize());
 
-            // 1. Kiểm tra file rỗng
             if (file.isEmpty()) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "File rỗng"));
+                return buildErrorResponse(HttpStatus.BAD_REQUEST, "File rỗng");
             }
 
-            // 2. Kiểm tra kích thước file
             if (file.getSize() > MAX_FILE_SIZE) {
-                return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
-                        .body(Map.of("error", "Kích thước file vượt quá giới hạn tối đa 10MB"));
+                return buildErrorResponse(HttpStatus.PAYLOAD_TOO_LARGE, "Kích thước file vượt quá 10MB");
             }
 
-            // Kiểm tra loại file
-            String contentType = file.getContentType();
-            if (!"image/jpeg".equals(contentType) && !"image/png".equals(contentType)) {
-                return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
-                        .body(Map.of("error", "Chỉ cho phép file JPEG và PNG"));
+            // Canonicalize content type (ví dụ image/jpg -> image/jpeg)
+            String declared = canonicalizeContentType(file.getContentType());
+
+            // Dùng Tika để detect
+            byte[] fileBytes = file.getBytes();
+            String detected = fileValidationService.detectContentType(fileBytes);
+
+            // Chấp nhận nếu detected ∈ whitelist (ưu tiên security)
+            if (!ALLOWED_TYPES.contains(detected)) {
+                return buildErrorResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                        "Chỉ cho phép JPEG/PNG/WebP");
             }
 
-            // Xác định phần mở rộng dựa trên loại nội dung
-            String extension = switch (contentType) {
-                case "image/jpeg" -> ".jpg";
-                case "image/png" -> ".png";
-                default -> throw new IllegalStateException("Loại nội dung không hợp lệ: " + contentType);
+            // Nếu declared khác detected, vẫn cho qua nhưng log cảnh báo
+            if (declared == null || !declared.equals(detected)) {
+                log.warn("Declared content type '{}' không khớp với detected '{}'", declared, detected);
+            }
+
+            // Validate dimensions (cần ImageIO plugin cho WEBP)
+            try {
+                fileValidationService.validateImageDimensions(fileBytes, detected);
+            } catch (IllegalArgumentException e) {
+                return buildErrorResponse(HttpStatus.BAD_REQUEST, e.getMessage());
+            }
+
+            // Xác định phần mở rộng từ loại nội dung
+            String extension = switch (detected) {
+                case TYPE_JPEG -> ".jpg";
+                case TYPE_PNG  -> ".png";
+                case TYPE_WEBP -> ".webp";
+                default -> ".bin";
             };
 
-            // Tạo cấu trúc thư mục dựa trên ngày hiện tại
+            // Tạo đường dẫn thư mục theo ngày
             LocalDate today = LocalDate.now();
             String datePath = String.format("%d/%02d/%02d", today.getYear(), today.getMonthValue(), today.getDayOfMonth());
-            Path uploadPath = Paths.get(uploadDir, datePath);
+
+            // Sử dụng ĐƯỜNG DẪN TUYỆT ĐỐI và BÌNH THƯỜNG HÓA
+            Path baseUploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
+            Path uploadPath = baseUploadPath.resolve(datePath).normalize();
+
+            // Bảo mật: Đảm bảo uploadPath nằm trong baseUploadPath
+            if (!uploadPath.startsWith(baseUploadPath)) {
+                log.error("Traversal path: {}", uploadPath);
+                return buildErrorResponse(HttpStatus.BAD_REQUEST, "Đường dẫn upload không hợp lệ");
+            }
+
+            // Tạo thư mục nếu chưa tồn tại
             Files.createDirectories(uploadPath);
 
+            // Tạo tên file duy nhất
             String uniqueFilename = UUID.randomUUID() + extension;
-            Path filePath = uploadPath.resolve(uniqueFilename);
-            file.transferTo(filePath);
+            Path filePath = uploadPath.resolve(uniqueFilename).normalize();
 
-            // Trả về URL của file
-            // Cập nhật fileUrl để sử dụng baseUrl từ application.properties
-            String fileUrl = String.format("%s/files/%s/%s", baseUrl, datePath, uniqueFilename); // Updated to match WebConfig
-            log.info("File được upload thành công bởi {}: {}", username, fileUrl);
-            return ResponseEntity.ok(Map.of("url", fileUrl));
+            // Bảo mật: Kiểm tra đường dẫn cuối cùng
+            if (!filePath.startsWith(baseUploadPath)) {
+                log.error("Traversal filename: {}", filePath);
+                return buildErrorResponse(HttpStatus.BAD_REQUEST, "Tên file không hợp lệ");
+            }
+
+            file.transferTo(filePath);
+            log.info("File đã được lưu tại: {}", filePath.toAbsolutePath());
+
+            // 5. TẠO URL PHẢN HỒI
+            String fileUrl = String.format("%s/files/%s/%s", baseUrl, datePath, uniqueFilename);
+
+            UploadResponse response = UploadResponse.builder()
+                    .url(fileUrl)
+                    .originalFilename(file.getOriginalFilename())
+                    .filename(uniqueFilename)
+                    .contentType(detected) // dùng loại đã detect
+                    .size(file.getSize())
+                    .uploadedAt(LocalDateTime.now())
+                    .uploadedBy(username)
+                    .build();
+
+            log.info("File đã được upload thành công bởi {}: {}", username, fileUrl);
+
+            return ResponseEntity.ok(response);
+
         } catch (IOException e) {
-            log.error("Không thể upload file: {}", file.getOriginalFilename(), e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Không thể upload file do lỗi hệ thống, vui lòng thử lại sau."));
+            log.error("Upload IO error: {}", e.getMessage(), e);
+            return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Không thể upload file do lỗi IO");
         } catch (Exception e) {
-            log.error("Lỗi không mong muốn trong quá trình upload", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Đã xảy ra lỗi không mong muốn"));
+            log.error("Unexpected upload error", e);
+            return buildErrorResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Đã xảy ra lỗi không mong muốn");
         }
+    }
+
+    private String canonicalizeContentType(String contentType) {
+        if (contentType == null) return null;
+        String ct = contentType.trim().toLowerCase();
+        if (ct.equals("image/jpg")) return TYPE_JPEG;
+        if (ct.equals("image/x-png")) return TYPE_PNG; // một số trình duyệt cũ
+        return ct;
+    }
+
+    private ResponseEntity<ErrorResponse> buildErrorResponse(HttpStatus status, String message) {
+        ErrorResponse error = new ErrorResponse(LocalDateTime.now(), status.value(), status.getReasonPhrase(), message, "/api/upload");
+        return ResponseEntity.status(status).body(error);
     }
 }
