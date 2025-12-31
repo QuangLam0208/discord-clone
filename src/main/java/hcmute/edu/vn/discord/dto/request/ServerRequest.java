@@ -13,7 +13,7 @@ import org.hibernate.validator.constraints.URL;
 public class ServerRequest {
 
     @NotBlank(message = "Tên server không được để trống")
-    @Size(max = 100, message = "Tên server không được dài quá 100 ký tự")
+    @Size(min = 2, max = 100, message = "Tên server phải từ 2 đến 100 ký tự")
     private String name;
 
     @Size(max = 500, message = "Mô tả không được quá 500 ký tự")
@@ -32,4 +32,3 @@ public class ServerRequest {
         }
     }
 }
-

@@ -31,12 +31,15 @@ public class ServerMemberServiceImpl implements ServerMemberService {
     @Override
     @Transactional
     public ServerMember addMemberToServer(Long serverId, Long userId) {
+        // Kiểm tra đã là thành viên chưa
         if (isMember(serverId, userId)) {
+            // Logic cũ của bạn trả về data integrity exception, giữ nguyên
             throw new DataIntegrityViolationException("User is already a member");
         }
 
         Server server = serverRepository.findById(serverId)
                 .orElseThrow(() -> new EntityNotFoundException("Server not found"));
+
         if (server.getStatus() != ServerStatus.ACTIVE) {
             throw new IllegalStateException("Server không hoạt động");
         }
@@ -44,12 +47,13 @@ public class ServerMemberServiceImpl implements ServerMemberService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
+        // Kiểm tra xem user có bị ban khỏi server không (soft ban flag)
         if (serverMemberRepository.findByServerIdAndUserId(serverId, userId)
                 .map(ServerMember::getIsBanned).orElse(false)) {
             throw new IllegalStateException("User bị ban khỏi server");
         }
 
-        // MẶC ĐỊNH: @everyone (không còn dùng "Member")
+        // MẶC ĐỊNH: Gán role @everyone
         ServerRole everyoneRole = serverRoleRepository.findByServerIdAndName(serverId, "@everyone")
                 .orElseGet(() -> {
                     // Self-healing: Nếu role @everyone bị thiếu, tự động tạo lại
@@ -81,7 +85,9 @@ public class ServerMemberServiceImpl implements ServerMemberService {
         newMember.setUser(user);
         newMember.setJoinedAt(LocalDateTime.now());
         newMember.setIsBanned(false);
+        // Nếu user chưa có display name thì lấy username
         newMember.setNickname(user.getDisplayName() != null ? user.getDisplayName() : user.getUsername());
+
         Set<ServerRole> roles = new HashSet<>();
         roles.add(everyoneRole);
         newMember.setRoles(roles);
@@ -132,14 +138,10 @@ public class ServerMemberServiceImpl implements ServerMemberService {
     public List<ServerRole> getRolesOfMember(Long serverId, Long userId) {
         ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Member not found"));
-        // đảm bảo @everyone luôn có
+
         boolean hasEveryone = member.getRoles().stream().anyMatch(r -> "@everyone".equalsIgnoreCase(r.getName()));
         if (!hasEveryone) {
-            ServerRole everyone = serverRoleRepository.findByServerIdAndName(serverId, "@everyone")
-                    .orElse(null);
-            if (everyone != null) {
-                member.getRoles().add(everyone);
-            }
+            serverRoleRepository.findByServerIdAndName(serverId, "@everyone").ifPresent(everyone -> member.getRoles().add(everyone));
         }
         return member.getRoles().stream().toList();
     }
