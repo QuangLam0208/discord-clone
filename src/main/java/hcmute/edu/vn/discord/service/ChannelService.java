@@ -1,17 +1,14 @@
 package hcmute.edu.vn.discord.service;
 
-import hcmute.edu.vn.discord.dto.request.ChannelPermissionRequest;
-import hcmute.edu.vn.discord.dto.request.ChannelRequest;
-import hcmute.edu.vn.discord.dto.response.ChannelResponse;
+import hcmute.edu.vn.discord.entity.enums.ChannelType;
+import hcmute.edu.vn.discord.entity.jpa.Channel;
+
 import java.util.List;
 
 public interface ChannelService {
-    ChannelResponse createChannel(ChannelRequest request);
-    ChannelResponse updateChannel(Long channelId, ChannelRequest request);
+    Channel createChannel(Long serverId, String name, ChannelType type, Long categoryId, Boolean isPrivate);
+    Channel updateChannel(Long channelId, String name, Long categoryId);
     void deleteChannel(Long channelId);
-
-    ChannelResponse getChannelById(Long id);
-    List<ChannelResponse> getChannelsByServer(Long serverId);
-    List<ChannelResponse> getChannelsByCategory(Long categoryId);
-    ChannelResponse updateChannelPermissions(Long channelId, ChannelPermissionRequest request);
+    List<Channel> getChannelsByServer(Long serverId);
+    Channel getChannelById(Long channelId);
 }

@@ -34,8 +34,7 @@ public class Channel {
     private Boolean isPrivate = false;
 
 
-    // Những thành viên cụ thể được phép xem kênh này
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "channel_allowed_members",
             joinColumns = @JoinColumn(name = "channel_id"),
@@ -43,8 +42,7 @@ public class Channel {
     )
     private Set<ServerMember> allowedMembers = new HashSet<>();
 
-    // Những Role được phép xem kênh này
-    @ManyToMany
+    @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "channel_allowed_roles",
             joinColumns = @JoinColumn(name = "channel_id"),

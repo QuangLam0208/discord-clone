@@ -1,78 +1,89 @@
 package hcmute.edu.vn.discord.controller;
 
-import hcmute.edu.vn.discord.dto.request.ChannelPermissionRequest;
 import hcmute.edu.vn.discord.dto.request.ChannelRequest;
 import hcmute.edu.vn.discord.dto.response.ChannelResponse;
+import hcmute.edu.vn.discord.entity.jpa.Channel;
 import hcmute.edu.vn.discord.service.ChannelService;
-import jakarta.validation.Valid;
+import hcmute.edu.vn.discord.security.servers.ServerAuth;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.net.URI;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/channels")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 public class ChannelController {
 
     private final ChannelService channelService;
+    private final ServerAuth serverAuth;
 
-    @PostMapping
-    // Check quyền: Phải có quyền MANAGE_CHANNELS trên server gửi lên
-    @PreAuthorize("@serverAuth.canManageChannels(#request.serverId, authentication.name)")
-    public ResponseEntity<ChannelResponse> createChannel(@Valid @RequestBody ChannelRequest request) {
-        ChannelResponse created = channelService.createChannel(request);
+    // 1. Tạo Channel (Có isPrivate)
+    @PostMapping("/servers/{serverId}/channels")
+    @PreAuthorize("@serverAuth.canManageChannels(#serverId, authentication.name)")
+    public ResponseEntity<ChannelResponse> createChannel(
+            @PathVariable Long serverId,
+            @RequestBody ChannelRequest request) {
 
-        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
-                .path("/{id}").buildAndExpand(created.getId()).toUri();
-        return ResponseEntity.created(location).body(created);
+        Channel channel = channelService.createChannel(
+                serverId,
+                request.getName(),
+                request.getType(),
+                request.getCategoryId(),
+                request.getIsPrivate()
+        );
+        return ResponseEntity.ok(ChannelResponse.from(channel));
     }
 
-    @PutMapping("/{id}")
-    // Check quyền: Lấy serverId từ ChannelId để check
-    @PreAuthorize("@serverAuth.canManageChannels(@serverAuth.serverIdOfChannel(#id), authentication.name)")
-    public ResponseEntity<ChannelResponse> updateChannel(@PathVariable Long id,
-                                                         @Valid @RequestBody ChannelRequest request) {
-        return ResponseEntity.ok(channelService.updateChannel(id, request));
-    }
-
-    @DeleteMapping("/{id}")
-    // Check quyền: Tương tự update, cần quyền MANAGE_CHANNELS
-    @PreAuthorize("@serverAuth.canManageChannels(@serverAuth.serverIdOfChannel(#id), authentication.name)")
-    public ResponseEntity<Void> deleteChannel(@PathVariable Long id) {
-        channelService.deleteChannel(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @GetMapping("/{id}")
-    // Check quyền: VIEW_CHANNELS (quan trọng: Channel Private cần check kỹ hơn Category)
-    @PreAuthorize("@serverAuth.canViewChannel(#id, authentication.name)")
-    public ResponseEntity<ChannelResponse> getChannelById(@PathVariable Long id) {
-        return ResponseEntity.ok(channelService.getChannelById(id));
-    }
-
-    @GetMapping("/server/{serverId}")
-    // Chỉ thành viên server mới được xem danh sách channel
+    // 2. Lấy danh sách Channel
+    @GetMapping("/servers/{serverId}/channels")
     @PreAuthorize("@serverAuth.isMember(#serverId, authentication.name)")
-    public ResponseEntity<List<ChannelResponse>> getChannelsByServer(@PathVariable Long serverId) {
-        return ResponseEntity.ok(channelService.getChannelsByServer(serverId));
-    }
-    // Lấy danh sách kênh theo Category
-    @GetMapping("/category/{categoryId}")
-    @PreAuthorize("@serverAuth.isMember(@serverAuth.serverIdOfCategory(#categoryId), authentication.name)")
-    public ResponseEntity<List<ChannelResponse>> getChannelsByCategory(@PathVariable Long categoryId) {
-        return ResponseEntity.ok(channelService.getChannelsByCategory(categoryId));
+    public ResponseEntity<List<ChannelResponse>> getChannels(
+            @PathVariable Long serverId,
+            Authentication authentication) {
+        String username = authentication.getName();
+        List<Channel> allChannels = channelService.getChannelsByServer(serverId);
+        // Logic: Chỉ giữ lại các kênh mà user có quyền "canViewChannel"
+        List<ChannelResponse> responses = allChannels.stream()
+                .filter(channel -> serverAuth.canViewChannel(channel.getId(), username))
+                .map(ChannelResponse::from)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(responses);
     }
 
-    // Cập nhật quyền truy cập (Thêm người/role vào kênh Private)
-    @PutMapping("/{id}/permissions")
-    @PreAuthorize("@serverAuth.canManageChannels(@serverAuth.serverIdOfChannel(#id), authentication.name)")
-    public ResponseEntity<ChannelResponse> updateChannelPermissions(@PathVariable Long id,
-                                                                    @RequestBody ChannelPermissionRequest request) {
-        return ResponseEntity.ok(channelService.updateChannelPermissions(id, request));
+    // 3. Lấy chi tiết 1 channel (Check quyền xem luôn cho chắc)
+    @GetMapping("/channels/{channelId}")
+    @PreAuthorize("@serverAuth.canViewChannel(#channelId, authentication.name)")
+    public ResponseEntity<ChannelResponse> getChannelDetail(@PathVariable Long channelId) {
+        Channel channel = channelService.getChannelById(channelId);
+        return ResponseEntity.ok(ChannelResponse.from(channel));
+    }
+
+    // 4. Update Channel
+    @PatchMapping("/channels/{channelId}")
+    @PreAuthorize("@serverAuth.canEditChannel(#channelId, authentication.name)")
+    public ResponseEntity<ChannelResponse> updateChannel(
+            @PathVariable Long channelId,
+            @RequestBody ChannelRequest request) {
+
+        Channel updated = channelService.updateChannel(
+                channelId,
+                request.getName(),
+                request.getCategoryId()
+        );
+        return ResponseEntity.ok(ChannelResponse.from(updated));
+    }
+
+    // 5. Delete Channel
+    @DeleteMapping("/channels/{channelId}")
+    @PreAuthorize("@serverAuth.canEditChannel(#channelId, authentication.name)")
+    public ResponseEntity<?> deleteChannel(@PathVariable Long channelId) {
+        channelService.deleteChannel(channelId);
+        return ResponseEntity.noContent().build();
     }
 }

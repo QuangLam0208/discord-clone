@@ -1,22 +1,19 @@
 package hcmute.edu.vn.discord.service.impl;
 
-import hcmute.edu.vn.discord.dto.request.ChannelPermissionRequest;
-import hcmute.edu.vn.discord.dto.request.ChannelRequest;
-import hcmute.edu.vn.discord.dto.response.ChannelResponse;
-import hcmute.edu.vn.discord.entity.jpa.*;
-import hcmute.edu.vn.discord.repository.*;
-import hcmute.edu.vn.discord.security.servers.ServerAuth;
+import hcmute.edu.vn.discord.entity.enums.ChannelType;
+import hcmute.edu.vn.discord.entity.jpa.Category;
+import hcmute.edu.vn.discord.entity.jpa.Channel;
+import hcmute.edu.vn.discord.entity.jpa.Server;
+import hcmute.edu.vn.discord.repository.CategoryRepository;
+import hcmute.edu.vn.discord.repository.ChannelRepository;
+import hcmute.edu.vn.discord.repository.ServerRepository;
 import hcmute.edu.vn.discord.service.ChannelService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,67 +22,53 @@ public class ChannelServiceImpl implements ChannelService {
     private final ChannelRepository channelRepository;
     private final ServerRepository serverRepository;
     private final CategoryRepository categoryRepository;
-    private final ServerAuth serverAuth;
-    private final ServerMemberRepository serverMemberRepository;
-    private final ServerRoleRepository serverRoleRepository;
 
     @Override
     @Transactional
-    public ChannelResponse createChannel(ChannelRequest request) {
-        // 1. Tìm Server (Bắt buộc)
-        Server server = serverRepository.findById(request.getServerId())
+    public Channel createChannel(Long serverId, String name, ChannelType type, Long categoryId, Boolean isPrivate) {
+        Server server = serverRepository.findById(serverId)
                 .orElseThrow(() -> new EntityNotFoundException("Server not found"));
 
         Channel channel = new Channel();
-        channel.setName(request.getName());
-        channel.setType(request.getType()); // TEXT hoặc VOICE
+        channel.setName(name);
+        channel.setType(type != null ? type : ChannelType.TEXT);
         channel.setServer(server);
-        channel.setIsPrivate(request.getIsPrivate() != null ? request.getIsPrivate() : false);
+        channel.setIsPrivate(isPrivate != null ? isPrivate : false);
 
-        // 2. Xử lý Category (Nếu có)
-        if (request.getCategoryId() != null) {
-            Category category = categoryRepository.findById(request.getCategoryId())
+        if (categoryId != null && categoryId > 0) {
+            Category category = categoryRepository.findById(categoryId)
                     .orElseThrow(() -> new EntityNotFoundException("Category not found"));
 
-            // Logic an toàn: Đảm bảo Category thuộc về đúng Server này
-            if (!category.getServer().getId().equals(server.getId())) {
-                throw new IllegalArgumentException("Category does not belong to this Server");
+            if (!category.getServer().getId().equals(serverId)) {
+                throw new IllegalArgumentException("Category does not belong to this server");
             }
             channel.setCategory(category);
         }
 
-        Channel savedChannel = channelRepository.save(channel);
-        return ChannelResponse.from(savedChannel);
+        return channelRepository.save(channel);
     }
 
     @Override
     @Transactional
-    public ChannelResponse updateChannel(Long channelId, ChannelRequest request) {
+    public Channel updateChannel(Long channelId, String name, Long categoryId) {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
 
-        // Update các trường cơ bản
-        channel.setName(request.getName());
-        if (request.getIsPrivate() != null) {
-            channel.setIsPrivate(request.getIsPrivate());
-        }
+        if (name != null && !name.isBlank()) channel.setName(name);
 
-        // Update Category (Di chuyển channel sang category khác)
-        if (request.getCategoryId() != null) {
-            // Nếu gửi ID mới khác ID cũ
-            if (channel.getCategory() == null || !request.getCategoryId().equals(channel.getCategory().getId())) {
-                Category category = categoryRepository.findById(request.getCategoryId())
+        if (categoryId != null) {
+            if (categoryId <= 0) {
+                channel.setCategory(null);
+            } else {
+                Category category = categoryRepository.findById(categoryId)
                         .orElseThrow(() -> new EntityNotFoundException("Category not found"));
-
-                // Check server khớp
                 if (!category.getServer().getId().equals(channel.getServer().getId())) {
-                    throw new IllegalArgumentException("Category does not belong to this Server");
+                    throw new IllegalArgumentException("Category mismatch");
                 }
                 channel.setCategory(category);
             }
         }
-
-        return ChannelResponse.from(channelRepository.save(channel));
+        return channelRepository.save(channel);
     }
 
     @Override
@@ -99,77 +82,15 @@ public class ChannelServiceImpl implements ChannelService {
 
     @Override
     @Transactional(readOnly = true)
-    public ChannelResponse getChannelById(Long id) {
-        Channel channel = channelRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
-        return ChannelResponse.from(channel);
+    public List<Channel> getChannelsByServer(Long serverId) {
+        // Gọi Repository (findByServerIdOrderByIdAsc hoặc findByServerId đều được)
+        return channelRepository.findByServerIdOrderByIdAsc(serverId);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<ChannelResponse> getChannelsByServer(Long serverId) {
-        // Lấy username hiện tại
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        return channelRepository.findByServerId(serverId).stream()
-                // FIX: Lọc bỏ các kênh mà user không có quyền xem
-                .filter(channel -> serverAuth.canViewChannel(channel.getId(), username))
-                .map(ChannelResponse::from)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<ChannelResponse> getChannelsByCategory(Long categoryId) {
-        String username = SecurityContextHolder.getContext().getAuthentication().getName();
-
-        return channelRepository.findByCategoryId(categoryId).stream()
-                // FIX: Cũng áp dụng lọc ở đây
-                .filter(channel -> serverAuth.canViewChannel(channel.getId(), username))
-                .map(ChannelResponse::from)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @Transactional
-    public ChannelResponse updateChannelPermissions(Long channelId, ChannelPermissionRequest request) {
-        Channel channel = channelRepository.findById(channelId)
+    public Channel getChannelById(Long channelId) {
+        return channelRepository.findById(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
-
-        if (!Boolean.TRUE.equals(channel.getIsPrivate())) {
-            throw new IllegalArgumentException("Chỉ kênh Private mới được thiết lập quyền truy cập");
-        }
-
-        Long serverId = channel.getServer().getId();
-
-        // 1. Xử lý Members
-        if (request.getMemberIds() != null) {
-            List<ServerMember> members = serverMemberRepository.findAllById(request.getMemberIds());
-
-            // Validate: Member phải thuộc server
-            Set<ServerMember> validMembers = new HashSet<>();
-            for (ServerMember m : members) {
-                if (m.getServer().getId().equals(serverId)) {
-                    validMembers.add(m);
-                }
-            }
-            channel.setAllowedMembers(validMembers);
-        }
-
-        // 2. Xử lý Roles
-        if (request.getRoleIds() != null) {
-            List<ServerRole> roles = serverRoleRepository.findAllById(request.getRoleIds());
-
-            // Validate: Role phải thuộc server
-            Set<ServerRole> validRoles = new HashSet<>();
-            for (ServerRole r : roles) {
-                if (r.getServer().getId().equals(serverId)) {
-                    validRoles.add(r);
-                }
-            }
-            channel.setAllowedRoles(validRoles);
-        }
-
-        return ChannelResponse.from(channelRepository.save(channel));
     }
 }

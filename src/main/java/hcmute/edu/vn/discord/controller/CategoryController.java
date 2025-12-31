@@ -2,6 +2,7 @@ package hcmute.edu.vn.discord.controller;
 
 import hcmute.edu.vn.discord.dto.request.CategoryRequest;
 import hcmute.edu.vn.discord.dto.response.CategoryResponse;
+import hcmute.edu.vn.discord.entity.jpa.Category;
 import hcmute.edu.vn.discord.service.CategoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,10 +26,12 @@ public class CategoryController {
     @PreAuthorize("@serverAuth.canManageChannels(#request.serverId, authentication.name)")
     public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest request) {
         request.normalize();
-        CategoryResponse created = categoryService.createCategory(request);
+        Category created = categoryService.createCategory(request);
+        CategoryResponse response = CategoryResponse.from(created);
+
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
-                .path("/{id}").buildAndExpand(created.getId()).toUri();
-        return ResponseEntity.created(location).body(created);
+                .path("/{id}").buildAndExpand(response.getId()).toUri();
+        return ResponseEntity.created(location).body(response);
     }
 
     // 2. SỬA CATEGORY: Cần quyền MANAGE_CHANNELS (Check theo ID category -> ra serverID)
@@ -37,7 +40,8 @@ public class CategoryController {
     public ResponseEntity<CategoryResponse> updateCategory(@PathVariable Long id,
                                                            @Valid @RequestBody CategoryRequest request) {
         request.normalize();
-        return ResponseEntity.ok(categoryService.updateCategory(id, request));
+        Category updated = categoryService.updateCategory(id, request);
+        return ResponseEntity.ok(CategoryResponse.from(updated));
     }
 
     // 3. XÓA CATEGORY: Cần quyền MANAGE_CHANNELS
@@ -52,13 +56,18 @@ public class CategoryController {
     @GetMapping("/{id}")
     @PreAuthorize("@serverAuth.isMember(@serverAuth.serverIdOfCategory(#id), authentication.name)")
     public ResponseEntity<CategoryResponse> getCategoryById(@PathVariable Long id) {
-        return ResponseEntity.ok(categoryService.getCategoryById(id));
+        Category category = categoryService.getCategoryById(id);
+        return ResponseEntity.ok(CategoryResponse.from(category));
     }
 
     // 5. XEM LIST CATEGORY: Chỉ cần là Member
     @GetMapping("/server/{serverId}")
     @PreAuthorize("@serverAuth.isMember(#serverId, authentication.name)")
     public ResponseEntity<List<CategoryResponse>> getCategoriesByServer(@PathVariable Long serverId) {
-        return ResponseEntity.ok(categoryService.getCategoriesByServer(serverId));
+        List<CategoryResponse> categories = categoryService.getCategoriesByServer(serverId)
+                .stream()
+                .map(CategoryResponse::from)
+                .toList();
+        return ResponseEntity.ok(categories);
     }
 }
