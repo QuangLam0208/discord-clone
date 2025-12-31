@@ -3,6 +3,7 @@ package hcmute.edu.vn.discord.dto.request;
 import hcmute.edu.vn.discord.entity.enums.ChannelType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
@@ -17,9 +18,8 @@ public class ChannelRequest {
 
     private Boolean isPrivate;
 
-    @NotNull(message = "Server ID là bắt buộc")
-    private Long serverId;
-
-    // Không bắt buộc
     private Long categoryId;
+    public void normalize() {
+        if (name != null) name = name.trim().toLowerCase();
+    }
 }

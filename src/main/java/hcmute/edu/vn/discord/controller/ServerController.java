@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/servers")
 @RequiredArgsConstructor
 public class ServerController {
+
     private final ServerService serverService;
     private final CategoryRepository categoryRepository;
     private final ChannelService channelService;
@@ -38,6 +39,8 @@ public class ServerController {
     @PostMapping
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<ServerResponse> createServer(@Valid @RequestBody ServerRequest request) {
+        request.normalize();
+
         Server saved = serverService.createServer(request);
 
         URI location = ServletUriComponentsBuilder
@@ -54,6 +57,8 @@ public class ServerController {
     @PreAuthorize("@serverAuth.isOwner(#id, authentication.name)")
     public ResponseEntity<ServerResponse> updateServer(@PathVariable Long id,
                                                        @Valid @RequestBody ServerRequest request) {
+        request.normalize();
+
         Server updated = serverService.updateServer(id, request);
         return ResponseEntity.ok(ServerResponse.from(updated));
     }
@@ -66,17 +71,23 @@ public class ServerController {
             Authentication authentication) {
 
         String username = authentication.getName();
+
+        // Query 1: Lấy Server + Owner (Nhờ @EntityGraph trong ServerRepository)
         Server server = serverService.getServerById(id);
 
+        // Query 2: Lấy Categories (Nhanh do query đơn giản)
         List<CategoryResponse> categories = categoryRepository.findByServerId(id).stream()
                 .map(CategoryResponse::from)
                 .toList();
 
+        // Query 3: Lấy Channels + Categories + Permissions (Nhờ @EntityGraph trong ChannelRepository)
+        // -> Bước filter và map bên dưới sẽ KHÔNG gọi thêm query nào nữa (tránh lỗi N+1)
         List<ChannelResponse> channels = channelService.getChannelsByServer(id).stream()
-                .filter(c -> serverAuth.canViewChannel(c.getId(), username)) // Check quyền
-                .map(ChannelResponse::from) // Map Entity -> DTO
+                .filter(c -> serverAuth.canViewChannel(c.getId(), username)) // Check quyền xem kênh
+                .map(ChannelResponse::from)
                 .toList();
 
+        // Query 4: Lấy Members + User + Roles (Nhờ @EntityGraph)
         List<ServerMemberResponse> members = serverMemberRepository.findByServerId(id).stream()
                 .map(ServerMemberResponse::from)
                 .toList();
@@ -89,7 +100,7 @@ public class ServerController {
                 .build());
     }
 
-    // 4. LẤY ALL
+    // 4. LẤY ALL (Dùng cho Admin hoặc trang khám phá)
     @GetMapping
     public ResponseEntity<List<ServerResponse>> getAllServers() {
         List<ServerResponse> servers = serverService.getAllServers().stream()
@@ -105,7 +116,7 @@ public class ServerController {
         return ResponseEntity.ok(ServerResponse.from(server));
     }
 
-    // 6. GET MY SERVERS
+    // 6. GET MY SERVERS (Danh sách server user đã tham gia)
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<ServerResponse>> getMyServers() {
@@ -115,7 +126,7 @@ public class ServerController {
         return ResponseEntity.ok(servers);
     }
 
-    // 7. DELETE
+    // 7. DELETE (Chỉ Owner mới được xóa)
     @DeleteMapping("/{id}")
     @PreAuthorize("@serverAuth.isOwner(#id, authentication.name)")
     public ResponseEntity<Void> deleteServer(@PathVariable Long id) {

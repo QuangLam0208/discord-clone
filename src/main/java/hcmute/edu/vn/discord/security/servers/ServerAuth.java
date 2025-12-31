@@ -222,9 +222,8 @@ public class ServerAuth {
 
     // Helper: lấy serverId từ channel
     public Long serverIdOfChannel(Long channelId) {
-        Channel channel = channelRepository.findById(channelId)
+        return channelRepository.findServerIdByChannelId(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
-        return channel.getServer().getId();
     }
 
     // Helper: lấy channelId từ message
@@ -238,5 +237,10 @@ public class ServerAuth {
     public Long serverIdOfMessage(String messageId) {
         Long channelId = channelIdOfMessage(messageId);
         return serverIdOfChannel(channelId);
+    }
+
+    public boolean canEditChannel(Long channelId, String username) {
+        Long serverId = serverIdOfChannel(channelId);
+        return canManageChannels(serverId, username);
     }
 }
