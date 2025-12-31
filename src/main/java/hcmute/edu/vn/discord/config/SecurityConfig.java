@@ -33,7 +33,7 @@ public class SecurityConfig {
 
         @Bean
         public AuthenticationManager authenticationManager(
-                        AuthenticationConfiguration authConfig) throws Exception {
+                AuthenticationConfiguration authConfig) throws Exception {
                 return authConfig.getAuthenticationManager();
         }
 
@@ -41,32 +41,33 @@ public class SecurityConfig {
         public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
                 http
-                                .csrf(AbstractHttpConfigurer::disable)
-                                .exceptionHandling(ex -> ex
-                                                .authenticationEntryPoint(unauthorizedHandler))
-                                .sessionManagement(sess -> sess
-                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                                .authorizeHttpRequests(auth -> auth
-                                                // TODO: /ws/**, /ws-test.html is temporarily public for testing. MUST
-                                                // secure before production.
-                                                .requestMatchers(
-                                                                "/api/auth/**",
-                                                                "/api/chat/history/**",
-                                                                "/api/test/**",
-                                                                "/ws/**",
-                                                                "/ws-test.html",
-                                                                "/swagger-ui.html",
-                                                                "/swagger-ui/**",
-                                                                "/v3/api-docs/**",
-                                                                "/swagger-resources/**",
-                                                                "/webjars/**",
-                                                                "/websocket-test.html",
-                                                                "/files/**")  // Cho phép xem file public
-                                                .permitAll()
-                                                .anyRequest().authenticated())
-                                .userDetailsService(userDetailsService)
-                                .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
-
+                        .csrf(AbstractHttpConfigurer::disable)
+                        .cors(cors -> {}) // bật CORS ở Security layer để dùng WebMvcConfigurer
+                        .exceptionHandling(ex -> ex
+                                .authenticationEntryPoint(unauthorizedHandler))
+                        .sessionManagement(sess -> sess
+                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                        .authorizeHttpRequests(auth -> auth
+                                // Cho phép preflight CORS
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                // TODO: /ws/**, /ws-test.html is temporarily public for testing. MUST secure before production.
+                                .requestMatchers(
+                                        "/api/auth/**",
+                                        "/api/chat/history/**",
+                                        "/api/test/**",
+                                        "/ws/**",
+                                        "/ws-test.html",
+                                        "/swagger-ui.html",
+                                        "/swagger-ui/**",
+                                        "/v3/api-docs/**",
+                                        "/swagger-resources/**",
+                                        "/webjars/**",
+                                        "/websocket-test.html",
+                                        "/files/**")  // Cho phép xem file public
+                                .permitAll()
+                                .anyRequest().authenticated())
+                        .userDetailsService(userDetailsService)
+                        .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
                 return http.build();
         }
 }
