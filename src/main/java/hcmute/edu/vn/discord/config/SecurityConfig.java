@@ -22,49 +22,51 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
-    private final UserDetailsServiceImpl userDetailsService;
-    private final AuthEntryPointJwt unauthorizedHandler;
-    private final AuthTokenFilter authTokenFilter;
+        private final UserDetailsServiceImpl userDetailsService;
+        private final AuthEntryPointJwt unauthorizedHandler;
+        private final AuthTokenFilter authTokenFilter;
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
-    }
+        @Bean
+        public AuthenticationManager authenticationManager(
+                        AuthenticationConfiguration authConfig) throws Exception {
+                return authConfig.getAuthenticationManager();
+        }
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(unauthorizedHandler))
-                .sessionManagement(sess -> sess
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // API (cho Ajax gọi)
-                        .requestMatchers("/api/auth/**").permitAll()
+                http
+                                .csrf(AbstractHttpConfigurer::disable)
+                                .exceptionHandling(ex -> ex
+                                                .authenticationEntryPoint(unauthorizedHandler))
+                                .sessionManagement(sess -> sess
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                .authorizeHttpRequests(auth -> auth
+                                                // TODO: /ws/**, /ws-test.html is temporarily public for testing. MUST
+                                                // secure before production.
+                                                .requestMatchers(
+                                                                "/api/auth/**",
+                                                                "/api/chat/history/**",
+                                                                "/api/test/**",
+                                                                "/ws/**",
+                                                                "/ws-test.html",
+                                                                "/swagger-ui.html",
+                                                                "/swagger-ui/**",
+                                                                "/v3/api-docs/**",
+                                                                "/swagger-resources/**",
+                                                                "/webjars/**",
+                                                                "/websocket-test.html",
+                                                                "/files/**")  // Cho phép xem file public
+                                                .permitAll()
+                                                .anyRequest().authenticated())
+                                .userDetailsService(userDetailsService)
+                                .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
-                        // View Controller (URL đẹp cho người dùng)
-                        .requestMatchers("/", "/login", "/register").permitAll()
-
-                        // Resource tĩnh (CSS, JS vẫn nằm ở static)
-                        .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
-
-                        // TODO: /ws/**, /ws-test.html is temporarily public for testing. MUST secure before production.
-                        .requestMatchers("/api/auth/**", "/api/test/**", "/ws/**",
-                                "/ws-test.html",
-                                "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .userDetailsService(userDetailsService)
-                .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
+                return http.build();
+        }
 }

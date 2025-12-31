@@ -1,8 +1,8 @@
 package hcmute.edu.vn.discord.entity.mongo;
 
-import jakarta.persistence.Id;
 import lombok.Builder;
 import lombok.Data;
+import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 

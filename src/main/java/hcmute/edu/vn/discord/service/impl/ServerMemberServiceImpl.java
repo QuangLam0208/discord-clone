@@ -1,7 +1,9 @@
 package hcmute.edu.vn.discord.service.impl;
 
+import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.enums.ServerStatus;
 import hcmute.edu.vn.discord.entity.jpa.*;
+import hcmute.edu.vn.discord.repository.PermissionRepository;
 import hcmute.edu.vn.discord.repository.ServerMemberRepository;
 import hcmute.edu.vn.discord.repository.ServerRepository;
 import hcmute.edu.vn.discord.repository.ServerRoleRepository;
@@ -24,6 +26,7 @@ public class ServerMemberServiceImpl implements ServerMemberService {
     private final ServerRepository serverRepository;
     private final UserRepository userRepository;
     private final ServerRoleRepository serverRoleRepository;
+    private final PermissionRepository permissionRepository;
 
     @Override
     @Transactional
@@ -52,7 +55,30 @@ public class ServerMemberServiceImpl implements ServerMemberService {
 
         // MẶC ĐỊNH: Gán role @everyone
         ServerRole everyoneRole = serverRoleRepository.findByServerIdAndName(serverId, "@everyone")
-                .orElseThrow(() -> new EntityNotFoundException("Role '@everyone' not found"));
+                .orElseGet(() -> {
+                    // Self-healing: Nếu role @everyone bị thiếu, tự động tạo lại
+                    ServerRole role = new ServerRole();
+                    role.setName("@everyone");
+                    role.setPriority(0);
+                    role.setServer(server);
+
+                    // Cấp quyền cơ bản mặc định
+                    Set<Permission> defaults = new HashSet<>();
+                    List<String> defaultCodes = List.of(
+                            EPermission.VIEW_CHANNELS.name(),
+                            EPermission.SEND_MESSAGES.name(),
+                            EPermission.READ_MESSAGE_HISTORY.name(),
+                            EPermission.CREATE_INVITE.name(),
+                            EPermission.CHANGE_NICKNAME.name(),
+                            EPermission.ADD_REACTIONS.name());
+
+                    for (String code : defaultCodes) {
+                        permissionRepository.findByCode(code).ifPresent(defaults::add);
+                    }
+
+                    role.setPermissions(defaults);
+                    return serverRoleRepository.save(role);
+                });
 
         ServerMember newMember = new ServerMember();
         newMember.setServer(server);

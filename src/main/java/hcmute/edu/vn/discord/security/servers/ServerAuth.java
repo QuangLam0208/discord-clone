@@ -71,11 +71,11 @@ public class ServerAuth {
 
     // Quản lý kênh: Owner hoặc ADMIN/MANAGE_CHANNELS
     public boolean canManageChannels(Long serverId, String username) {
-        if (isOwner(serverId, username)) return true;
+        if (isOwner(serverId, username))
+            return true;
         return has(serverId, username, Set.of(
                 EPermission.ADMIN.getCode(),
-                EPermission.MANAGE_CHANNELS.getCode()
-        ));
+                EPermission.MANAGE_CHANNELS.getCode()));
     }
 
     // Quản lý role: Owner hoặc ADMIN/MANAGE_ROLES
@@ -89,21 +89,27 @@ public class ServerAuth {
 
     // Quản lý thành viên: Owner hoặc ADMIN/MANAGE_SERVER/KICK_APPROVE_REJECT_MEMBERS/BAN_MEMBERS
     public boolean canManageMembers(Long serverId, String username) {
-        if (isOwner(serverId, username)) return true;
+        if (isOwner(serverId, username))
+            return true;
         return has(serverId, username, Set.of(
                 EPermission.ADMIN.getCode(),
                 EPermission.MANAGE_SERVER.getCode(),
                 EPermission.KICK_APPROVE_REJECT_MEMBERS.getCode(),
-                EPermission.BAN_MEMBERS.getCode()
-        ));
+                EPermission.BAN_MEMBERS.getCode()));
     }
 
-    // Xem kênh: Public cần VIEW_CHANNELS; Private cần Owner/Admin hoặc nằm trong allowedMembers/allowedRoles
+    // Xem kênh: Owner luôn được xem. Public cần VIEW_CHANNELS; Private cần Admin
+    // hoặc nằm trong allowedMembers/allowedRoles
     public boolean canViewChannel(Long channelId, String username) {
         User user = requireUser(username);
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
         Long serverId = channel.getServer().getId();
+
+        // Owner bypass
+        if (isOwner(serverId, username))
+            return true;
+
         ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, user.getId())
                 .orElseThrow(() -> new AccessDeniedException("Bạn chưa tham gia Server này!"));
 
@@ -115,10 +121,9 @@ public class ServerAuth {
             return has(serverId, username, Set.of(EPermission.VIEW_CHANNELS.getCode()));
         }
 
-        if (isOwner(serverId, username)) return true;
-
         boolean isAdmin = has(serverId, username, Set.of(EPermission.ADMIN.getCode()));
-        if (isAdmin) return true;
+        if (isAdmin)
+            return true;
 
         boolean userAllowed = channel.getAllowedMembers() != null && channel.getAllowedMembers().contains(member);
         boolean roleAllowed = channel.getAllowedRoles() != null && member.getRoles().stream()
@@ -127,46 +132,54 @@ public class ServerAuth {
         return userAllowed || roleAllowed;
     }
 
-    // Gửi tin nhắn: phải xem được kênh + SEND_MESSAGES
+    // Gửi tin nhắn: phải xem được kênh + (SEND_MESSAGES hoặc Owner)
     public boolean canSendMessage(Long channelId, String username) {
-        if (!canViewChannel(channelId, username)) return false;
+        if (!canViewChannel(channelId, username))
+            return false;
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
         Long serverId = channel.getServer().getId();
+        if (isOwner(serverId, username))
+            return true;
         return has(serverId, username, Set.of(EPermission.SEND_MESSAGES.getCode()));
     }
 
     // Quản lý tin nhắn người khác: Owner hoặc ADMIN/MANAGE_MESSAGES
     public boolean canManageMessages(Long channelId, String username) {
-        if (!canViewChannel(channelId, username)) return false;
+        if (!canViewChannel(channelId, username))
+            return false;
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
         Long serverId = channel.getServer().getId();
-        if (isOwner(serverId, username)) return true;
+        if (isOwner(serverId, username))
+            return true;
         return has(serverId, username, Set.of(
                 EPermission.ADMIN.getCode(),
-                EPermission.MANAGE_MESSAGES.getCode()
-        ));
+                EPermission.MANAGE_MESSAGES.getCode()));
     }
 
-    // Thả/gỡ reaction: phải xem được kênh + ADD_REACTIONS hoặc ADMIN
+    // Thả/gỡ reaction: phải xem được kênh + ADD_REACTIONS hoặc ADMIN hoặc Owner
     public boolean canReactToMessage(String messageId, String username) {
         Message msg = messageRepository.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("Message not found"));
         Long channelId = msg.getChannelId();
-        if (!canViewChannel(channelId, username)) return false;
+        if (!canViewChannel(channelId, username))
+            return false;
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
         Long serverId = channel.getServer().getId();
+        if (isOwner(serverId, username))
+            return true;
         return has(serverId, username, Set.of(
                 EPermission.ADD_REACTIONS.getCode(),
-                EPermission.ADMIN.getCode()
-        ));
+                EPermission.ADMIN.getCode()));
     }
 
-    // Đọc lịch sử: phải xem được kênh + READ_MESSAGE_HISTORY (thường đi kèm VIEW_CHANNELS)
+    // Đọc lịch sử: phải xem được kênh + READ_MESSAGE_HISTORY (thường đi kèm
+    // VIEW_CHANNELS)
     public boolean canReadMessageHistory(Long channelId, String username) {
-        if (!canViewChannel(channelId, username)) return false;
+        if (!canViewChannel(channelId, username))
+            return false;
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
         Long serverId = channel.getServer().getId();
@@ -175,49 +188,49 @@ public class ServerAuth {
 
     // Đính kèm tệp
     public boolean canAttachFiles(Long channelId, String username) {
-        if (!canViewChannel(channelId, username)) return false;
+        if (!canViewChannel(channelId, username))
+            return false;
         Long serverId = serverIdOfChannel(channelId);
         return has(serverId, username, Set.of(
                 EPermission.ATTACH_FILES.getCode(),
-                EPermission.ADMIN.getCode()
-        ));
+                EPermission.ADMIN.getCode()));
     }
 
     // Nhúng link
     public boolean canEmbedLink(Long channelId, String username) {
-        if (!canViewChannel(channelId, username)) return false;
+        if (!canViewChannel(channelId, username))
+            return false;
         Long serverId = serverIdOfChannel(channelId);
         return has(serverId, username, Set.of(
                 EPermission.EMBED_LINK.getCode(),
-                EPermission.ADMIN.getCode()
-        ));
+                EPermission.ADMIN.getCode()));
     }
 
     // Tạo lời mời
     public boolean canCreateInvite(Long serverId, String username) {
-        if (!isMember(serverId, username)) return false;
+        if (!isMember(serverId, username))
+            return false;
         return has(serverId, username, Set.of(
                 EPermission.CREATE_INVITE.getCode(),
-                EPermission.ADMIN.getCode()
-        ));
+                EPermission.ADMIN.getCode()));
     }
 
     // Đổi nickname
     public boolean canChangeNickname(Long serverId, String username) {
-        if (!isMember(serverId, username)) return false;
+        if (!isMember(serverId, username))
+            return false;
         return has(serverId, username, Set.of(
                 EPermission.CHANGE_NICKNAME.getCode(),
-                EPermission.ADMIN.getCode()
-        ));
+                EPermission.ADMIN.getCode()));
     }
 
     // Mention everyone/here/roles
     public boolean canMentionEveryone(Long serverId, String username) {
-        if (!isMember(serverId, username)) return false;
+        if (!isMember(serverId, username))
+            return false;
         return has(serverId, username, Set.of(
                 EPermission.MENTION_EVERYONE_HERE_ALLROLES.getCode(),
-                EPermission.ADMIN.getCode()
-        ));
+                EPermission.ADMIN.getCode()));
     }
 
     // Helper: lấy serverId từ channel
