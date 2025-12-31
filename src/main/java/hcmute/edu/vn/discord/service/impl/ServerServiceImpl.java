@@ -57,7 +57,14 @@ public class ServerServiceImpl implements ServerService {
         everyoneRole.setPriority(0);
         everyoneRole.setPermissions(new HashSet<>(Set.of(
                 permMap.get(EPermission.VIEW_CHANNELS),
+                permMap.get(EPermission.CREATE_EXPRESSIONS),
+                permMap.get(EPermission.CREATE_INVITE),
+                permMap.get(EPermission.CHANGE_NICKNAME),
                 permMap.get(EPermission.SEND_MESSAGES),
+                permMap.get(EPermission.EMBED_LINK),
+                permMap.get(EPermission.ATTACH_FILES),
+                permMap.get(EPermission.ADD_REACTIONS),
+                permMap.get(EPermission.MENTION_EVERYONE_HERE_ALLROLES),
                 permMap.get(EPermission.READ_MESSAGE_HISTORY)
         )));
         serverRoleRepository.save(everyoneRole);
