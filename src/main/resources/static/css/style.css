@@ -171,3 +171,180 @@ button:hover { background-color: #4752c4; }
 .empty-active-state { text-align: center; margin-top: 40px; }
 .empty-text-bold { color: white; font-weight: bold; margin-bottom: 8px; font-size: 16px; }
 .empty-text-desc { color: #b9bbbe; font-size: 14px; }
+
+/* =========================================
+   6. SERVER CHANNEL LIST (DANH MỤC & KÊNH)
+   ========================================= */
+
+/* Nhóm không có category */
+.uncategorized-channels {
+    margin-bottom: 16px;
+}
+
+/* Category Wrapper */
+.category-wrapper {
+    margin-bottom: 4px;
+}
+
+/* Header của Category */
+.category-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px 6px 2px;
+    color: #96989d;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 700;
+    transition: color 0.2s;
+}
+.category-header:hover {
+    color: #dcddde;
+}
+
+.cat-info {
+    display: flex; align-items: center; gap: 2px;
+    text-transform: uppercase;
+}
+.cat-info i { font-size: 10px; width: 12px; text-align: center; }
+
+/* Nút (+) Tạo kênh */
+.add-channel-icon {
+    font-size: 14px; cursor: pointer;
+}
+
+/* Kênh con bên trong Category */
+.category-content .channel-item {
+    margin-left: 8px; /* Thụt lề */
+}
+
+
+/* =========================================
+   7. SERVER CHAT (SCROLLBAR & UPLOAD)
+   ========================================= */
+
+/* Chat Area với Scrollbar tùy chỉnh */
+.chat-area {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex; flex-direction: column; gap: 16px;
+}
+
+/* Webkit Scrollbar (Chrome/Safari/Edge) */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background-color: #2e3338;
+    border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #202225;
+    border-radius: 4px;
+}
+
+/* Nút Upload Ảnh (Icon +) */
+.upload-icon-btn {
+    color: #b9bbbe;
+    font-size: 22px;
+    margin-right: 12px;
+    cursor: pointer;
+    display: flex; align-items: center;
+    transition: color 0.2s;
+}
+.upload-icon-btn:hover { color: #dcddde; }
+
+/* Icon Emoji/Gift bên phải Input */
+.input-right-icons {
+    display: flex; gap: 12px;
+    color: #b9bbbe; font-size: 20px;
+    margin-left: 12px;
+}
+.input-right-icons i { cursor: pointer; }
+.input-right-icons i:hover { color: #f0f0f0; }
+
+
+/* =========================================
+   8. CONTEXT MENU (CHUỘT PHẢI)
+   ========================================= */
+.context-menu {
+    position: fixed;
+    background-color: #18191c;
+    width: 190px;
+    padding: 6px 8px;
+    border-radius: 4px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.24);
+    z-index: 9999;
+
+    /* Mặc định ẩn */
+    display: none;
+    opacity: 0;
+    transition: opacity 0.1s;
+}
+
+.context-menu.visible {
+    display: block;
+    opacity: 1;
+}
+
+.menu-item {
+    padding: 8px 8px;
+    border-radius: 2px;
+    color: #b9bbbe;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+}
+.menu-item:hover {
+    background-color: #4752c4; /* Xanh Discord khi hover */
+    color: white;
+}
+.menu-separator {
+    height: 1px;
+    background-color: #36393f;
+    margin: 4px 0;
+}
+.icon-right { font-size: 12px; }
+
+
+/* =========================================
+   9. STYLE CHO MODAL MỚI (INVITE, CHANNEL)
+   ========================================= */
+/* Style cho Link Box trong Invite Modal */
+.invite-link-box {
+    background-color: #202225;
+    padding: 10px;
+    border-radius: 4px;
+    margin-top: 8px;
+    display: flex; justify-content: space-between; align-items: center;
+}
+.invite-link-box span {
+    color: #dcddde; font-size: 14px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.invite-link-box button {
+    width: auto; height: 32px;
+    background-color: #5865F2;
+    color: white; border: none; border-radius: 3px;
+    padding: 0 16px; font-weight: bold; font-size: 13px;
+}
+
+/* Style cho Radio chọn loại kênh */
+.channel-type-option {
+    flex: 1;
+    background-color: #2f3136;
+    padding: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    color: #b9bbbe; font-weight: 500;
+    display: flex; align-items: center; gap: 8px;
+}
+.channel-type-option:hover { background-color: #36393f; }
+.channel-type-option.selected {
+    background-color: #40444b;
+    border-color: #5865F2; /* Viền xanh */
+}
