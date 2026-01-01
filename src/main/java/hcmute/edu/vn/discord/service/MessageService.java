@@ -2,10 +2,13 @@ package hcmute.edu.vn.discord.service;
 
 import hcmute.edu.vn.discord.dto.request.MessageRequest;
 import hcmute.edu.vn.discord.dto.response.MessageResponse;
+import hcmute.edu.vn.discord.entity.mongo.Message;
 import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 public interface MessageService {
+    // Lưu và phát tán message được dựng sẵn
+    Message sendMessage(Message message);
     // 1. Gửi tin nhắn (DTO MessageRequest đã chứa content, replyToId, attachments)
     MessageResponse createMessage(Long channelId, String username, MessageRequest request);
 

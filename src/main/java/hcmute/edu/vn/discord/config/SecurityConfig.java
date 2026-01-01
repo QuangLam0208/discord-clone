@@ -6,6 +6,7 @@ import hcmute.edu.vn.discord.security.services.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -21,37 +22,53 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
-    private final UserDetailsServiceImpl userDetailsService;
-    private final AuthEntryPointJwt unauthorizedHandler;
-    private final AuthTokenFilter authTokenFilter;
+        private final UserDetailsServiceImpl userDetailsService;
+        private final AuthEntryPointJwt unauthorizedHandler;
+        private final AuthTokenFilter authTokenFilter;
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+        @Bean
+        public PasswordEncoder passwordEncoder() {
+                return new BCryptPasswordEncoder();
+        }
 
-    @Bean
-    public AuthenticationManager authenticationManager(
-            AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
-    }
+        @Bean
+        public AuthenticationManager authenticationManager(
+                AuthenticationConfiguration authConfig) throws Exception {
+                return authConfig.getAuthenticationManager();
+        }
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        @Bean
+        public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-        http
-                .csrf(AbstractHttpConfigurer::disable)
-                .exceptionHandling(ex -> ex
-                        .authenticationEntryPoint(unauthorizedHandler))
-                .sessionManagement(sess -> sess
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/api/test/**").permitAll()
-                        .anyRequest().authenticated()
-                )
-                .userDetailsService(userDetailsService)
-                .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
+                http
+                        .csrf(AbstractHttpConfigurer::disable)
+//                        .cors(cors -> {}) // bật CORS ở Security layer để dùng WebMvcConfigurer
+                        .exceptionHandling(ex -> ex
+                                .authenticationEntryPoint(unauthorizedHandler))
+                        .sessionManagement(sess -> sess
+                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                        .authorizeHttpRequests(auth -> auth
+                                // Cho phép preflight CORS
+                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                // TODO: /ws/**, /ws-test.html is temporarily public for testing. MUST secure before production.
+                                .requestMatchers(
+                                        "/",
+                                        "/login", "/register", "/home",
+                                        "/error", "/favicon.ico",
+                                        "/css/**", "/js/**", "/images/**", "/fonts/**", "/webjars/**",
+                                        "/api/auth/**", "/api/test/**",
+                                        // swagger, ws, files...
+                                        "/ws/**", "/ws-test.html",
+                                        "/swagger-ui.html", "/swagger-ui/**",
+                                        "/v3/api-docs/**", "/swagger-resources/**",
+                                        "/webjars/**",
+                                        "/websocket-test.html",
+                                        "/files/**"
+                                )  // Cho phép xem file public
+                                .permitAll()
+                                .anyRequest().authenticated())
+                        .userDetailsService(userDetailsService)
+                        .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
+                return http.build();
+        }
 }
