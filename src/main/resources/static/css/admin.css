@@ -1,0 +1,201 @@
+/* =========================================================
+   DISCORD ADMIN THEME - admin.css
+   ========================================================= */
+
+/* 1. Layout Container */
+.discord-admin-container {
+    padding: 40px;
+    background-color: #313338; /* Nền tối chuẩn Discord */
+    color: #dbdee1;
+    min-height: 100vh;
+    font-family: 'gg sans', 'Segoe UI', sans-serif;
+}
+
+/* 2. Header & Search Bar */
+.discord-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    background-color: #2b2d31;
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.discord-header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #f2f3f5;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.discord-search {
+    background-color: #1e1f22;
+    border-radius: 4px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    transition: 0.2s;
+    border: 1px solid transparent;
+}
+
+.discord-search:focus-within {
+    border-color: #5865F2; /* Focus màu xanh Discord */
+}
+
+.discord-search input {
+    background: transparent;
+    border: none;
+    color: #dbdee1;
+    padding: 6px;
+    outline: none;
+    font-size: 14px;
+    width: 250px;
+}
+
+.discord-search button {
+    background: transparent;
+    border: none;
+    color: #b5bac1;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.discord-search button:hover { color: #fff; }
+
+/* 3. Table Styling */
+.discord-table-wrapper {
+    background-color: #2b2d31;
+    border-radius: 8px;
+    overflow: hidden; /* Bo tròn góc bảng */
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.discord-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.discord-table thead {
+    background-color: #1e1f22;
+    border-bottom: 1px solid #1f2023;
+}
+
+.discord-table th {
+    text-align: left;
+    padding: 14px 24px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #b5bac1;
+    letter-spacing: 0.5px;
+}
+
+.discord-table tbody tr {
+    border-bottom: 1px solid #1f2023;
+    transition: background-color 0.1s;
+}
+
+.discord-table tbody tr:hover {
+    background-color: #35373c; /* Hover sáng hơn */
+}
+
+.discord-table td {
+    padding: 12px 24px;
+    font-size: 14px;
+    color: #dbdee1;
+    vertical-align: middle;
+}
+
+/* 4. Avatar & User Info */
+.table-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background-color: #5865F2;
+    border: 2px solid #2b2d31;
+}
+
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-cell span {
+    font-weight: 600;
+    color: #f2f3f5;
+}
+
+/* 5. Badges (Role) */
+.badge-role {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: white;
+}
+
+.badge-role.admin { background-color: #ed4245; } /* Đỏ */
+.badge-role.member { background-color: #5865F2; } /* Xanh Blurple */
+
+/* 6. Action Buttons */
+.btn-mini {
+    padding: 6px 12px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    margin-right: 6px;
+    display: inline-block;
+    transition: 0.2s;
+}
+
+.btn-mini.edit { background-color: #4e5058; color: white; }
+.btn-mini.edit:hover { background-color: #6d6f78; }
+
+.btn-mini.ban { background-color: #da373c; color: white; }
+.btn-mini.ban:hover { background-color: #a1282c; }
+
+/* 7. Pagination */
+.discord-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 24px;
+    gap: 12px;
+}
+
+.page-btn {
+    background-color: #2b2d31;
+    color: #dbdee1;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.page-btn:hover {
+    background-color: #5865F2;
+    color: white;
+}
+
+.page-info {
+    font-size: 14px;
+    color: #b5bac1;
+}
+
+.page-info b { color: #f2f3f5; }

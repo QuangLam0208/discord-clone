@@ -1,50 +1,81 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="https://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Quản lý Users</title>
+    <title>Quản lý Users - Discord Admin</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-<div class="admin-container">
-    <h1>Quản lý Users</h1>
+<div class="discord-admin-container">
 
-    <div class="filter-bar">
-        <form th:action="@{/admin/users}" method="get">
-            <input type="text" name="keyword" th:value="${keyword}" placeholder="Tìm username, email...">
-            <button type="submit">Tìm kiếm</button>
+    <div class="discord-header">
+        <h1><i class="fas fa-users-cog"></i> Quản lý Thành viên</h1>
+
+        <form th:action="@{/admin/users}" method="get" class="discord-search">
+            <input type="text" name="keyword" th:value="${keyword}" placeholder="Tìm kiếm theo tên hoặc email...">
+            <button type="submit"><i class="fas fa-search"></i></button>
         </form>
     </div>
 
-    <table class="data-table">
-        <thead>
-        <tr>
-            <th>ID</th>
-            <th>Avatar</th>
-            <th>Username</th>
-            <th>Email</th>
-            <th>Ngày tạo</th>
-            <th>Hành động</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr th:each="u : ${users}">
-            <td th:text="${u.id}">1</td>
-            <td><img th:src="${u.avatarUrl}" class="avatar-tiny"></td>
-            <td th:text="${u.username}">admin</td>
-            <td th:text="${u.email}">admin@gmail.com</td>
-            <td th:text="${u.createdAt}">2024-01-01</td>
-            <td>
-                <a th:href="@{/admin/users/edit/{id}(id=${u.id})}" class="btn-edit">Sửa</a>
-                <a th:href="@{/admin/users/ban/{id}(id=${u.id})}" class="btn-delete">Ban</a>
-            </td>
-        </tr>
-        </tbody>
-    </table>
+    <div class="discord-table-wrapper">
+        <table class="discord-table">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Người dùng</th>
+                <th>Email</th>
+                <th>Vai trò</th>
+                <th>Ngày tham gia</th>
+                <th>Hành động</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="u : ${users}">
+                <td style="color: #b5bac1; font-family: monospace;" th:text="'#' + ${u.id}">#1</td>
 
-    <div class="pagination" th:if="${totalPages > 1}">
-        <a th:href="@{/admin/users(page=${currentPage - 1}, keyword=${keyword})}" th:if="${currentPage > 0}">&laquo; Trước</a>
-        <span th:text="${currentPage + 1} + ' / ' + ${totalPages}">1/10</span>
-        <a th:href="@{/admin/users(page=${currentPage + 1}, keyword=${keyword})}" th:if="${currentPage < totalPages - 1}">Sau &raquo;</a>
+                <td>
+                    <div class="user-cell">
+                        <img th:src="${u.avatarUrl != null ? u.avatarUrl : '/images/default.png'}" class="table-avatar">
+                        <span th:text="${u.username}">Username</span>
+                    </div>
+                </td>
+
+                <td th:text="${u.email}">email@example.com</td>
+
+                <td>
+                    <span th:if="${#lists.contains(u.roles.![name.toString()], 'ADMIN')}" class="badge-role admin">ADMIN</span>
+
+                    <span th:unless="${#lists.contains(u.roles.![name.toString()], 'ADMIN')}" class="badge-role member">MEMBER</span>
+                </td>
+
+                <td th:text="${#temporals.format(u.createdAt, 'dd/MM/yyyy')}">01/01/2024</td>
+
+                <td>
+                    <a th:href="@{/admin/users/edit/{id}(id=${u.id})}" class="btn-mini edit">Sửa</a>
+                    <a th:href="@{/admin/users/ban/{id}(id=${u.id})}" class="btn-mini ban">Ban</a>
+                </td>
+            </tr>
+
+            <tr th:if="${#lists.isEmpty(users)}">
+                <td colspan="6" style="text-align: center; padding: 40px; color: #b5bac1;">
+                    <i class="fas fa-ghost"></i> Không tìm thấy kết quả nào.
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="discord-pagination" th:if="${totalPages > 1}">
+        <a th:if="${currentPage > 0}"
+           th:href="@{/admin/users(page=${currentPage - 1}, keyword=${keyword})}"
+           class="page-btn"><i class="fas fa-chevron-left"></i> Trước</a>
+
+        <span class="page-info">Trang <b th:text="${currentPage + 1}"></b> / <span th:text="${totalPages}"></span></span>
+
+        <a th:if="${currentPage < totalPages - 1}"
+           th:href="@{/admin/users(page=${currentPage + 1}, keyword=${keyword})}"
+           class="page-btn">Sau <i class="fas fa-chevron-right"></i></a>
     </div>
 </div>
 </body>
