@@ -26,7 +26,6 @@
                 <th>Người dùng</th>
                 <th>Email</th>
                 <th>Vai trò</th>
-                <th>Ngày tham gia</th>
                 <th>Hành động</th>
             </tr>
             </thead>
@@ -38,27 +37,46 @@
                     <div class="user-cell">
                         <img th:src="${u.avatarUrl != null ? u.avatarUrl : '/images/default.png'}" class="table-avatar">
                         <span th:text="${u.username}">Username</span>
+
+                        <input type="hidden" th:id="'displayName-' + ${u.id}" th:value="${u.displayName}">
                     </div>
                 </td>
 
                 <td th:text="${u.email}">email@example.com</td>
 
                 <td>
-                    <span th:if="${#lists.contains(u.roles.![name.toString()], 'ADMIN')}" class="badge-role admin">ADMIN</span>
+                            <span th:if="${#lists.contains(u.roles.![name.toString()], 'ADMIN')}"
+                                  class="badge-role admin">ADMIN</span>
 
-                    <span th:unless="${#lists.contains(u.roles.![name.toString()], 'ADMIN')}" class="badge-role member">MEMBER</span>
+                    <span th:unless="${#lists.contains(u.roles.![name.toString()], 'ADMIN')}"
+                          class="badge-role member">MEMBER</span>
+
+                    <div style="display:none;" th:id="'roles-' + ${u.id}">
+                        <span th:each="r : ${u.roles}" th:text="${r.name} + ','"></span>
+                    </div>
                 </td>
 
-                <td th:text="${#temporals.format(u.createdAt, 'dd/MM/yyyy')}">01/01/2024</td>
-
                 <td>
-                    <a th:href="@{/admin/users/edit/{id}(id=${u.id})}" class="btn-mini edit">Sửa</a>
-                    <a th:href="@{/admin/users/ban/{id}(id=${u.id})}" class="btn-mini ban">Ban</a>
+                    <div class="action-buttons-wrapper">
+                        <button type="button" class="btn-mini edit"
+                                th:data-id="${u.id}"
+                                th:data-username="${u.username}"
+                                onclick="openEditModal(this.getAttribute('data-id'), this.getAttribute('data-username'))">
+                            <i class="fas fa-pen"></i> Sửa
+                        </button>
+
+                        <button type="button" class="btn-mini ban"
+                                th:data-id="${u.id}"
+                                th:data-username="${u.username}"
+                                onclick="openBanModal(this.getAttribute('data-id'), this.getAttribute('data-username'))">
+                            <i class="fas fa-gavel"></i> Ban
+                        </button>
+                    </div>
                 </td>
             </tr>
 
             <tr th:if="${#lists.isEmpty(users)}">
-                <td colspan="6" style="text-align: center; padding: 40px; color: #b5bac1;">
+                <td colspan="5" style="text-align: center; padding: 40px; color: #b5bac1;">
                     <i class="fas fa-ghost"></i> Không tìm thấy kết quả nào.
                 </td>
             </tr>
@@ -78,5 +96,77 @@
            class="page-btn">Sau <i class="fas fa-chevron-right"></i></a>
     </div>
 </div>
+
+<div id="editModal" class="modal-overlay">
+    <div class="discord-modal">
+        <form th:action="@{/admin/users/update}" method="post">
+            <input type="hidden" name="id" id="editUserId">
+
+            <div class="modal-header">
+                <h2>Cập nhật Người dùng</h2>
+            </div>
+
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Tên đăng nhập (Read-only)</label>
+                    <input type="text" id="editUsername" class="discord-input" readonly style="opacity: 0.6; cursor: not-allowed;">
+                </div>
+
+                <div class="form-group">
+                    <label>Tên hiển thị (Display Name)</label>
+                    <input type="text" name="displayName" id="editDisplayName" class="discord-input">
+                </div>
+
+                <div class="form-group">
+                    <label>Phân quyền (Roles)</label>
+                    <div style="background: #1e1f22; padding: 10px; border-radius: 4px;">
+                        <div th:each="role : ${allRoles}" style="margin-bottom: 5px;">
+                            <label style="display: flex; align-items: center; cursor: pointer; text-transform: none;">
+                                <input type="checkbox" name="roleNames"
+                                       th:value="${role.name}"
+                                       style="margin-right: 10px; width: 16px; height: 16px;">
+                                <span th:text="${role.name}">ADMIN</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal('editModal')">Hủy bỏ</button>
+                <button type="submit" class="btn-confirm">Lưu thay đổi</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="banModal" class="modal-overlay">
+    <div class="discord-modal">
+        <form th:action="@{/admin/users/ban}" method="post">
+            <input type="hidden" name="id" id="banUserId">
+
+            <div class="modal-header">
+                <h2 class="danger-title">BAN NGƯỜI DÙNG</h2>
+            </div>
+
+            <div class="modal-body">
+                <p class="confirm-text">
+                    Bạn có chắc chắn muốn cấm người dùng <strong id="banUsername">...</strong> không?
+                </p>
+                <div class="discord-warning-box">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <p>Người dùng này sẽ bị đăng xuất ngay lập tức và không thể truy cập vào hệ thống.</p>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="closeModal('banModal')">Hủy</button>
+                <button type="submit" class="btn-danger-action">Ban ngay</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:src="@{/js/admin.js}"></script>
 </body>
 </html>
