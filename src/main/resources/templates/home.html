@@ -439,11 +439,7 @@
         function triggerCreateChannelRoot() { ctxMenu.classList.remove('visible'); openModal('createChannelRootModal'); }
         function triggerCreateCategory() { ctxMenu.classList.remove('visible'); openModal('createCategoryModal'); }
 
-        function openCreateChannelModal(e, catName, catId) {
-            if (e) e.stopPropagation();
-            document.getElementById('modal-category-name').innerText = catName;
-            openModal('createChannelInCatModal');
-        }
+
 
         switchToDM();
     </script>

@@ -8,7 +8,8 @@ window.state = {
     currentChannelId: null,
     currentUser: null,
     stompClient: null,
-    tempCategoryId: null // Used for modals
+    tempCategoryId: null, // Used for modals
+    pendingAttachments: [] // Shared between upload.js and chat.js
 };
 
 window.elements = {

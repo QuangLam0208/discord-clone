@@ -1,7 +1,7 @@
 // UPLOAD MODULE
 
 // Global variables for Upload module
-let pendingAttachments = [];
+// pendingAttachments is now in window.state (home.js)
 let uploadBtn, fileInput, chatInput, previewContainer;
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const response = await Api.upload('/api/upload', formData);
                 if (response && response.url) {
                     console.log("Uploaded pending:", response.url);
-                    pendingAttachments.push(response.url);
+                    state.pendingAttachments.push(response.url);
                     renderPreviews();
                     chatInput.focus();
                 }
@@ -68,12 +68,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.key === 'Enter') {
                 const content = chatInput.value.trim();
                 // Send if content exists OR there are attachments
-                if ((content || pendingAttachments.length > 0) && state.currentChannelId) {
-                    sendMessage(content, [...pendingAttachments]); // Send copy
+                if ((content || state.pendingAttachments.length > 0) && state.currentChannelId) {
+                    if (window.sendMessage) {
+                        window.sendMessage(content, [...state.pendingAttachments]);
+                    } else {
+                        console.error("sendMessage function not found!");
+                        alert("Lỗi: Không thể gửi tin nhắn (hàm sendMessage không tìm thấy).");
+                    }
                     chatInput.value = '';
 
                     // Clear pending
-                    pendingAttachments = [];
+                    state.pendingAttachments = [];
                     renderPreviews();
                 }
             }
@@ -83,13 +88,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function renderPreviews() {
     previewContainer.innerHTML = '';
-    if (pendingAttachments.length === 0) {
+    if (state.pendingAttachments.length === 0) {
         previewContainer.style.display = 'none';
         return;
     }
     previewContainer.style.display = 'flex';
 
-    pendingAttachments.forEach((url, index) => {
+    state.pendingAttachments.forEach((url, index) => {
         const wrapper = document.createElement('div');
         wrapper.style.position = 'relative';
         wrapper.style.width = '100px';
@@ -121,7 +126,7 @@ function renderPreviews() {
         removeBtn.style.cursor = 'pointer';
 
         removeBtn.onclick = () => {
-            pendingAttachments.splice(index, 1);
+            state.pendingAttachments.splice(index, 1);
             renderPreviews();
         };
 

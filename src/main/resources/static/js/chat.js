@@ -104,7 +104,19 @@ function connectChannelSocket(channelId) {
     }
 }
 
+// 1. Export connect function if needed, or ensuring subscribe handles connection
+window.connectChannelSocket = connectChannelSocket; // Expose if needed
+
 function subscribeToChannel(channelId) {
+    if (!channelId) return;
+
+    // Safety check: specific fix for "Cannot read properties of null (reading 'subscribe')"
+    if (!state.stompClient || !state.stompClient.connected) {
+        console.log("WebSocket not ready. connecting...", channelId);
+        connectChannelSocket(channelId);
+        return;
+    }
+
     // Hủy đăng ký channel cũ nếu có
     if (channelSubscription) {
         channelSubscription.unsubscribe();
@@ -115,6 +127,7 @@ function subscribeToChannel(channelId) {
         const receivedMsg = JSON.parse(message.body);
         // Render tin nhắn mới nhận được
         const chatArea = document.querySelector('.chat-area');
+        if (!chatArea) return;
 
         // Nếu đây là tin nhắn đầu tiên (đang hiện text "Chưa có tin nhắn...") -> clear đi
         if (chatArea.innerText.includes("Chưa có tin nhắn")) chatArea.innerHTML = '';
@@ -126,8 +139,11 @@ function subscribeToChannel(channelId) {
 
     console.log(`Subscribed to /topic/channel/${channelId}`);
 }
+// Export globally
+window.subscribeToChannel = subscribeToChannel;
 
-function sendMessage(content, attachments = []) {
+// 5. Send Message (Global)
+window.sendMessage = function (content, attachments = []) {
     if (!state.stompClient || !state.stompClient.connected) {
         alert("Mất kết nối máy chủ. Vui lòng reload.");
         return;

@@ -16,7 +16,20 @@ window.loadCategoriesAndChannels = async function (serverId) {
         const nullCategoryChannels = [];
 
         if (categories && Array.isArray(categories)) {
-            categories.forEach(cat => { categoryMap[cat.id] = { ...cat, channelsList: [] }; });
+            categories.forEach(cat => {
+                // Robust ID detection
+                const realId = cat.id || cat.categoryId || cat.uuid || cat._id;
+
+                if (!realId) {
+                    console.error("Category missing ID:", cat);
+                    // FORCE ALERT TO DEBUG
+                    alert("DEBUG: Server gửi dữ liệu Category thiếu ID. Các trường hiện có: " + Object.keys(cat).join(", "));
+                } else {
+                    // Normalize ID
+                    cat.id = realId;
+                    categoryMap[realId] = { ...cat, channelsList: [] };
+                }
+            });
         }
 
         if (channels && Array.isArray(channels)) {
@@ -72,13 +85,15 @@ function createCategoryElement(categoryData) {
     wrapper.dataset.categoryId = categoryData.id;
     const header = document.createElement('div');
     header.className = 'category-header';
-    header.innerHTML = `
-        <div class="cat-info"><i class="fa-solid fa-angle-down"></i><span>${categoryData.name.toUpperCase()}</span></div>
-        <i class="fa-solid fa-plus add-channel-icon" title="Tạo kênh" onclick="openCreateChannelModal(event, '${categoryData.name}', '${categoryData.id}')"></i>
-    `;
-    header.querySelector('.cat-info').onclick = () => {
+
+    const catInfo = document.createElement('div');
+    catInfo.className = 'cat-info';
+    catInfo.innerHTML = `<i class="fa-solid fa-angle-down"></i><span>${categoryData.name.toUpperCase()}</span>`;
+
+    // Toggle Collapse
+    catInfo.onclick = () => {
         const content = wrapper.querySelector('.category-content');
-        const icon = header.querySelector('i');
+        const icon = catInfo.querySelector('i');
         if (content.style.display === 'none') {
             content.style.display = 'block';
             icon.className = 'fa-solid fa-angle-down';
@@ -87,6 +102,24 @@ function createCategoryElement(categoryData) {
             icon.className = 'fa-solid fa-angle-right';
         }
     };
+
+    const addIcon = document.createElement('i');
+    addIcon.className = 'fa-solid fa-plus add-channel-icon';
+    addIcon.setAttribute('title', 'Tạo kênh');
+    // Bind click event: Traverse DOM to find ID
+    addIcon.onclick = (e) => {
+        e.stopPropagation();
+        const wrapper = e.target.closest('.category-wrapper');
+        const idFromDom = wrapper ? wrapper.dataset.categoryId : null;
+
+        console.log("Clicked + btn. DOM ID:", idFromDom, "Closure ID:", categoryData.id);
+
+        openCreateChannelModal(e, categoryData.name, idFromDom || categoryData.id);
+    };
+
+    header.appendChild(catInfo);
+    header.appendChild(addIcon);
+
     const content = document.createElement('div');
     content.className = 'category-content';
     categoryData.channelsList.forEach(ch => { content.appendChild(createChannelItem(ch)); });
@@ -94,6 +127,7 @@ function createCategoryElement(categoryData) {
     wrapper.appendChild(content);
     return wrapper;
 }
+
 function createChannelItem(channel) {
     const div = document.createElement('div');
     div.className = 'channel-item';
@@ -108,13 +142,59 @@ function createChannelItem(channel) {
     return div;
 }
 
+window.onSelectChannel = function (channel) {
+    console.log("Selected channel:", channel);
+    state.currentChannelId = channel.id;
+
+    // Update Header UI
+    const topBar = document.querySelector('.top-bar');
+    if (topBar) {
+        // Selector for "Server Chat View" top bar
+        // Structure: <div class="top-bar"> <i class="fa-solid fa-hashtag" ...></i> <span>name</span> </div>
+
+        const titleSpan = topBar.querySelector('span'); // First span usually name
+        const icon = topBar.querySelector('i');         // First i usually icon
+
+        if (titleSpan) titleSpan.innerText = channel.name;
+
+        if (icon) {
+            icon.className = (channel.type === 'VOICE') ? 'fa-solid fa-volume-high' : 'fa-solid fa-hashtag';
+            // Ensure style consistency
+            icon.style.color = '#72767d';
+            icon.style.marginRight = '8px';
+        }
+    }
+
+    // Subscribe to STOMP topic
+    if (window.subscribeToChannel) {
+        window.subscribeToChannel(channel.id);
+    }
+
+    // Load Message History
+    if (window.loadMessages) {
+        window.loadMessages(channel.id);
+    } else {
+        console.warn("loadMessages function not found");
+    }
+}
+
 // 2. MODAL HELPERS
 window.openCreateChannelModal = function (event, categoryName, categoryId) {
     if (event) event.stopPropagation();
+
+    // Validate ID immediately
+    if (!categoryId) {
+        console.error("openCreateChannelModal called with null ID");
+        // alert("Lỗi hệ thống: Category ID không hợp lệ."); // Optional
+        return;
+    }
+
     const modal = document.getElementById('createChannelInCatModal');
     if (modal) {
         document.getElementById('modal-category-name').innerText = categoryName;
-        state.tempCategoryId = categoryId;
+        state.tempCategoryId = categoryId; // Keep for backup
+        modal.dataset.categoryId = categoryId; // Store reliably in DOM
+        console.log("Opening modal for cat:", categoryId);
         modal.classList.add('active');
     }
 }
@@ -140,8 +220,17 @@ document.addEventListener('DOMContentLoaded', () => {
             const type = typeInput ? typeInput.value : 'TEXT';
             const isPrivate = isPrivateInput ? isPrivateInput.checked : false;
 
+            // USE DATASET ID with Fallback
+            const categoryId = modal.dataset.categoryId || state.tempCategoryId;
+
             if (!name) {
                 alert("Tên kênh không được để trống");
+                return;
+            }
+
+            if (!categoryId) {
+                console.error("ERROR: Category ID missing from modal dataset and state");
+                alert("Lỗi: Không tìm thấy Category ID. Vui lòng reload trang.");
                 return;
             }
 
@@ -149,7 +238,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 await Api.post(`/api/servers/${state.currentServerId}/channels`, {
                     name: name,
                     type: type,
-                    categoryId: state.tempCategoryId,
+                    categoryId: categoryId,
                     isPrivate: isPrivate
                 });
                 modal.classList.remove('active');
