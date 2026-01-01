@@ -1,34 +1,13 @@
 /* =========================================
-   1. GLOBAL RESET & CẤU HÌNH CƠ BẢN
+   1. GLOBAL & RESET
    ========================================= */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: 'Segoe UI', 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-}
-
-html, body {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background-color: #36393f;
-    color: #dcddde;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+html, body { width: 100%; height: 100%; overflow: hidden; background-color: #36393f; color: #dcddde; display: flex; justify-content: center; align-items: center; }
 
 /* =========================================
-   2. STYLE CHO LOGIN / REGISTER
+   2. LOGIN / REGISTER
    ========================================= */
-.login-container {
-    background-color: #2f3136;
-    padding: 32px;
-    border-radius: 5px;
-    box-shadow: 0 2px 10px 0 rgba(0,0,0,0.2);
-    width: 400px;
-}
+.login-container { background-color: #2f3136; padding: 32px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); width: 400px; }
 .login-box h2 { text-align: center; color: #fff; margin-bottom: 8px; }
 .subtitle { text-align: center; color: #b9bbbe; font-size: 14px; margin-bottom: 20px; }
 .input-group { margin-bottom: 20px; }
@@ -37,171 +16,64 @@ html, body {
 button { width: 100%; height: 45px; background-color: #5865F2; color: white; border: none; border-radius: 3px; font-weight: bold; cursor: pointer; }
 button:hover { background-color: #4752c4; }
 .link-text { margin-top: 15px; font-size: 14px; color: #b9bbbe; }
-.link-text a { color: #00aff4; text-decoration: none; font-weight: 500; transition: text-decoration 0.2s; }
+.link-text a { color: #00aff4; text-decoration: none; font-weight: 500; }
 .link-text a:hover { text-decoration: underline; color: #00b0f4; }
 .error-msg { color: #ed4245; font-size: 13px; margin-top: 10px; text-align: center; display: none; }
 
 /* =========================================
-   3. LAYOUT CHÍNH (3 CỘT)
+   3. LAYOUT
    ========================================= */
-.app-layout {
-    display: flex;
-    width: 100vw;
-    height: 100vh;
-    background-color: #36393f;
-    align-items: stretch;
-}
+.app-layout { display: flex; width: 100vw; height: 100vh; background-color: #36393f; align-items: stretch; }
 
-/* --- CỘT 1: SIDEBAR --- */
-.sidebar {
-    width: 72px; /* Chiều rộng cố định */
-    background-color: #202225; /* Màu tối hơn */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding-top: 12px;
-    overflow-y: auto;
-    scrollbar-width: none; /* Ẩn thanh cuộn (Firefox) */
-    flex-shrink: 0;
-}
-.sidebar::-webkit-scrollbar {
-    display: none; /* Ẩn thanh cuộn (Chrome/Safari) */
-}
-
-/* Item bao bọc để xử lý hover và pill */
-.sidebar-item {
-    position: relative;
-    width: 72px;
-    height: 48px;
-    margin-bottom: 8px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-}
-
-/* Icon chính */
-.sidebar-icon {
-    width: 48px;
-    height: 48px;
-    background-color: #36393f;
-    border-radius: 50%; /* Mặc định tròn */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    transition: all 0.2s ease-in-out;
-    overflow: hidden;
-    color: #dcddde;
-    font-size: 16px;
-    font-weight: bold;
-}
+/* SIDEBAR */
+.sidebar { width: 72px; background-color: #202225; display: flex; flex-direction: column; align-items: center; padding-top: 12px; flex-shrink: 0; overflow-y: auto; }
+.sidebar::-webkit-scrollbar { display: none; }
+.sidebar-item { position: relative; width: 72px; height: 48px; margin-bottom: 8px; display: flex; justify-content: center; align-items: center; cursor: pointer; }
+.sidebar-icon { width: 48px; height: 48px; background-color: #36393f; border-radius: 50%; display: flex; justify-content: center; align-items: center; transition: 0.2s; overflow: hidden; color: #dcddde; font-size: 16px; font-weight: bold; }
 .sidebar-icon img { width: 100%; height: 100%; object-fit: cover; }
-
-/* Hiệu ứng Hover */
-.sidebar-item:hover .sidebar-icon,
-.sidebar-item.active .sidebar-icon {
-    border-radius: 16px;
-    background-color: #5865F2;
-    color: white;
-}
-
-/* Thanh trắng (Pill) chỉ thị bên trái */
-.pill {
-    position: absolute;
-    left: 0;
-    width: 4px;
-    height: 0; /* Mặc định ẩn */
-    background-color: white;
-    border-radius: 0 4px 4px 0;
-    transition: height 0.2s;
-}
+.sidebar-item:hover .sidebar-icon, .sidebar-item.active .sidebar-icon { border-radius: 16px; background-color: #5865F2; color: white; }
+.pill { position: absolute; left: 0; width: 4px; height: 0; background-color: white; border-radius: 0 4px 4px 0; transition: height 0.2s; }
 .sidebar-item:hover .pill { height: 20px; }
 .sidebar-item.active .pill { height: 40px; }
-
-/* Dấu gạch ngăn cách */
-.separator {
-    width: 32px;
-    height: 2px;
-    background-color: #36393f;
-    margin: 8px 0;
-    border-radius: 1px;
-    flex-shrink: 0;
-}
-
-/* Tooltip (Hiện tên Server) */
-.tooltip {
-    position: absolute;
-    left: 80px; /* Cách icon ra */
-    background-color: #18191c;
-    color: #dcddde;
-    padding: 8px 12px;
-    border-radius: 4px;
-    font-size: 14px; font-weight: bold;
-    white-space: nowrap;
-    opacity: 0; pointer-events: none;
-    transform: scale(0.9); transition: all 0.1s;
-    z-index: 1000;
-    box-shadow: 0 5px 10px rgba(0,0,0,0.3);
-}
-.tooltip::before { /* Mũi tên tam giác */
-    content: ""; position: absolute; top: 50%; left: -6px; margin-top: -6px;
-    border-width: 6px; border-style: solid;
-    border-color: transparent #18191c transparent transparent;
-}
+.separator { width: 32px; height: 2px; background-color: #36393f; margin: 8px 0; border-radius: 1px; flex-shrink: 0; }
+.tooltip { position: absolute; left: 80px; background-color: #18191c; color: #dcddde; padding: 8px 12px; border-radius: 4px; font-size: 14px; font-weight: bold; white-space: nowrap; opacity: 0; pointer-events: none; transform: scale(0.9); transition: 0.1s; z-index: 1000; box-shadow: 0 5px 10px rgba(0,0,0,0.3); }
 .sidebar-item:hover .tooltip { opacity: 1; transform: scale(1); }
-
-/* Nút Add Server (+ màu xanh) */
-.add-server-icon {
-    color: #23a559;
-    background-color: #36393f;
-    font-size: 24px;
-    font-weight: 300;
-}
+.add-server-icon { color: #23a559; background-color: #36393f; font-size: 24px; font-weight: 300; }
 .sidebar-item:hover .add-server-icon { background-color: #23a559; color: white; }
 
-
-/* --- CỘT 2: CHANNELS & USER BAR--- */
-.channels-sidebar {
-    width: 240px;
-    background-color: #2f3136;
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-}
-.channel-header {
-    height: 48px; border-bottom: 1px solid #202225;
-    padding: 0 16px; display: flex; align-items: center;
-    font-weight: bold; color: white; box-shadow: 0 1px 0 rgba(4,4,5,0.2);
-}
+/* NAVIGATION (CỘT GIỮA) */
+.channels-sidebar { width: 240px; background-color: #2f3136; display: flex; flex-direction: column; flex-shrink: 0; }
+.channel-header { height: 48px; border-bottom: 1px solid #202225; padding: 0 16px; display: flex; align-items: center; font-weight: bold; color: white; box-shadow: 0 1px 0 rgba(4,4,5,0.2); }
 .channel-list { flex: 1; padding: 10px 8px; overflow-y: auto; }
 .channel-item { padding: 6px 8px; margin-bottom: 2px; border-radius: 4px; color: #8e9297; cursor: pointer; font-size: 15px; display: flex; align-items: center; gap: 8px; }
 .channel-item:hover { background-color: #34373c; color: #dcddde; }
 .channel-item.active { background-color: #393c43; color: white; }
 
+/* DM List */
+.search-bar-container { height: 48px; border-bottom: 1px solid #202225; padding: 0 10px; display: flex; align-items: center; box-shadow: 0 1px 0 rgba(4,4,5,0.2); }
+.search-btn { background-color: #202225; color: #96989d; text-align: left; width: 100%; padding: 6px; border-radius: 4px; font-size: 13px; border: none; cursor: pointer; }
+.dm-header-item { padding: 10px; color: #96989d; cursor: pointer; border-radius: 4px; margin: 8px 8px 0 8px; display: flex; align-items: center; gap: 12px; }
+.dm-header-item:hover { background-color: #34373c; color: #dcddde; }
+.dm-header-item.active { background-color: #393c43; color: #fff; }
+.category-name { font-size: 12px; font-weight: bold; color: #96989d; padding: 0 18px; margin-bottom: 8px; margin-top: 16px; cursor: default; }
+
 /* User Bar */
-.user-bar {
-    height: 52px; background-color: #292b2f;
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0 8px; font-size: 14px; position: relative;
-}
+.user-bar { height: 52px; background-color: #292b2f; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; font-size: 14px; position: relative; }
 .user-wrapper { display: flex; align-items: center; padding: 4px; border-radius: 4px; cursor: pointer; flex: 1; min-width: 0; }
 .user-wrapper:hover { background-color: #393c43; }
-.user-avatar { width: 32px; height: 32px; background-color: #5865F2; border-radius: 50%; margin-right: 8px; position: relative; flex-shrink: 0; }
-.user-avatar::after { content: ''; position: absolute; bottom: -2px; right: -2px; width: 10px; height: 10px; background-color: #3ba55c; border: 3px solid #292b2f; border-radius: 50%; }
+.user-avatar { width: 32px; height: 32px; background-color: #5865F2; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
 .user-info { display: flex; flex-direction: column; line-height: 1.2; overflow: hidden; }
-.username { font-weight: bold; color: white; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.username { font-weight: bold; color: white; font-size: 13px; }
 .usertag { font-size: 11px; color: #b9bbbe; }
 .user-actions { display: flex; }
-.btn-icon { background: none; border: none; color: #b9bbbe; width: 32px; height: 32px; border-radius: 4px; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 14px; }
+.btn-icon { background: none; border: none; color: #b9bbbe; width: 32px; height: 32px; border-radius: 4px; cursor: pointer; display: flex; justify-content: center; align-items: center; }
 .btn-icon:hover { background-color: #393c43; color: #dcddde; }
 .settings-popup { display: none; position: absolute; bottom: 60px; left: 10px; width: 220px; background-color: #18191c; padding: 6px 8px; border-radius: 4px; box-shadow: 0 8px 16px rgba(0,0,0,0.24); z-index: 1000; }
 .settings-popup.show { display: block; }
-.menu-item { padding: 10px 8px; border-radius: 2px; color: #b9bbbe; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+.menu-item { padding: 10px 8px; border-radius: 2px; color: #b9bbbe; font-size: 14px; cursor: pointer; }
 .menu-item:hover { background-color: #4752c4; color: white; }
-.menu-item.logout { color: #ed4245; }
-.menu-item.logout:hover { background-color: #ed4245; color: white; }
 
-/* --- CỘT 3: CHAT CONTENT --- */
+/* CHAT CONTENT */
 .chat-content { flex: 1; background-color: #36393f; display: flex; flex-direction: column; min-width: 0; }
 .top-bar { height: 48px; border-bottom: 1px solid #26272d; display: flex; align-items: center; padding: 0 16px; font-weight: bold; color: white; box-shadow: 0 1px 0 rgba(4,4,5,0.2); }
 .chat-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
@@ -209,30 +81,16 @@ button:hover { background-color: #4752c4; }
 .msg-user { color: white; font-weight: bold; margin-right: 8px; cursor: pointer; }
 .msg-content { color: #dcddde; }
 .input-area { padding: 0 16px 24px; margin-top: 10px; }
-.input-area input { width: 100%; padding: 12px 16px; background-color: #40444b; border: none; border-radius: 8px; color: #dcddde; font-size: 15px; }
-.input-area input:focus { outline: none; }
-
+.input-wrapper { display: flex; align-items: center; width: 100%; background-color: #40444b; border-radius: 8px; padding: 0 16px; }
+.input-wrapper input { width: 100%; padding: 12px 0; background: none; border: none; outline: none; color: #dcddde; font-size: 15px; }
+.add-file-icon { color: #b9bbbe; font-size: 20px; margin-right: 12px; cursor: pointer; }
 
 /* =========================================
-   4. MODAL "TẠO MÁY CHỦ"
+   4. MODAL
    ========================================= */
-.modal-overlay {
-    position: fixed; top: 0; left: 0;
-    width: 100vw; height: 100vh;
-    background-color: rgba(0, 0, 0, 0.7);
-    z-index: 2000; /* Cao hơn tất cả */
-    display: flex; justify-content: center; align-items: center;
-    opacity: 0; visibility: hidden; transition: all 0.2s;
-}
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.7); z-index: 2000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: 0.2s; }
 .modal-overlay.active { opacity: 1; visibility: visible; }
-
-.modal-box {
-    background-color: white; width: 440px;
-    border-radius: 5px; overflow: hidden;
-    text-align: center; position: relative;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-    color: #060607;
-}
+.modal-box { background-color: white; width: 440px; border-radius: 5px; overflow: hidden; text-align: center; position: relative; }
 .modal-header { padding: 24px; }
 .modal-header h2 { font-size: 24px; font-weight: 700; color: #060607; margin-bottom: 8px; }
 .modal-header p { color: #4f5660; font-size: 14px; }
@@ -241,5 +99,75 @@ button:hover { background-color: #4752c4; }
 .modal-body .input-group input { background-color: #e3e5e8; color: #2e3338; border: none; }
 .modal-footer { background-color: #f2f3f5; padding: 16px; display: flex; justify-content: space-between; align-items: center; }
 .btn-back { background: none; border: none; cursor: pointer; color: #4f5660; font-weight: 500; font-size: 14px; }
-.btn-create { width: auto; height: auto; padding: 10px 24px; background-color: #5865F2; color: white; border-radius: 3px; }
+.btn-create { padding: 10px 24px; background-color: #5865F2; color: white; border-radius: 3px; }
 .close-modal { position: absolute; top: 15px; right: 15px; cursor: pointer; color: #72767d; font-size: 24px; }
+
+/* =========================================
+   5. DASHBOARD BẠN BÈ (CẬP NHẬT GỌN)
+   ========================================= */
+
+/* Header Bạn Bè */
+.friend-header-bar { padding: 0 16px; background-color: #36393f; display: flex; align-items: center; }
+.friend-header-left { display: flex; align-items: center; width: 100%; }
+
+.friend-title-wrapper { display: flex; align-items: center; margin-right: 16px; }
+.icon-friend { color: #8e9297; margin-right: 8px; }
+.title-friend { font-weight: bold; color: white; font-size: 16px; }
+
+.vertical-divider { width: 1px; height: 24px; background-color: #42454a; margin-right: 16px; }
+
+.friend-tabs { display: flex; align-items: center; gap: 16px; }
+.tab-item {
+    /* Reset style mặc định của thẻ button */
+    background: transparent;
+    border: none;
+    font-family: inherit;
+
+    /* Style của Discord */
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: #b9bbbe;
+    font-weight: 500;
+    cursor: pointer;
+    font-size: 15px;
+    transition: all 0.2s;
+
+    /* FIX LỖI: Chữ luôn nằm trên 1 dòng */
+    white-space: nowrap;
+
+    /* Căn chỉnh chiều cao cho đều với nút Thêm bạn */
+    height: 45px;
+    display: flex;
+    align-items: center;
+}
+
+.tab-item:hover {
+    background-color: #393c43;
+    color: #dcddde;
+}
+
+.tab-item.active {
+    background-color: #42464D;
+    color: white;
+    cursor: default;
+}
+
+.add-friend-btn { background-color: #5865F2; color: white; border: none; padding: 2px 10px; border-radius: 4px; font-size: 14px; font-weight: 500; cursor: pointer; transition: 0.2s; }
+.add-friend-btn:hover { background-color: #4752c4; }
+
+/* Body Chia 2 Cột */
+.friend-dashboard-body { display: flex; flex: 1; overflow: hidden; }
+
+/* Cột Trái */
+.friend-list-section { flex: 1; padding: 20px 30px; border-right: 1px solid #42454a; display: flex; flex-direction: column; }
+.friend-search-wrapper { background-color: #202225; border-radius: 4px; padding: 8px 12px; display: flex; align-items: center; margin-bottom: 24px; border: 1px solid transparent; }
+.friend-search-wrapper:focus-within { border-color: #00aff4; }
+.friend-search-wrapper input { background: none; border: none; outline: none; color: #dcddde; flex: 1; font-size: 15px; }
+.friend-label { font-size: 12px; font-weight: bold; color: #b9bbbe; margin-bottom: 16px; text-transform: uppercase; }
+
+/* Cột Phải */
+.active-now-section { width: 360px; padding: 20px; background-color: #36393f; }
+.active-now-title { font-size: 20px; font-weight: bold; color: white; margin-bottom: 20px; }
+.empty-active-state { text-align: center; margin-top: 40px; }
+.empty-text-bold { color: white; font-weight: bold; margin-bottom: 8px; font-size: 16px; }
+.empty-text-desc { color: #b9bbbe; font-size: 14px; }
