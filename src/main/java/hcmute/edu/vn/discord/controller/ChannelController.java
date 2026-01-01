@@ -28,7 +28,8 @@ public class ChannelController {
     @PreAuthorize("@serverAuth.canManageChannels(#serverId, authentication.name)")
     public ResponseEntity<ChannelResponse> createChannel(
             @PathVariable Long serverId,
-            @RequestBody @Valid ChannelRequest request) {
+            @RequestBody @Valid ChannelRequest request,
+            Authentication authentication) {
 
         request.normalize();
 
@@ -37,7 +38,8 @@ public class ChannelController {
                 request.getName(),
                 request.getType(),
                 request.getCategoryId(),
-                request.getIsPrivate()
+                request.getIsPrivate(),
+                authentication.getName()
         ));
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}").buildAndExpand(created.getId()).toUri();
