@@ -51,7 +51,7 @@ public class ChatController {
             // Dùng request object của MessageService để tái sử dụng logic kiểm tra quyền
             MessageRequest serviceRequest = new MessageRequest();
             serviceRequest.setContent(chatMessage.getContent());
-            // chatMessage chưa hỗ trợ reply/attachments, có thể mở rộng sau
+            serviceRequest.setAttachments(chatMessage.getAttachments());
 
             var savedResponse = messageService.createMessage(chatMessage.getChannelId(), username, serviceRequest);
 

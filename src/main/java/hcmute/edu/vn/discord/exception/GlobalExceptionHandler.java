@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.validation.FieldError;
 
 import java.time.LocalDateTime;
@@ -43,15 +44,13 @@ public class GlobalExceptionHandler {
     private ResponseEntity<ErrorResponse> buildError(
             HttpStatus status,
             String message,
-            HttpServletRequest request
-    ) {
+            HttpServletRequest request) {
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
                 status.value(),
                 status.getReasonPhrase(),
                 message,
-                request.getRequestURI()
-        );
+                request.getRequestURI());
         if (status.is5xxServerError()) {
             log.error("[{} {}] {}", request.getMethod(), request.getRequestURI(), message);
         } else {
@@ -73,7 +72,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex,
-                                                          HttpServletRequest request) {
+            HttpServletRequest request) {
         // Gom tất cả lỗi field + global vào một chuỗi
         String msg = ex.getBindingResult().getAllErrors().stream()
                 .map(err -> {
@@ -83,29 +82,31 @@ public class GlobalExceptionHandler {
                     return err.getObjectName() + ": " + err.getDefaultMessage();
                 })
                 .collect(Collectors.joining("; "));
-        if (msg.isBlank()) msg = "Dữ liệu không hợp lệ";
+        if (msg.isBlank())
+            msg = "Dữ liệu không hợp lệ";
         return buildError(HttpStatus.BAD_REQUEST, msg, request);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ErrorResponse> handleConstraint(ConstraintViolationException ex,
-                                                          HttpServletRequest request) {
+            HttpServletRequest request) {
         String msg = ex.getConstraintViolations().stream()
                 .map(v -> v.getPropertyPath() + ": " + v.getMessage())
                 .collect(Collectors.joining("; "));
-        if (msg.isBlank()) msg = "Dữ liệu không hợp lệ";
+        if (msg.isBlank())
+            msg = "Dữ liệu không hợp lệ";
         return buildError(HttpStatus.BAD_REQUEST, msg, request);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleBadRequest(IllegalArgumentException ex,
-                                                          HttpServletRequest request) {
+            HttpServletRequest request) {
         return buildError(HttpStatus.BAD_REQUEST, ex.getMessage(), request);
     }
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleInvalidJson(HttpMessageNotReadableException ex,
-                                                           HttpServletRequest request) {
+            HttpServletRequest request) {
         String msg = "JSON không hợp lệ";
         String cause = rootMessage(ex);
         if (cause != null && !cause.isBlank()) {
@@ -116,28 +117,28 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ErrorResponse> handleMissingParam(MissingServletRequestParameterException ex,
-                                                            HttpServletRequest request) {
+            HttpServletRequest request) {
         String msg = "Thiếu tham số: " + ex.getParameterName();
         return buildError(HttpStatus.BAD_REQUEST, msg, request);
     }
 
     @ExceptionHandler(MissingRequestHeaderException.class)
     public ResponseEntity<ErrorResponse> handleMissingHeader(MissingRequestHeaderException ex,
-                                                             HttpServletRequest request) {
+            HttpServletRequest request) {
         String msg = "Thiếu header: " + ex.getHeaderName();
         return buildError(HttpStatus.BAD_REQUEST, msg, request);
     }
 
     @ExceptionHandler(MissingPathVariableException.class)
     public ResponseEntity<ErrorResponse> handleMissingPathVar(MissingPathVariableException ex,
-                                                              HttpServletRequest request) {
+            HttpServletRequest request) {
         String msg = "Thiếu biến đường dẫn: " + ex.getVariableName();
         return buildError(HttpStatus.BAD_REQUEST, msg, request);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
-                                                            HttpServletRequest request) {
+            HttpServletRequest request) {
         String expected = ex.getRequiredType() != null ? ex.getRequiredType().getSimpleName() : "đúng kiểu";
         String msg = "Tham số '" + ex.getName() + "' không đúng kiểu (mong đợi " + expected + ")";
         return buildError(HttpStatus.BAD_REQUEST, msg, request);
@@ -147,25 +148,25 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex,
-                                                              HttpServletRequest request) {
+            HttpServletRequest request) {
         return buildError(HttpStatus.UNAUTHORIZED, "Sai tài khoản hoặc mật khẩu", request);
     }
 
     @ExceptionHandler(ExpiredJwtException.class)
     public ResponseEntity<ErrorResponse> handleExpiredJwt(ExpiredJwtException ex,
-                                                          HttpServletRequest request) {
+            HttpServletRequest request) {
         return buildError(HttpStatus.UNAUTHORIZED, "Token đã hết hạn", request);
     }
 
-    @ExceptionHandler({MalformedJwtException.class, SignatureException.class, UnsupportedJwtException.class})
+    @ExceptionHandler({ MalformedJwtException.class, SignatureException.class, UnsupportedJwtException.class })
     public ResponseEntity<ErrorResponse> handleInvalidJwt(Exception ex,
-                                                          HttpServletRequest request) {
+            HttpServletRequest request) {
         return buildError(HttpStatus.UNAUTHORIZED, "Token không hợp lệ", request);
     }
 
     @ExceptionHandler(InsufficientAuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleInsufficientAuth(InsufficientAuthenticationException ex,
-                                                                HttpServletRequest request) {
+            HttpServletRequest request) {
         return buildError(HttpStatus.UNAUTHORIZED, "Yêu cầu xác thực", request);
     }
 
@@ -173,7 +174,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleForbidden(AccessDeniedException ex,
-                                                         HttpServletRequest request) {
+            HttpServletRequest request) {
         String msg = (ex.getMessage() != null && !ex.getMessage().isBlank())
                 ? ex.getMessage()
                 : "Không có quyền truy cập";
@@ -182,7 +183,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(IllegalStateException.class)
     public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException ex,
-                                                            HttpServletRequest request) {
+            HttpServletRequest request) {
         return buildError(HttpStatus.FORBIDDEN, ex.getMessage(), request);
     }
 
@@ -190,22 +191,28 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(EntityNotFoundException ex,
-                                                        HttpServletRequest request) {
+            HttpServletRequest request) {
         return buildError(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ErrorResponse> handleNoHandler(NoHandlerFoundException ex,
-                                                         HttpServletRequest request) {
+            HttpServletRequest request) {
         String msg = "Không tìm thấy endpoint: " + request.getMethod() + " " + request.getRequestURI();
         return buildError(HttpStatus.NOT_FOUND, msg, request);
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException ex,
+            HttpServletRequest request) {
+        return buildError(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
     // ===== 405 METHOD NOT ALLOWED =====
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex,
-                                                                  HttpServletRequest request) {
+            HttpServletRequest request) {
         String supported = ex.getSupportedHttpMethods() != null
                 ? ex.getSupportedHttpMethods().toString()
                 : "";
@@ -218,7 +225,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
     public ResponseEntity<ErrorResponse> handleNotAcceptable(HttpMediaTypeNotAcceptableException ex,
-                                                             HttpServletRequest request) {
+            HttpServletRequest request) {
         return buildError(HttpStatus.NOT_ACCEPTABLE, "Định dạng phản hồi không được chấp nhận", request);
     }
 
@@ -226,7 +233,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleConflict(DataIntegrityViolationException ex,
-                                                        HttpServletRequest request) {
+            HttpServletRequest request) {
         String base = "Dữ liệu bị trùng hoặc vi phạm ràng buộc";
         String cause = rootMessage(ex);
         String msg = base + (cause != null && !cause.isBlank() ? (": " + cause) : "");
@@ -249,7 +256,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex,
-                                                                    HttpServletRequest request) {
+            HttpServletRequest request) {
         String supported = ex.getSupportedMediaTypes().toString();
         String msg = "Content-Type không được hỗ trợ" + (supported.isEmpty() ? "" : ". Hỗ trợ: " + supported);
         return buildError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, msg, request);
@@ -259,7 +266,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleOther(Exception ex,
-                                                     HttpServletRequest request) {
+            HttpServletRequest request) {
         if (request.getRequestURI().startsWith("/v3/api-docs")) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
