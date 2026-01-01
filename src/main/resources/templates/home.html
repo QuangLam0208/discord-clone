@@ -22,13 +22,13 @@
 
         <div class="separator"></div>
 
-        <div class="sidebar-item" id="btn-server-1" onclick="switchToServer(this)">
+        <div class="sidebar-item" id="server-1" data-server-id="1" onclick="switchToServer(this)">
             <div class="pill"></div>
             <div class="sidebar-icon">D</div>
             <span class="tooltip">Dev Community</span>
         </div>
 
-        <div class="sidebar-item" onclick="openModal('serverModal')">
+        <div class="sidebar-item" id="createServerBtn" onclick="openModal('createServerModal')">
             <div class="pill"></div>
             <div class="sidebar-icon add-server-icon">+</div>
             <span class="tooltip">Thêm máy chủ</span>
@@ -36,17 +36,63 @@
     </nav>
 
     <aside class="channels-sidebar">
+
         <div id="server-channels-view" style="display: none; flex: 1; flex-direction: column;">
-            <div class="channel-header">
+            <div class="channel-header" data-server-id="1">
                 <h4>Dev Community</h4>
                 <i class="fa-solid fa-chevron-down" style="font-size: 12px; margin-left: auto;"></i>
             </div>
-            <div class="channel-list" id="server-channel-area">
-                <div class="category-name"><i class="fa-solid fa-angle-down"></i> THÔNG TIN</div>
-                <div class="channel-item active"><i class="fa-solid fa-hashtag"></i> kênh-chung</div>
 
-                <div class="category-name" style="margin-top: 16px;"><i class="fa-solid fa-angle-down"></i> TRÒ CHUYỆN</div>
-                <div class="channel-item"><i class="fa-solid fa-volume-high"></i> Sảnh chính</div>
+            <div class="channel-list" id="server-channel-area">
+
+                <div class="uncategorized-channels">
+                    <div class="channel-item active" data-channel-id="101">
+                        <i class="fa-solid fa-hashtag"></i> quy-tắc
+                    </div>
+                    <div class="channel-item" data-channel-id="102">
+                        <i class="fa-solid fa-hashtag"></i> giới-thiệu
+                    </div>
+                </div>
+
+                <div class="category-wrapper" data-category-id="cat-1">
+                    <div class="category-header">
+                        <div class="cat-info">
+                            <i class="fa-solid fa-angle-down"></i>
+                            <span>THÔNG TIN</span>
+                        </div>
+                        <i class="fa-solid fa-plus add-channel-icon"
+                           id="createChannelInCategoryBtn-cat-1"
+                           onclick="openCreateChannelModal(event, 'THÔNG TIN', 'cat-1')"
+                           title="Tạo kênh"></i>
+                    </div>
+                    <div class="category-content">
+                        <div class="channel-item" data-channel-id="201">
+                            <i class="fa-solid fa-hashtag"></i> thông-báo
+                        </div>
+                    </div>
+                </div>
+
+                <div class="category-wrapper" data-category-id="cat-2">
+                    <div class="category-header">
+                        <div class="cat-info">
+                            <i class="fa-solid fa-angle-down"></i>
+                            <span>TRÒ CHUYỆN</span>
+                        </div>
+                        <i class="fa-solid fa-plus add-channel-icon"
+                           id="createChannelInCategoryBtn-cat-2"
+                           onclick="openCreateChannelModal(event, 'TRÒ CHUYỆN', 'cat-2')"
+                           title="Tạo kênh"></i>
+                    </div>
+                    <div class="category-content">
+                        <div class="channel-item" data-channel-id="301">
+                            <i class="fa-solid fa-hashtag"></i> chung
+                        </div>
+                        <div class="channel-item" data-channel-id="302">
+                            <i class="fa-solid fa-volume-high"></i> Sảnh chính
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -59,7 +105,7 @@
                     <i class="fa-solid fa-user-group"></i> Bạn bè
                 </div>
                 <div class="category-name" style="margin-top: 16px;">
-                    TIN NHẮN TRỰC TIẾP <span style="float: right; cursor: pointer;">+</span>
+                    TIN NHẮN TRỰC TIẾP <span style="float: right; cursor: pointer;" id="createDmBtn">+</span>
                 </div>
             </div>
         </div>
@@ -89,21 +135,26 @@
         <div id="server-chat-view" style="display: none; height: 100%; flex-direction: column;">
             <div class="top-bar">
                 <i class="fa-solid fa-hashtag" style="color: #72767d; margin-right: 8px;"></i>
-                <span>kênh-chung</span>
+                <span>quy-tắc</span>
             </div>
             <div class="chat-area custom-scrollbar">
                 <div class="message">
                     <div class="user-avatar" style="width: 40px; height: 40px; margin-right: 16px;"></div>
                     <div>
-                        <div class="msg-user">System Admin <span style="font-size: 12px; color: #72767d; font-weight: normal;">Hôm nay lúc 10:30</span></div>
+                        <div class="msg-user">System Admin <span style="font-size: 12px; color: #b5bac1; font-weight: normal;">Hôm nay lúc 10:30</span></div>
                         <div class="msg-content">Chào mừng đến với Server Test!</div>
                     </div>
                 </div>
             </div>
             <div class="input-area">
                 <div class="input-wrapper">
-                    <i class="fa-solid fa-circle-plus upload-icon-btn"></i>
-                    <input type="text" placeholder="Gửi tin nhắn đến #kênh-chung">
+                    <label for="chat-file-upload" class="upload-icon-btn"><i class="fa-solid fa-circle-plus"></i></label>
+                    <input type="file" id="chat-file-upload" style="display: none;">
+                    <input type="text" placeholder="Gửi tin nhắn đến #quy-tắc">
+                    <div class="input-right-icons">
+                        <i class="fa-solid fa-gift"></i>
+                        <i class="fa-solid fa-face-smile"></i>
+                    </div>
                 </div>
             </div>
         </div>
@@ -135,7 +186,6 @@
                     <h3 class="active-now-title">Đang hoạt động</h3>
                     <div class="empty-active-state">
                         <div class="empty-text-bold">Hiện không có ai đang hoạt động</div>
-                        <div class="empty-text-desc">Mọi thứ khá yên ắng...</div>
                     </div>
                 </div>
             </div>
@@ -145,32 +195,33 @@
 
 <div id="context-menu" class="context-menu">
     <div class="menu-item" onclick="triggerInvite()">
-        <span>Mời mọi người</span>
+        <span>Invite to Server</span>
         <i class="fa-solid fa-user-plus icon-right"></i>
     </div>
     <div class="menu-separator"></div>
-    <div class="menu-item" onclick="triggerCreateChannel()">
-        <span>Tạo kênh</span>
+    <div class="menu-item" onclick="triggerCreateChannelRoot()" id="createChannelRootBtn">
+        <span>Create Channel</span>
         <i class="fa-solid fa-circle-plus icon-right"></i>
     </div>
-    <div class="menu-item" onclick="triggerCreateCategory()">
-        <span>Tạo danh mục</span>
+    <div class="menu-item" onclick="triggerCreateCategory()" id="createCategoryBtn">
+        <span>Create Category</span>
         <i class="fa-solid fa-folder-plus icon-right"></i>
     </div>
 </div>
 
-<div class="modal-overlay" id="serverModal">
+<div class="modal-overlay" id="createServerModal">
     <div class="modal-box">
-        <button class="close-modal-btn" onclick="closeModal('serverModal')">&times;</button>
+        <button class="close-modal-btn" onclick="closeModal('createServerModal')">&times;</button>
         <div class="modal-header">
             <h2>Tùy chỉnh máy chủ</h2>
             <p>Hãy đặt tên và biểu tượng cho máy chủ mới của bạn.</p>
         </div>
         <div class="modal-body">
-            <div class="server-icon-upload">
+            <label for="serverIconUpload" class="server-icon-upload">
                 <i class="fa-solid fa-camera"></i>
                 <span>UPLOAD</span>
-            </div>
+            </label>
+            <input type="file" id="serverIconUpload" style="display: none;" accept="image/*">
             <div class="input-group">
                 <label>TÊN MÁY CHỦ</label>
                 <input type="text" value="Máy chủ của tôi">
@@ -178,63 +229,59 @@
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn-cancel" onclick="closeModal('serverModal')">Trở lại</button>
+            <button class="btn-cancel" onclick="closeModal('createServerModal')">Bỏ qua</button>
             <button class="btn-primary">Tạo</button>
         </div>
     </div>
 </div>
 
-<div class="modal-overlay" id="createChannelModal">
+<div class="modal-overlay" id="createChannelInCatModal">
     <div class="modal-box">
-        <button class="close-modal-btn" onclick="closeModal('createChannelModal')">&times;</button>
-        <div class="modal-header" style="text-align: left; padding-bottom: 20px;">
+        <button class="close-modal-btn" onclick="closeModal('createChannelInCatModal')">&times;</button>
+        <div class="modal-header" style="text-align: left;">
             <h2>Tạo Kênh</h2>
-            <div class="sub-text">Trong <span id="modal-category-name">Text Channels</span></div>
+            <div class="sub-text">Trong <span id="modal-category-name">TEXT CHANNELS</span></div>
         </div>
         <div class="modal-body">
             <div class="input-group">
                 <label>LOẠI KÊNH</label>
-
                 <label class="channel-type-option">
                     <div class="icon-wrapper"><i class="fa-solid fa-hashtag"></i></div>
-                    <div class="text-wrapper">
-                        <span class="type-title">Text</span>
-                        <span class="type-desc">Gửi tin nhắn, hình ảnh, GIF, emoji.</span>
-                    </div>
-                    <input type="radio" name="channelType" checked>
-                    <div class="radio-mark"></div>
+                    <div class="text-wrapper"><span class="type-title">Text</span><span class="type-desc">Gửi tin nhắn, hình ảnh, GIF.</span></div>
+                    <input type="radio" name="channelTypeCat" value="TEXT" checked><div class="radio-mark"></div>
                 </label>
-
                 <label class="channel-type-option">
                     <div class="icon-wrapper"><i class="fa-solid fa-microphone"></i></div>
-                    <div class="text-wrapper">
-                        <span class="type-title">Voice</span>
-                        <span class="type-desc">Trò chuyện thoại, video, chia sẻ màn hình.</span>
-                    </div>
-                    <input type="radio" name="channelType">
-                    <div class="radio-mark"></div>
+                    <div class="text-wrapper"><span class="type-title">Voice</span><span class="type-desc">Trò chuyện thoại, video.</span></div>
+                    <input type="radio" name="channelTypeCat" value="VOICE"><div class="radio-mark"></div>
                 </label>
             </div>
-
             <div class="input-group">
                 <label>TÊN KÊNH</label>
-                <div class="input-with-icon">
-                    <i class="fa-solid fa-hashtag input-icon"></i>
-                    <input type="text" placeholder="kênh-mới">
+                <div class="input-with-icon"><i class="fa-solid fa-hashtag input-icon"></i><input type="text" placeholder="kênh-mới"></div>
+            </div>
+            <div class="toggle-group">
+                <div class="toggle-label">
+                    <div class="toggle-title"><i class="fa-solid fa-lock" style="font-size: 14px;"></i> Kênh riêng tư</div>
+                    <div class="toggle-desc">Chỉ thành viên được chọn mới xem được.</div>
                 </div>
+                <label class="switch">
+                    <input type="checkbox">
+                    <span class="slider round"></span>
+                </label>
             </div>
         </div>
         <div class="modal-footer">
-            <button class="btn-cancel" onclick="closeModal('createChannelModal')">Hủy</button>
+            <button class="btn-cancel" onclick="closeModal('createChannelInCatModal')">Hủy</button>
             <button class="btn-primary">Tạo Kênh</button>
         </div>
     </div>
 </div>
 
-<div class="modal-overlay" id="categoryModal">
+<div class="modal-overlay" id="createCategoryModal">
     <div class="modal-box">
-        <button class="close-modal-btn" onclick="closeModal('categoryModal')">&times;</button>
-        <div class="modal-header" style="text-align: left; padding-bottom: 20px;">
+        <button class="close-modal-btn" onclick="closeModal('createCategoryModal')">&times;</button>
+        <div class="modal-header" style="text-align: left;">
             <h2>Tạo Danh Mục</h2>
         </div>
         <div class="modal-body">
@@ -242,10 +289,62 @@
                 <label>TÊN DANH MỤC</label>
                 <input type="text" placeholder="Tên danh mục mới">
             </div>
+            <div class="toggle-group">
+                <div class="toggle-label">
+                    <div class="toggle-title">Danh mục riêng tư</div>
+                    <div class="toggle-desc">Chỉ thành viên được chọn mới thấy danh mục này.</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox">
+                    <span class="slider round"></span>
+                </label>
+            </div>
         </div>
         <div class="modal-footer">
-            <button class="btn-cancel" onclick="closeModal('categoryModal')">Hủy</button>
+            <button class="btn-cancel" onclick="closeModal('createCategoryModal')">Hủy</button>
             <button class="btn-primary">Tạo Danh Mục</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="createChannelRootModal">
+    <div class="modal-box">
+        <button class="close-modal-btn" onclick="closeModal('createChannelRootModal')">&times;</button>
+        <div class="modal-header" style="text-align: left;">
+            <h2>Tạo Kênh</h2>
+        </div>
+        <div class="modal-body">
+            <div class="input-group">
+                <label>LOẠI KÊNH</label>
+                <label class="channel-type-option">
+                    <div class="icon-wrapper"><i class="fa-solid fa-hashtag"></i></div>
+                    <div class="text-wrapper"><span class="type-title">Text</span></div>
+                    <input type="radio" name="channelTypeRoot" value="TEXT" checked><div class="radio-mark"></div>
+                </label>
+                <label class="channel-type-option">
+                    <div class="icon-wrapper"><i class="fa-solid fa-microphone"></i></div>
+                    <div class="text-wrapper"><span class="type-title">Voice</span></div>
+                    <input type="radio" name="channelTypeRoot" value="VOICE"><div class="radio-mark"></div>
+                </label>
+            </div>
+            <div class="input-group">
+                <label>TÊN KÊNH</label>
+                <div class="input-with-icon"><i class="fa-solid fa-hashtag input-icon"></i><input type="text" placeholder="kênh-mới"></div>
+            </div>
+            <div class="toggle-group">
+                <div class="toggle-label">
+                    <div class="toggle-title"><i class="fa-solid fa-lock" style="font-size: 14px;"></i> Kênh riêng tư</div>
+                    <div class="toggle-desc">Chỉ thành viên được chọn mới xem được.</div>
+                </div>
+                <label class="switch">
+                    <input type="checkbox">
+                    <span class="slider round"></span>
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal('createChannelRootModal')">Hủy</button>
+            <button class="btn-primary">Tạo Kênh</button>
         </div>
     </div>
 </div>
@@ -253,25 +352,18 @@
 <div class="modal-overlay" id="inviteModal">
     <div class="modal-box">
         <button class="close-modal-btn" onclick="closeModal('inviteModal')">&times;</button>
-        <div class="modal-header" style="text-align: left; padding-bottom: 20px;">
-            <h2>Mời bạn bè vào Dev Community</h2>
+        <div class="modal-header" style="text-align: left;">
+            <h2>Mời bạn bè</h2>
         </div>
         <div class="modal-body">
             <div class="input-group">
                 <label>TÌM KIẾM BẠN BÈ</label>
-                <div class="search-box-invite">
-                    <input type="text" placeholder="Tìm kiếm bạn bè">
-                    <i class="fa-solid fa-magnifying-glass" style="color: #b5bac1;"></i>
-                </div>
+                <div class="search-box-invite"><input type="text" placeholder="Tìm kiếm bạn bè"><i class="fa-solid fa-magnifying-glass" style="color: #b5bac1;"></i></div>
             </div>
             <div class="invite-divider"></div>
             <div class="input-group">
-                <label>HOẶC GỬI LIÊN KẾT MỜI MÁY CHỦ</label>
-                <div class="copy-link-box">
-                    <input type="text" value="https://discord.gg/hcmute-k23" readonly>
-                    <button class="btn-copy">Sao chép</button>
-                </div>
-                <div class="input-note">Liên kết mời của bạn sẽ hết hạn sau 7 ngày. <a href="#" style="color: #00a8fc;">Chỉnh sửa liên kết</a></div>
+                <label>HOẶC GỬI LIÊN KẾT</label>
+                <div class="copy-link-box"><input type="text" value="https://discord.gg/hcmute" readonly><button class="btn-copy">Sao chép</button></div>
             </div>
         </div>
     </div>
@@ -279,65 +371,57 @@
 
 <script src="/js/home.js"></script>
 <script>
-    // Logic Chuyển Tab
-    function switchToDM() {
-        document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-        document.getElementById('btn-dm').classList.add('active');
-        document.getElementById('server-channels-view').style.display = 'none';
-        document.getElementById('dm-channels-view').style.display = 'flex';
-        document.getElementById('server-chat-view').style.display = 'none';
-        document.getElementById('dm-chat-view').style.display = 'flex';
+    // 1. Logic Switch View
+    function switchToDM() { toggleViews('dm'); }
+    function switchToServer(el) {
+        document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
+        el.classList.add('active');
+        toggleViews('server');
     }
-    function switchToServer(element) {
-        document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
-        element.classList.add('active');
-        document.getElementById('server-channels-view').style.display = 'flex';
-        document.getElementById('dm-channels-view').style.display = 'none';
-        document.getElementById('server-chat-view').style.display = 'flex';
-        document.getElementById('dm-chat-view').style.display = 'none';
+    function toggleViews(type) {
+        const isServer = type === 'server';
+        document.getElementById('server-channels-view').style.display = isServer ? 'flex' : 'none';
+        document.getElementById('dm-channels-view').style.display = isServer ? 'none' : 'flex';
+        document.getElementById('server-chat-view').style.display = isServer ? 'flex' : 'none';
+        document.getElementById('dm-chat-view').style.display = isServer ? 'none' : 'flex';
     }
 
-    // Modal Functions
+    // 2. Modal Helpers
     function openModal(id) { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-    // Close modal when click outside
-    window.onclick = function(event) {
-        if (event.target.classList.contains('modal-overlay')) {
-            event.target.classList.remove('active');
-        }
-        if (!event.target.closest('.context-menu') && !event.target.closest('.channel-list')) {
+    // 3. Close when click outside
+    window.onclick = function(e) {
+        if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('active');
+        if (!e.target.closest('.context-menu') && !e.target.closest('.channel-list')) {
             document.getElementById('context-menu').classList.remove('visible');
         }
     }
 
-    // Context Menu Logic
-    const serverChannelArea = document.getElementById('server-channel-area');
-    const contextMenu = document.getElementById('context-menu');
-
-    if(serverChannelArea) {
-        serverChannelArea.addEventListener('contextmenu', function(e) {
+    // 4. Context Menu
+    const channelArea = document.getElementById('server-channel-area');
+    const ctxMenu = document.getElementById('context-menu');
+    if(channelArea){
+        channelArea.addEventListener('contextmenu', e => {
             e.preventDefault();
-            contextMenu.style.top = `${e.clientY}px`;
-            contextMenu.style.left = `${e.clientX}px`;
-            contextMenu.classList.add('visible');
+            ctxMenu.style.top = `${e.clientY}px`;
+            ctxMenu.style.left = `${e.clientX}px`;
+            ctxMenu.classList.add('visible');
         });
     }
 
-    function triggerInvite() {
-        contextMenu.classList.remove('visible');
-        openModal('inviteModal');
-    }
-    function triggerCreateChannel() {
-        contextMenu.classList.remove('visible');
-        openModal('createChannelModal');
-    }
-    function triggerCreateCategory() {
-        contextMenu.classList.remove('visible');
-        openModal('categoryModal');
+    // 5. Triggers
+    function triggerInvite() { ctxMenu.classList.remove('visible'); openModal('inviteModal'); }
+    function triggerCreateChannelRoot() { ctxMenu.classList.remove('visible'); openModal('createChannelRootModal'); }
+    function triggerCreateCategory() { ctxMenu.classList.remove('visible'); openModal('createCategoryModal'); }
+
+    function openCreateChannelModal(e, catName, catId) {
+        if(e) e.stopPropagation();
+        document.getElementById('modal-category-name').innerText = catName;
+        openModal('createChannelInCatModal');
     }
 
-    // Settings Popup
+    // 6. Settings Popup
     const btnSettings = document.getElementById('btn-settings');
     const settingsPopup = document.getElementById('settings-popup');
     if(btnSettings){

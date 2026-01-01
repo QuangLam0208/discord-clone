@@ -1,5 +1,5 @@
 /* =========================================
-   1. GLOBAL RESET & CẤU HÌNH CƠ BẢN
+   1. GLOBAL RESET
    ========================================= */
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
 html, body { width: 100%; height: 100%; overflow: hidden; background-color: #313338; color: #dbdee1; display: flex; justify-content: center; align-items: center; }
@@ -7,7 +7,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background-color: #313
 /* =========================================
    2. LOGIN / REGISTER (Giữ nguyên)
    ========================================= */
-.login-container { background-color: #313338; padding: 32px; border-radius: 5px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); width: 400px; }
+.login-container { background-color: #313338; padding: 32px; border-radius: 5px; box-shadow: 0 2px 10px 0 rgba(0,0,0,0.2); width: 400px; }
 .login-box h2 { text-align: center; color: #f2f3f5; margin-bottom: 8px; }
 .subtitle { text-align: center; color: #b5bac1; font-size: 14px; margin-bottom: 20px; }
 .input-group { margin-bottom: 20px; }
@@ -51,7 +51,17 @@ button:hover { background-color: #4752c4; }
 .channel-item { padding: 6px 8px; margin-bottom: 2px; border-radius: 4px; color: #96989d; cursor: pointer; font-size: 15px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
 .channel-item:hover { background-color: #35373c; color: #dbdee1; }
 .channel-item.active { background-color: #404249; color: white; }
-.category-name { font-size: 12px; font-weight: bold; color: #96989d; padding: 0 18px; margin-bottom: 8px; margin-top: 16px; cursor: default; }
+
+/* Server List */
+.uncategorized-channels { margin-bottom: 16px; }
+.category-wrapper { margin-bottom: 4px; }
+.category-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 8px 6px 4px; color: #96989d; cursor: pointer; font-size: 12px; font-weight: 700; transition: color 0.2s; }
+.category-header:hover { color: #dbdee1; }
+.cat-info { display: flex; align-items: center; gap: 2px; text-transform: uppercase; }
+.cat-info i { font-size: 10px; width: 12px; text-align: center; }
+.add-channel-icon { font-size: 14px; cursor: pointer; }
+.add-channel-icon:hover { color: #dbdee1; }
+.category-content .channel-item { margin-left: 8px; }
 
 /* DM List */
 .search-bar-container { height: 48px; border-bottom: 1px solid #1f2023; padding: 0 10px; display: flex; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
@@ -59,6 +69,7 @@ button:hover { background-color: #4752c4; }
 .dm-header-item { padding: 10px; color: #96989d; cursor: pointer; border-radius: 4px; margin: 8px 8px 0 8px; display: flex; align-items: center; gap: 12px; }
 .dm-header-item:hover { background-color: #35373c; color: #dbdee1; }
 .dm-header-item.active { background-color: #404249; color: #fff; }
+.category-name { font-size: 12px; font-weight: bold; color: #96989d; padding: 0 18px; margin-bottom: 8px; margin-top: 16px; cursor: default; }
 
 /* User Bar */
 .user-bar { height: 52px; background-color: #232428; display: flex; align-items: center; justify-content: space-between; padding: 0 8px; font-size: 14px; position: relative; }
@@ -94,6 +105,9 @@ button:hover { background-color: #4752c4; }
 .input-wrapper input { width: 100%; padding: 12px 0; background: none; border: none; outline: none; color: #dcddde; font-size: 15px; }
 .upload-icon-btn { color: #b9bbbe; font-size: 22px; margin-right: 12px; cursor: pointer; display: flex; align-items: center; transition: color 0.2s; }
 .upload-icon-btn:hover { color: #f2f3f5; }
+.input-right-icons { display: flex; gap: 12px; color: #b9bbbe; font-size: 20px; margin-left: 12px; }
+.input-right-icons i { cursor: pointer; }
+.input-right-icons i:hover { color: #f2f3f5; }
 
 /* FRIEND DASHBOARD */
 .friend-header-bar { padding: 0 16px; background-color: #313338; display: flex; align-items: center; height: 48px; border-bottom: 1px solid #1f2023; }
@@ -121,7 +135,7 @@ button:hover { background-color: #4752c4; }
 .empty-text-desc { color: #b9bbbe; font-size: 14px; }
 
 /* =========================================
-   CONTEXT MENU
+   5. CONTEXT MENU
    ========================================= */
 .context-menu { position: fixed; background-color: #111214; width: 190px; padding: 6px 8px; border-radius: 4px; box-shadow: 0 8px 16px rgba(0,0,0,0.24); z-index: 9999; display: none; opacity: 0; transition: opacity 0.1s; }
 .context-menu.visible { display: block; opacity: 1; }
@@ -131,14 +145,19 @@ button:hover { background-color: #4752c4; }
 .icon-right { font-size: 12px; }
 
 /* =========================================
-   MODALS DARK THEME (CHUẨN DISCORD)
+   6. MODALS DARK THEME (CHUẨN DISCORD)
    ========================================= */
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background-color: rgba(0, 0, 0, 0.85); z-index: 2000; display: flex; justify-content: center; align-items: center; opacity: 0; visibility: hidden; transition: 0.2s; }
 .modal-overlay.active { opacity: 1; visibility: visible; }
 .modal-box { background-color: #313338; width: 460px; border-radius: 5px; overflow: hidden; position: relative; box-shadow: 0 0 0 1px rgba(32,34,37,.6), 0 2px 10px 0 rgba(0,0,0,.2); transform: scale(0.9); transition: transform 0.2s; }
 .modal-overlay.active .modal-box { transform: scale(1); }
+
+/* FIXED CLOSE BUTTON */
+.close-modal-btn { position: absolute; top: 16px; right: 16px; background: transparent; border: none; color: #b5bac1; font-size: 24px; line-height: 1; cursor: pointer; transition: 0.2s; z-index: 10; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+.close-modal-btn:hover { color: #dbdee1; }
+
 .modal-header { padding: 24px 24px 0 24px; text-align: center; }
-#createChannelModal .modal-header, #categoryModal .modal-header, #inviteModal .modal-header { text-align: left; padding-bottom: 20px; }
+#createChannelInCatModal .modal-header, #createCategoryModal .modal-header, #createChannelRootModal .modal-header, #inviteModal .modal-header { text-align: left; padding-bottom: 20px; }
 .modal-header h2 { font-size: 24px; font-weight: 700; color: #dbdee1; margin-bottom: 8px; }
 .modal-header p { color: #b5bac1; font-size: 14px; margin: 0; }
 .sub-text { font-size: 12px !important; text-transform: uppercase; font-weight: 700; margin-top: 4px; }
@@ -153,19 +172,28 @@ button:hover { background-color: #4752c4; }
 .btn-cancel:hover { text-decoration: underline; }
 .btn-primary { background-color: #5865F2; color: white; border: none; border-radius: 3px; padding: 10px 24px; font-size: 14px; font-weight: 500; cursor: pointer; transition: 0.2s; }
 .btn-primary:hover { background-color: #4752c4; }
-.close-modal-btn { position: absolute; top: 20px; right: 20px; background: none; border: none; color: #b5bac1; font-size: 24px; cursor: pointer; transition: 0.2s; z-index: 10; }
-.close-modal-btn:hover { color: #dbdee1; }
 
-/* Radio Button (Text/Voice) */
+/* Radio Options */
 .channel-type-option { display: flex; align-items: center; background-color: #2b2d31; padding: 12px; margin-bottom: 8px; border-radius: 4px; cursor: pointer; transition: 0.2s; }
 .channel-type-option:hover, .channel-type-option:has(input:checked) { background-color: #404249; }
 .icon-wrapper { font-size: 24px; color: #b5bac1; margin-right: 12px; width: 24px; text-align: center; }
 .text-wrapper { flex: 1; }
-.type-title { display: block; font-weight: 600; color: #dbdee1; font-size: 16px; margin-bottom: 2px; }
+.type-title { display: block; font-weight: 600; color: #dbdee1; font-size: 16px; }
 .type-desc { display: block; font-size: 12px; color: #b5bac1; }
 .channel-type-option input { display: none; }
 .radio-mark { width: 20px; height: 20px; border: 2px solid #b5bac1; border-radius: 50%; position: relative; }
 .channel-type-option input:checked + .radio-mark { border-color: #dbdee1; background-color: #dbdee1; border: 5px solid #2b2d31; }
+
+/* PRIVATE TOGGLE */
+.toggle-group { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; }
+.toggle-label .toggle-title { font-weight: 600; color: #dbdee1; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.toggle-label .toggle-desc { color: #b5bac1; font-size: 12px; margin-top: 4px; }
+.switch { position: relative; display: inline-block; width: 40px; height: 24px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #80848e; transition: .2s; border-radius: 24px; }
+.slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .2s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+input:checked + .slider { background-color: #23a559; }
+input:checked + .slider:before { transform: translateX(16px); }
 
 /* Extras */
 .server-icon-upload { width: 80px; height: 80px; border-radius: 50%; border: 2px dashed #b5bac1; display: flex; flex-direction: column; justify-content: center; align-items: center; margin: 0 auto 20px auto; color: #b5bac1; font-size: 12px; font-weight: 700; cursor: pointer; }
