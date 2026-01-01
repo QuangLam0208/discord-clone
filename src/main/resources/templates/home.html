@@ -8,11 +8,30 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
 <body>
-<div class="app-layout" id="app" style="display: none;">
-    <nav class="servers-sidebar">
-        <div class="server-icon active">D</div>
-        <div class="server-icon">+</div>
-    </nav>
+
+<div class="app-layout" id="app" style="display: none;"> <nav class="sidebar">
+    <div class="sidebar-item active">
+        <div class="pill"></div>
+        <div class="sidebar-icon">
+            <i class="fa-brands fa-discord" style="font-size: 28px;"></i>
+        </div>
+        <span class="tooltip">Direct Messages</span>
+    </div>
+
+    <div class="separator"></div>
+
+    <div class="sidebar-item">
+        <div class="pill"></div>
+        <div class="sidebar-icon">D</div>
+        <span class="tooltip">Dev Community</span>
+    </div>
+
+    <div class="sidebar-item" onclick="openModal()">
+        <div class="pill"></div>
+        <div class="sidebar-icon add-server-icon">+</div>
+        <span class="tooltip">Add a Server</span>
+    </div>
+</nav>
 
     <aside class="channels-sidebar">
         <div class="channel-header"><h4>Server Test</h4></div>
@@ -43,6 +62,54 @@
     </main>
 </div>
 
+<div class="modal-overlay" id="serverModal">
+    <div class="modal-box">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <div class="modal-header">
+            <h2>Tạo máy chủ của bạn</h2>
+            <p>Máy chủ là nơi bạn và bạn bè tụ tập. Hãy tạo một cái riêng và bắt đầu trò chuyện.</p>
+        </div>
+        <div class="modal-body">
+            <div class="input-group">
+                <label>TÊN MÁY CHỦ</label>
+                <input type="text" placeholder="Ví dụ: Hội yêu mèo" value="Máy chủ của tôi">
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-back" onclick="closeModal()">Bỏ qua</button>
+            <button class="btn-create">Tạo Máy Chủ</button>
+        </div>
+    </div>
+</div>
+
 <script src="/js/home.js"></script>
+<script>
+    // Script xử lý Modal (inline để chạy ngay)
+    function openModal() {
+        document.getElementById('serverModal').classList.add('active');
+    }
+    function closeModal() {
+        document.getElementById('serverModal').classList.remove('active');
+    }
+    // Đóng khi click ra ngoài
+    document.getElementById('serverModal').addEventListener('click', function(e) {
+        if (e.target === this) closeModal();
+    });
+
+    // Script cho nút Settings (User Bar cũ)
+    const btnSettings = document.getElementById('btn-settings');
+    const settingsPopup = document.getElementById('settings-popup');
+    if(btnSettings){
+        btnSettings.addEventListener('click', (e) => {
+            e.stopPropagation();
+            settingsPopup.classList.toggle('show');
+        });
+        document.addEventListener('click', (e) => {
+            if (!settingsPopup.contains(e.target) && e.target !== btnSettings) {
+                settingsPopup.classList.remove('show');
+            }
+        });
+    }
+</script>
 </body>
 </html>
