@@ -1,12 +1,8 @@
 package hcmute.edu.vn.discord.service.impl;
 
 import hcmute.edu.vn.discord.entity.enums.ChannelType;
-import hcmute.edu.vn.discord.entity.jpa.Category;
-import hcmute.edu.vn.discord.entity.jpa.Channel;
-import hcmute.edu.vn.discord.entity.jpa.Server;
-import hcmute.edu.vn.discord.repository.CategoryRepository;
-import hcmute.edu.vn.discord.repository.ChannelRepository;
-import hcmute.edu.vn.discord.repository.ServerRepository;
+import hcmute.edu.vn.discord.entity.jpa.*;
+import hcmute.edu.vn.discord.repository.*;
 import hcmute.edu.vn.discord.service.ChannelService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -22,10 +18,13 @@ public class ChannelServiceImpl implements ChannelService {
     private final ChannelRepository channelRepository;
     private final ServerRepository serverRepository;
     private final CategoryRepository categoryRepository;
+    private final UserRepository userRepository;
+    private final ServerMemberRepository serverMemberRepository;
 
     @Override
     @Transactional
-    public Channel createChannel(Long serverId, String name, ChannelType type, Long categoryId, Boolean isPrivate) {
+    public Channel createChannel(Long serverId, String name, ChannelType type, Long categoryId,
+                                 Boolean isPrivate, String createdByUsername) {
         Server server = serverRepository.findById(serverId)
                 .orElseThrow(() -> new EntityNotFoundException("Server not found"));
 
@@ -43,6 +42,18 @@ public class ChannelServiceImpl implements ChannelService {
                 throw new IllegalArgumentException("Category does not belong to this server");
             }
             channel.setCategory(category);
+        }
+
+        // Auto-add creator to allowedMembers for private channels
+        if (Boolean.TRUE.equals(channel.getIsPrivate())) {
+            if (createdByUsername == null || createdByUsername.isBlank()) {
+                throw new IllegalArgumentException("createdByUsername is required for private channel creation");
+            }
+            User creator = userRepository.findByUsername(createdByUsername)
+                    .orElseThrow(() -> new EntityNotFoundException("User not found: " + createdByUsername));
+            ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, creator.getId())
+                    .orElseThrow(() -> new EntityNotFoundException("Creator is not a member of this server"));
+            channel.getAllowedMembers().add(member);
         }
 
         return channelRepository.save(channel);

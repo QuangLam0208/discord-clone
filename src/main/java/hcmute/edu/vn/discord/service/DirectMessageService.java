@@ -2,6 +2,7 @@ package hcmute.edu.vn.discord.service;
 
 import hcmute.edu.vn.discord.dto.request.DirectMessageRequest;
 import hcmute.edu.vn.discord.dto.request.EditMessageRequest;
+import hcmute.edu.vn.discord.dto.response.ConversationResponse;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,4 +24,6 @@ public interface DirectMessageService {
     void addReaction(String messageId, Long userId, String emoji);
 
     void removeReaction(String messageId, Long userId);
+
+    ConversationResponse getOrCreateConversation(Long senderId, Long receiverId);
 }

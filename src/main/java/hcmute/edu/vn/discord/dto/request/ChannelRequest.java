@@ -9,17 +9,20 @@ import lombok.Data;
 @Data
 public class ChannelRequest {
     @NotBlank(message = "Tên kênh không được để trống")
-    @Size(min = 1, max = 100, message = "Tên kênh phải từ 1 đến 100 ký tự")
+    @Size(max = 100, message = "Tên kênh phải từ 1 đến 100 ký tự")
     private String name;
 
     @NotNull(message = "Loại kênh là bắt buộc (TEXT hoặc VOICE)")
     private ChannelType type;
 
     private Boolean isPrivate;
-
-    @NotNull(message = "Server ID là bắt buộc")
-    private Long serverId;
-
-    // Không bắt buộc
     private Long categoryId;
+    public void normalize() {
+        if (name != null) {
+            name = name.trim();
+            if (type == ChannelType.TEXT) {
+                name = name.toLowerCase().replace(' ', '-');
+            }
+        }
+    }
 }

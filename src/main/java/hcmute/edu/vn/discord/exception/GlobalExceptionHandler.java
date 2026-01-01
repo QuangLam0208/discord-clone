@@ -25,8 +25,10 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.validation.FieldError;
 
@@ -220,16 +222,6 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.NOT_ACCEPTABLE, "Định dạng phản hồi không được chấp nhận", request);
     }
 
-    // ===== 415 UNSUPPORTED MEDIA TYPE =====
-
-    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
-    public ResponseEntity<ErrorResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex,
-                                                                    HttpServletRequest request) {
-        String supported = ex.getSupportedMediaTypes().toString();
-        String msg = "Content-Type không được hỗ trợ" + (supported.isEmpty() ? "" : ". Hỗ trợ: " + supported);
-        return buildError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, msg, request);
-    }
-
     // ===== 409 CONFLICT =====
 
     @ExceptionHandler(DataIntegrityViolationException.class)
@@ -241,11 +233,37 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.CONFLICT, msg, request);
     }
 
+    // ===== 413 PAYLOAD TOO LARGE =====
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.PAYLOAD_TOO_LARGE)
+    public ErrorResponse handleMaxSize(MaxUploadSizeExceededException ex) {
+        return new ErrorResponse(LocalDateTime.now(),
+                HttpStatus.PAYLOAD_TOO_LARGE.value(),
+                HttpStatus.PAYLOAD_TOO_LARGE.getReasonPhrase(),
+                "Kích thước file vượt quá giới hạn cấu hình",
+                "/api/upload");
+    }
+
+    // ===== 415 UNSUPPORTED MEDIA TYPE =====
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex,
+                                                                    HttpServletRequest request) {
+        String supported = ex.getSupportedMediaTypes().toString();
+        String msg = "Content-Type không được hỗ trợ" + (supported.isEmpty() ? "" : ". Hỗ trợ: " + supported);
+        return buildError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, msg, request);
+    }
+
     // ===== 500 INTERNAL SERVER ERROR =====
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleOther(Exception ex,
                                                      HttpServletRequest request) {
+        if (request.getRequestURI().startsWith("/v3/api-docs")) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+
         log.error("Unhandled exception", ex);
         return buildError(HttpStatus.INTERNAL_SERVER_ERROR, "Lỗi hệ thống", request);
     }

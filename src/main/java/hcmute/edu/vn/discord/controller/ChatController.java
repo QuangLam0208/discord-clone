@@ -1,9 +1,7 @@
 package hcmute.edu.vn.discord.controller;
 
 import hcmute.edu.vn.discord.dto.request.ChatMessageRequest;
-import hcmute.edu.vn.discord.dto.response.ChatMessageResponse;
-import hcmute.edu.vn.discord.entity.jpa.User;
-import hcmute.edu.vn.discord.entity.mongo.Message;
+import hcmute.edu.vn.discord.dto.request.MessageRequest;
 import hcmute.edu.vn.discord.service.MessageService;
 import hcmute.edu.vn.discord.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +10,14 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import hcmute.edu.vn.discord.dto.response.MessageResponse;
+import java.util.List;
 
 import java.security.Principal;
 
@@ -25,46 +31,67 @@ public class ChatController {
 
     @MessageMapping("/chat.sendMessage")
     public void sendMessage(@Payload ChatMessageRequest chatMessage, Principal principal) {
-        User sender = null;
+        try {
+            String username;
+            if (principal != null) {
+                username = principal.getName();
+            } else if (chatMessage.getSenderId() != null) {
+                // Fallback chỉ dùng cho dev/test environment không có auth
+                var user = userService.findById(chatMessage.getSenderId()).orElse(null);
+                if (user == null) {
+                    log.error("Sender not found for ID: {}", chatMessage.getSenderId());
+                    return;
+                }
+                username = user.getUsername();
+            } else {
+                log.error("Unauthorized: No principal and no senderId provided");
+                return;
+            }
 
+            // Dùng request object của MessageService để tái sử dụng logic kiểm tra quyền
+            MessageRequest serviceRequest = new MessageRequest();
+            serviceRequest.setContent(chatMessage.getContent());
+            // chatMessage chưa hỗ trợ reply/attachments, có thể mở rộng sau
+
+            var savedResponse = messageService.createMessage(chatMessage.getChannelId(), username, serviceRequest);
+
+            // Gửi tin nhắn đến topic của channel đó
+            String destination = "/topic/channel/" + chatMessage.getChannelId();
+            messagingTemplate.convertAndSend(destination, savedResponse);
+
+            log.info("Message sent to {} by {}", destination, username);
+
+        } catch (Exception e) {
+            // Log lỗi và có thể gửi message lỗi về lại cho user qua user-specific queue
+            // (nếu cần)
+            log.error("Error sending message via WS: {}", e.getMessage());
+        }
+    }
+
+    @GetMapping("/api/chat/history/{channelId}")
+    @ResponseBody
+    public ResponseEntity<List<MessageResponse>> getChatHistory(
+            @PathVariable Long channelId,
+            @RequestParam(required = false) Long senderId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Principal principal) {
+
+        String username = null;
         if (principal != null) {
-            // Lấy thông tin user từ Principal
-            String username = principal.getName();
-            sender = userService.findByUsername(username)
-                    .orElseThrow(() -> new RuntimeException("User not found: " + username));
-        } else if (chatMessage.getSenderId() != null) {
-            // Fallback cho testing
-            sender = userService.findById(chatMessage.getSenderId()).orElse(null);
+            username = principal.getName();
+        } else if (senderId != null) {
+            var user = userService.findById(senderId).orElse(null);
+            if (user != null) {
+                username = user.getUsername();
+            }
         }
 
-        if (sender == null) {
-            log.error("Tin nhắn bị từ chối: Không xác định được người gửi");
-            return;
+        if (username == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        // Lưu tin nhắn vào MongoDB
-        Message message = new Message();
-        message.setChannelId(chatMessage.getChannelId());
-        message.setSenderId(sender.getId());
-        message.setContent(chatMessage.getContent());
-
-        Message savedMessage = messageService.sendMessage(message);
-
-        // Tạo response
-        ChatMessageResponse response = ChatMessageResponse.builder()
-                .id(savedMessage.getId())
-                .content(savedMessage.getContent())
-                .senderId(sender.getId())
-                .senderName(sender.getDisplayName() != null ? sender.getDisplayName() : sender.getUsername())
-                .channelId(savedMessage.getChannelId())
-                .createdAt(savedMessage.getCreatedAt().toInstant())
-                .build();
-
-        // Gửi tin nhắn đến topic của channel đó
-        // Client sẽ subscribe: /topic/channel/{channelId}
-        String destination = "/topic/channel/" + chatMessage.getChannelId();
-        messagingTemplate.convertAndSend(destination, response);
-
-        log.info("Message sent to {}", destination);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdAt")); // thời gian
+        return ResponseEntity.ok(messageService.getMessagesByChannel(channelId, username, pageable));
     }
 }
