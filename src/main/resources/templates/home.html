@@ -421,21 +421,6 @@
         openModal('createChannelInCatModal');
     }
 
-    // 6. Settings Popup
-    const btnSettings = document.getElementById('btn-settings');
-    const settingsPopup = document.getElementById('settings-popup');
-    if(btnSettings){
-        btnSettings.addEventListener('click', (e) => {
-            e.stopPropagation();
-            settingsPopup.classList.toggle('show');
-        });
-        document.addEventListener('click', (e) => {
-            if (!settingsPopup.contains(e.target) && e.target !== btnSettings) {
-                settingsPopup.classList.remove('show');
-            }
-        });
-    }
-
     switchToDM();
 </script>
 </body>

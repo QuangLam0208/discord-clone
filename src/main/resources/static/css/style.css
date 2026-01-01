@@ -72,7 +72,7 @@ button:hover { background-color: #4752c4; }
 .category-name { font-size: 12px; font-weight: bold; color: #96989d; padding: 0 18px; margin-bottom: 8px; margin-top: 16px; cursor: default; }
 
 /* User Bar */
-.user-bar { position: fixed; bottom: 10px; left: 10px; width: 292px; height: 60px; background-color: #232428; border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); z-index: 999; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-top: none; transition: transform 0.2s ease; }
+.user-bar { position: fixed; bottom: 10px; left: 10px; width: 292px; height: 60px; background-color: #232428; border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); z-index: 9999; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-top: none; transition: transform 0.2s ease; overflow: visible !important; }
 .user-bar:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6); }
 
 /* User Info Section */
