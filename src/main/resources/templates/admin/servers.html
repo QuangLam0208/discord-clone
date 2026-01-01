@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="https://www.thymeleaf.org">
+<head>
+    <title>Quản lý Servers</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="admin-container">
+    <h1>Quản lý Servers</h1>
+
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Tên Server</th>
+            <th>Chủ sở hữu</th>
+            <th>Thành viên</th>
+            <th>Hành động</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="sv : ${servers}">
+            <td th:text="${sv.id}">1</td>
+            <td th:text="${sv.name}">Hội Gaming</td>
+            <td th:text="${sv.owner != null ? sv.owner.username : 'Unknown'}">Chủ Server</td>
+            <td th:text="${sv.members != null ? sv.members.size() : 0}">100</td>
+            <td>
+                <a th:href="@{/admin/servers/delete/{id}(id=${sv.id})}"
+                   onclick="return confirm('Xóa server này?')" class="btn-delete">Xóa</a>
+
+                <a th:href="@{/admin/servers/transfer/{id}(id=${sv.id})}" class="btn-warn">Chuyển quyền</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+</div>
+</body>
+</html>

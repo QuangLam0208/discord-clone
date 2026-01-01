@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="https://www.thymeleaf.org">
+<head>
+    <title>Bạn bè - Discord Clone</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+<div class="main-container">
+    <div class="sidebar">
+        <div class="channel-list">
+            <a th:href="@{/friends}" class="active"><i class="fas fa-user-friends"></i> Bạn bè</a>
+            <a th:href="@{/servers}"><i class="fas fa-compass"></i> Khám phá</a>
+        </div>
+    </div>
+
+    <div class="chat-area friends-view">
+        <div class="top-bar">
+            <h3><i class="fas fa-users"></i> Bạn bè</h3>
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="switchTab('all')">Tất cả</button>
+                <button class="tab-btn" onclick="switchTab('pending')">
+                    Đang chờ <span class="badge" th:if="${requests.size() > 0}" th:text="${requests.size()}">0</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="friends-list-container">
+            <div id="tab-all" class="tab-content">
+                <div th:each="friend : ${friends}" class="friend-item">
+                    <div class="friend-info">
+                        <img th:src="${friend.avatarUrl != null ? friend.avatarUrl : '/images/default.png'}" class="avatar-small">
+                        <div>
+                            <span class="friend-name" th:text="${friend.username}">User</span>
+                            <small th:text="${friend.status}">Online</small>
+                        </div>
+                    </div>
+                    <div class="friend-actions">
+                        <a th:href="@{/dm/{id}(id=${friend.id})}" class="btn-icon" title="Nhắn tin"><i class="fas fa-comment"></i></a>
+                        <a th:href="@{/api/friends/remove/{id}(id=${friend.id})}" class="btn-icon delete"><i class="fas fa-times"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-pending" class="tab-content" style="display:none;">
+                <div th:if="${#lists.isEmpty(requests)}" class="empty-state">Không có lời mời nào.</div>
+
+                <div th:each="req : ${requests}" class="friend-item request-item">
+                    <div class="friend-info">
+                        <span th:text="${req.senderName}">Người gửi</span>
+                        <small>Đã gửi lời mời kết bạn</small>
+                    </div>
+                    <div class="friend-actions">
+                        <form th:action="@{/api/friends/requests/{id}/accept(id=${req.id})}" method="post" style="display:inline;">
+                            <button type="submit" class="btn-accept"><i class="fas fa-check"></i></button>
+                        </form>
+                        <form th:action="@{/api/friends/requests/{id}/decline(id=${req.id})}" method="post" style="display:inline;">
+                            <button type="submit" class="btn-decline"><i class="fas fa-times"></i></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchTab(tabId) {
+        document.querySelectorAll('.tab-content').forEach(el => el.style.display = 'none');
+        document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-' + tabId).style.display = 'block';
+        event.target.classList.add('active');
+    }
+</script>
+</body>
+</html>

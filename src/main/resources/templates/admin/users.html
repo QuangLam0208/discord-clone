@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="https://www.thymeleaf.org">
+<head>
+    <title>Quản lý Users</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="admin-container">
+    <h1>Quản lý Users</h1>
+
+    <div class="filter-bar">
+        <form th:action="@{/admin/users}" method="get">
+            <input type="text" name="keyword" th:value="${keyword}" placeholder="Tìm username, email...">
+            <button type="submit">Tìm kiếm</button>
+        </form>
+    </div>
+
+    <table class="data-table">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>Avatar</th>
+            <th>Username</th>
+            <th>Email</th>
+            <th>Ngày tạo</th>
+            <th>Hành động</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="u : ${users}">
+            <td th:text="${u.id}">1</td>
+            <td><img th:src="${u.avatarUrl}" class="avatar-tiny"></td>
+            <td th:text="${u.username}">admin</td>
+            <td th:text="${u.email}">admin@gmail.com</td>
+            <td th:text="${u.createdAt}">2024-01-01</td>
+            <td>
+                <a th:href="@{/admin/users/edit/{id}(id=${u.id})}" class="btn-edit">Sửa</a>
+                <a th:href="@{/admin/users/ban/{id}(id=${u.id})}" class="btn-delete">Ban</a>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <div class="pagination" th:if="${totalPages > 1}">
+        <a th:href="@{/admin/users(page=${currentPage - 1}, keyword=${keyword})}" th:if="${currentPage > 0}">&laquo; Trước</a>
+        <span th:text="${currentPage + 1} + ' / ' + ${totalPages}">1/10</span>
+        <a th:href="@{/admin/users(page=${currentPage + 1}, keyword=${keyword})}" th:if="${currentPage < totalPages - 1}">Sau &raquo;</a>
+    </div>
+</div>
+</body>
+</html>

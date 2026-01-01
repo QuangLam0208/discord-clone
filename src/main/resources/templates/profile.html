@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="https://www.thymeleaf.org">
+<head>
+    <title>Hồ sơ cá nhân</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="main-container center-view">
+    <div class="profile-card">
+        <div class="profile-header-color"></div>
+
+        <div class="profile-avatar-section">
+            <img th:src="${user.avatarUrl != null ? user.avatarUrl : '/images/default.png'}" class="avatar-large">
+
+            <div class="edit-avatar">
+                <form th:action="@{/profile/avatar}" method="post" enctype="multipart/form-data">
+                    <label for="avatarUpload" class="btn-change-avatar">Đổi Avatar</label>
+                    <input type="file" id="avatarUpload" name="avatarFile" style="display:none" onchange="this.form.submit()">
+                </form>
+            </div>
+        </div>
+
+        <div class="profile-info">
+            <h2 th:text="${user.displayName}">Display Name</h2>
+            <p class="username" th:text="'@' + ${user.username}">@username</p>
+
+            <div class="info-group">
+                <label>Email</label>
+                <span th:text="${user.email}">email@example.com</span>
+            </div>
+
+            <div class="info-group">
+                <label>Giới thiệu</label>
+                <p th:text="${user.bio != null ? user.bio : 'Chưa có giới thiệu.'}">Bio...</p>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
