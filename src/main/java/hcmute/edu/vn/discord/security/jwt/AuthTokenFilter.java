@@ -3,6 +3,7 @@ package hcmute.edu.vn.discord.security.jwt;
 import hcmute.edu.vn.discord.security.services.UserDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.NonNull;
@@ -35,44 +36,50 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain)
             throws ServletException, IOException {
-        String path = request.getServletPath();
-
-        if (path.startsWith("/api/auth")) {
+        // Bỏ qua CORS preflight
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
         }
         try {
             String jwt = parseJwt(request);
-            if (jwt != null && jwtUtils.validateJwtToken(jwt)
-                    && SecurityContextHolder.getContext().getAuthentication() == null) {
+
+            if (jwt != null
+                    && SecurityContextHolder.getContext().getAuthentication() == null
+                    && jwtUtils.validateJwtToken(jwt)) {
 
                 String username = jwtUtils.getUserNameFromJwtToken(jwt);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
+                                userDetails, null, userDetails.getAuthorities());
 
-                authentication.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
-            logger.error("Cannot set authentication for request {}", request.getRequestURI(), e);
+            logger.error("Cannot set authentication", e);
         }
 
         filterChain.doFilter(request, response);
     }
 
     private String parseJwt(HttpServletRequest request) {
+        // Ưu tiên header Authorization
         String headerAuth = request.getHeader("Authorization");
         if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
-            return headerAuth.substring(7);
+            String token = headerAuth.substring(7).trim();
+            if (StringUtils.hasText(token)) return token;
+        }
+        // Nếu không có header, thử lấy từ cookie 'jwt'
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie c : cookies) {
+                if ("jwt".equals(c.getName()) && StringUtils.hasText(c.getValue())) {
+                    return c.getValue();
+                }
+            }
         }
         return null;
     }

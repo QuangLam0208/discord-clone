@@ -14,6 +14,9 @@ public interface InviteService {
     // Xử lý khi user click vào invite (tăng lượt dùng)
     boolean useInvite(String code);
 
+    // XỬ LÝ GIA NHẬP SERVER
+    void joinServer(String code);
+
     // Lấy danh sách invite của server
     List<Invite> getInvitesByServer(Long serverId);
 

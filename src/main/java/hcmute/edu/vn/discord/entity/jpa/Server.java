@@ -2,13 +2,16 @@ package hcmute.edu.vn.discord.entity.jpa;
 
 import hcmute.edu.vn.discord.entity.enums.ServerStatus;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "servers")
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Server {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,29 +24,27 @@ public class Server {
 
     private String iconUrl;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private User owner;
 
     @Enumerated(EnumType.STRING)
-    private ServerStatus status; // ACTIVE, FREEZE, SHADOWBAN, DELETED
+    private ServerStatus status;
 
-    @OneToMany(mappedBy = "server", cascade = CascadeType.ALL,
-            orphanRemoval = true)
-    private List<Channel> channels;
+    @OneToMany(mappedBy = "server", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Set<ServerMember> members = new HashSet<>();
 
-    @OneToMany(
-            mappedBy = "server",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private List<ServerMember> members;
+    @OneToMany(mappedBy = "server", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Set<Channel> channels = new HashSet<>();
 
-    @OneToMany(
-            mappedBy = "server",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true
-    )
-    private List<ServerRole> roles;
+    @OneToMany(mappedBy = "server", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Set<ServerRole> roles = new HashSet<>();
 }
-

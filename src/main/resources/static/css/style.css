@@ -1,0 +1,195 @@
+/* =========================================
+   1. GLOBAL RESET (FIX LỖI VIỀN TRẮNG & MÀU NỀN)
+   ========================================= */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* Chặn thanh cuộn thừa */
+    background-color: #36393f; /* Màu nền chủ đạo */
+    font-family: 'Segoe UI', 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    color: #dcddde;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* =========================================
+   2. STYLE CHO LOGIN / REGISTER
+   ========================================= */
+.login-container {
+    background-color: #2f3136;
+    padding: 32px;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px 0 rgba(0,0,0,0.2);
+    width: 400px;
+}
+.login-box h2 { text-align: center; color: #fff; margin-bottom: 8px; }
+.subtitle { text-align: center; color: #b9bbbe; font-size: 14px; margin-bottom: 20px; }
+.input-group { margin-bottom: 20px; }
+.input-group label { display: block; color: #b9bbbe; font-size: 11px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase; }
+.input-group input { width: 100%; padding: 10px; height: 40px; background-color: #202225; border: 1px solid #202225; border-radius: 3px; color: #dcddde; }
+button { width: 100%; height: 45px; background-color: #5865F2; color: white; border: none; border-radius: 3px; font-weight: bold; cursor: pointer; }
+button:hover { background-color: #4752c4; }
+.link-text {
+    margin-top: 15px;
+    font-size: 14px;
+    color: #b9bbbe; /* Màu xám dịu (không phải trắng) */
+}
+
+.link-text a {
+    color: #00aff4; /* Màu xanh Discord chuẩn */
+    text-decoration: none;
+    font-weight: 500; /* Bỏ bold đậm, để medium cho thanh thoát */
+    transition: text-decoration 0.2s;
+}
+
+.link-text a:hover {
+    text-decoration: underline; /* Chỉ gạch chân khi di chuột */
+    color: #00b0f4;
+}.error-msg { color: #ed4245; font-size: 13px; margin-top: 10px; text-align: center; display: none; }
+
+/* =========================================
+   3. LAYOUT CHÍNH (3 CỘT)
+   ========================================= */
+.app-layout {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    background-color: #36393f;
+    align-items: stretch;
+}
+
+/* --- CỘT 1: SERVERS --- */
+.servers-sidebar {
+    width: 72px;
+    background-color: #202225;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 12px;
+    flex-shrink: 0;
+}
+.server-icon {
+    width: 48px; height: 48px;
+    background-color: #36393f;
+    border-radius: 50%;
+    margin-bottom: 8px;
+    cursor: pointer;
+    display: flex; justify-content: center; align-items: center;
+    color: #dcddde; font-weight: 500; transition: 0.2s;
+}
+.server-icon:hover, .server-icon.active { border-radius: 16px; background-color: #5865F2; color: white; }
+
+/* --- CỘT 2: CHANNELS & USER BAR MỚI --- */
+.channels-sidebar {
+    width: 240px;
+    background-color: #2f3136;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.channel-header {
+    height: 48px;
+    border-bottom: 1px solid #202225;
+    padding: 0 16px;
+    display: flex; align-items: center;
+    font-weight: bold; color: white;
+    box-shadow: 0 1px 0 rgba(4,4,5,0.2);
+}
+
+.channel-list { flex: 1; padding: 10px 8px; overflow-y: auto; }
+.channel-item { padding: 6px 8px; margin-bottom: 2px; border-radius: 4px; color: #8e9297; cursor: pointer; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+.channel-item:hover { background-color: #34373c; color: #dcddde; }
+.channel-item.active { background-color: #393c43; color: white; }
+
+/* --- USER BAR (GIỐNG DISCORD THẬT) --- */
+.user-bar {
+    height: 52px;
+    background-color: #292b2f;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 8px;
+    font-size: 14px;
+    position: relative; /* Để căn vị trí menu popup */
+}
+
+.user-wrapper {
+    display: flex; align-items: center; padding: 4px; border-radius: 4px; cursor: pointer;
+    flex: 1; min-width: 0; /* Fix lỗi text tràn */
+}
+.user-wrapper:hover { background-color: #393c43; }
+
+.user-avatar {
+    width: 32px; height: 32px;
+    background-color: #5865F2;
+    border-radius: 50%;
+    margin-right: 8px;
+    position: relative;
+    flex-shrink: 0;
+}
+/* Chấm xanh online */
+.user-avatar::after {
+    content: '';
+    position: absolute; bottom: -2px; right: -2px;
+    width: 10px; height: 10px;
+    background-color: #3ba55c;
+    border: 3px solid #292b2f; border-radius: 50%;
+}
+
+.user-info { display: flex; flex-direction: column; line-height: 1.2; overflow: hidden; }
+.username { font-weight: bold; color: white; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.usertag { font-size: 11px; color: #b9bbbe; }
+
+/* Các nút Icon (Mic, Headphone, Gear) */
+.user-actions { display: flex; }
+.btn-icon {
+    background: none; border: none; color: #b9bbbe;
+    width: 32px; height: 32px; border-radius: 4px;
+    cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 14px;
+}
+.btn-icon:hover { background-color: #393c43; color: #dcddde; }
+
+/* --- MENU POPUP (Cài đặt) --- */
+.settings-popup {
+    display: none; /* Ẩn mặc định */
+    position: absolute;
+    bottom: 60px; left: 10px; width: 220px;
+    background-color: #18191c;
+    padding: 6px 8px; border-radius: 4px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.24);
+    z-index: 1000;
+}
+.settings-popup.show { display: block; }
+
+.menu-item { padding: 10px 8px; border-radius: 2px; color: #b9bbbe; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+.menu-item:hover { background-color: #4752c4; color: white; }
+.menu-item.logout { color: #ed4245; }
+.menu-item.logout:hover { background-color: #ed4245; color: white; }
+.menu-divider { height: 1px; background-color: #36393f; margin: 4px 0; }
+
+/* --- CỘT 3: CHAT CONTENT --- */
+.chat-content {
+    flex: 1; background-color: #36393f;
+    display: flex; flex-direction: column; min-width: 0;
+}
+.top-bar {
+    height: 48px; border-bottom: 1px solid #26272d;
+    display: flex; align-items: center; padding: 0 16px;
+    font-weight: bold; color: white;
+    box-shadow: 0 1px 0 rgba(4,4,5,0.2);
+}
+.chat-area { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+.message { display: flex; align-items: baseline; }
+.msg-user { color: white; font-weight: bold; margin-right: 8px; cursor: pointer; }
+.msg-content { color: #dcddde; }
+.input-area { padding: 0 16px 24px; margin-top: 10px; }
+.input-area input { width: 100%; padding: 12px 16px; background-color: #40444b; border: none; border-radius: 8px; color: #dcddde; font-size: 15px; }
+.input-area input:focus { outline: none; }

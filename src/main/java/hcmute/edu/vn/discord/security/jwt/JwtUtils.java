@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
+
 import java.security.Key;
 import java.util.Date;
 import java.util.List;
@@ -54,6 +56,9 @@ public class JwtUtils {
     }
 
     public boolean validateJwtToken(String authToken) {
+        if (!StringUtils.hasText(authToken)) {
+            return false; // Không parse token rỗng
+        }
         try {
             Jwts.parserBuilder()
                     .setSigningKey(key())
