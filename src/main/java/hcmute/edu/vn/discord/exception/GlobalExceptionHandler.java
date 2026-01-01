@@ -205,6 +205,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<ErrorResponse> handleNoResourceFound(NoResourceFoundException ex,
             HttpServletRequest request) {
+        // Suppress logs for Chrome DevTools
+        if (request.getRequestURI().contains("com.chrome.devtools.json")) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ErrorResponse(
+                    LocalDateTime.now(),
+                    HttpStatus.NOT_FOUND.value(),
+                    HttpStatus.NOT_FOUND.getReasonPhrase(),
+                    ex.getMessage(),
+                    request.getRequestURI()));
+        }
         return buildError(HttpStatus.NOT_FOUND, ex.getMessage(), request);
     }
 
