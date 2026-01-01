@@ -3,6 +3,7 @@ package hcmute.edu.vn.discord.security.jwt;
 import hcmute.edu.vn.discord.security.services.UserDetailsServiceImpl;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.jspecify.annotations.NonNull;
@@ -35,7 +36,7 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain)
             throws ServletException, IOException {
-        // BỎ QUA CORS PREFLIGHT
+        // Bỏ qua CORS preflight
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
             filterChain.doFilter(request, response);
             return;
@@ -52,15 +53,9 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
+                                userDetails, null, userDetails.getAuthorities());
 
-                authentication.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
             }
         } catch (Exception e) {
@@ -71,22 +66,21 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     }
 
     private String parseJwt(HttpServletRequest request) {
+        // Ưu tiên header Authorization
         String headerAuth = request.getHeader("Authorization");
-
-        if (!StringUtils.hasText(headerAuth)) {
-            return null;
+        if (StringUtils.hasText(headerAuth) && headerAuth.startsWith("Bearer ")) {
+            String token = headerAuth.substring(7).trim();
+            if (StringUtils.hasText(token)) return token;
         }
-
-        if (!headerAuth.startsWith("Bearer ")) {
-            return null;
+        // Nếu không có header, thử lấy từ cookie 'jwt'
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie c : cookies) {
+                if ("jwt".equals(c.getName()) && StringUtils.hasText(c.getValue())) {
+                    return c.getValue();
+                }
+            }
         }
-
-        String token = headerAuth.substring(7).trim();
-
-        if (!StringUtils.hasText(token)) {
-            return null;
-        }
-
-        return token;
+        return null;
     }
 }

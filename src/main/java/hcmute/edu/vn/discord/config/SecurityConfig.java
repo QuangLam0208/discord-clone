@@ -42,7 +42,7 @@ public class SecurityConfig {
 
                 http
                         .csrf(AbstractHttpConfigurer::disable)
-                        .cors(cors -> {}) // bật CORS ở Security layer để dùng WebMvcConfigurer
+//                        .cors(cors -> {}) // bật CORS ở Security layer để dùng WebMvcConfigurer
                         .exceptionHandling(ex -> ex
                                 .authenticationEntryPoint(unauthorizedHandler))
                         .sessionManagement(sess -> sess
@@ -52,18 +52,19 @@ public class SecurityConfig {
                                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                                 // TODO: /ws/**, /ws-test.html is temporarily public for testing. MUST secure before production.
                                 .requestMatchers(
-                                        "/api/auth/**",
-                                        "/api/chat/history/**",
-                                        "/api/test/**",
-                                        "/ws/**",
-                                        "/ws-test.html",
-                                        "/swagger-ui.html",
-                                        "/swagger-ui/**",
-                                        "/v3/api-docs/**",
-                                        "/swagger-resources/**",
+                                        "/",
+                                        "/login", "/register", "/home",
+                                        "/error", "/favicon.ico",
+                                        "/css/**", "/js/**", "/images/**", "/fonts/**", "/webjars/**",
+                                        "/api/auth/**", "/api/test/**",
+                                        // swagger, ws, files...
+                                        "/ws/**", "/ws-test.html",
+                                        "/swagger-ui.html", "/swagger-ui/**",
+                                        "/v3/api-docs/**", "/swagger-resources/**",
                                         "/webjars/**",
                                         "/websocket-test.html",
-                                        "/files/**")  // Cho phép xem file public
+                                        "/files/**"
+                                )  // Cho phép xem file public
                                 .permitAll()
                                 .anyRequest().authenticated())
                         .userDetailsService(userDetailsService)
