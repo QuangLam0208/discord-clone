@@ -365,14 +365,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 // 1. SERVER MENU
                 if (targetServer) {
                     const serverId = targetServer.dataset.serverId;
-                    ctxMenu.innerHTML += `
-                        <div class="menu-item" onclick="editServer('${serverId}')">
-                            <span>Sửa Server</span><i class="fa-solid fa-pen"></i>
-                        </div>
-                        <div class="menu-separator"></div>
-                        <div class="menu-item logout" onclick="deleteServer('${serverId}')">
-                            <span>Xóa Server</span><i class="fa-solid fa-trash"></i>
-                        </div>`;
+                    const ownerId = parseInt(targetServer.dataset.ownerId);
+                    const isOwner = state.currentUser && state.currentUser.id === ownerId;
+
+                    if (isOwner) {
+                        ctxMenu.innerHTML += `
+                            <div class="menu-item" onclick="editServer('${serverId}')">
+                                <span>Sửa Server</span><i class="fa-solid fa-pen"></i>
+                            </div>
+                            <div class="menu-separator"></div>
+                            <div class="menu-item logout" onclick="deleteServer('${serverId}')">
+                                <span>Xóa Server</span><i class="fa-solid fa-trash"></i>
+                            </div>`;
+                    } else {
+                        ctxMenu.innerHTML += `
+                             <div class="menu-item" style="cursor: default; color: #aaa;">
+                                <span>Chỉ chủ server mới được sửa/xóa</span>
+                            </div>`;
+                    }
                 }
 
                 // 2. CATEGORY MENU

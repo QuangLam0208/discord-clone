@@ -40,6 +40,7 @@ function createServerIcon(server) {
     const div = document.createElement('div');
     div.className = 'sidebar-item';
     div.dataset.serverId = server.id;
+    div.dataset.ownerId = server.ownerId;
     div.title = server.name;
     let contentHtml = '';
     if (server.iconUrl) {
@@ -173,6 +174,15 @@ window.editServer = async (id) => {
 window.deleteServer = async (id) => {
     const res = await Swal.fire({ title: 'Xóa Server?', icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33' });
     if (res.isConfirmed) {
-        try { await Api.delete(`/api/servers/${id}`); location.reload(); } catch (e) { Swal.fire('Lỗi', e.message, 'error'); }
+        try {
+            const success = await Api.delete(`/api/servers/${id}`);
+            if (success) {
+                Swal.fire('Thành công', 'Đã xóa server', 'success').then(() => location.reload());
+            } else {
+                Swal.fire('Lỗi', 'Không thể xóa server (Xem console)', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Lỗi', e.message, 'error');
+        }
     }
 };

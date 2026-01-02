@@ -102,10 +102,41 @@ const Api = (function () {
         return true;
     }
 
+    // Put JSON
+    async function putJSON(endpoint, body) {
+        const response = await request(endpoint, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        if (!response) return null;
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(data.message || 'Lỗi khi gọi API PUT');
+        }
+        return data;
+    }
+
+    // Patch JSON
+    async function patchJSON(endpoint, body) {
+        const response = await request(endpoint, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        if (!response) return null;
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Lỗi khi gọi API PATCH');
+        return data;
+    }
+
     // Public các hàm ra ngoài
     return {
         get: getJSON,
         post: postJSON,
+        put: putJSON,
+        patch: patchJSON,
         upload: postMultipart,
         delete: deleteObj,
         fetch: request
