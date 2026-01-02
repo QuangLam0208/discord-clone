@@ -28,7 +28,6 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
         StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
         if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
-            // Extract Authorization header
             List<String> authHeaders = accessor.getNativeHeader("Authorization");
 
             if (authHeaders != null && !authHeaders.isEmpty()) {
@@ -39,13 +38,10 @@ public class JwtChannelInterceptor implements ChannelInterceptor {
                         if (jwtUtils.validateJwtToken(token)) {
                             String username = jwtUtils.getUserNameFromJwtToken(token);
                             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
-
                             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                                     userDetails, null, userDetails.getAuthorities());
-
                             accessor.setUser(authentication);
-                            log.info("WebSocket CONNECTED: Principal='{}' | JWT Subject='{}'",
-                                    userDetails.getUsername(), username);
+                            log.info("WebSocket CONNECTED: Principal='{}'", userDetails.getUsername());
                         }
                     } catch (Exception e) {
                         log.error("WebSocket Authentication Failed: {}", e.getMessage());

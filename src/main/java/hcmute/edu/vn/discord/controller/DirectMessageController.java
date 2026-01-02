@@ -4,34 +4,33 @@ import hcmute.edu.vn.discord.dto.request.DirectMessageRequest;
 import hcmute.edu.vn.discord.dto.request.EditMessageRequest;
 import hcmute.edu.vn.discord.dto.response.ConversationResponse;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
+import hcmute.edu.vn.discord.repository.UserRepository;
+import hcmute.edu.vn.discord.security.services.UserDetailsImpl;
 import hcmute.edu.vn.discord.service.DirectMessageService;
-import hcmute.edu.vn.discord.service.UserService;
-import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-
-import hcmute.edu.vn.discord.security.services.UserDetailsImpl;
+import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/direct-messages")
 @Tag(name = "Direct Messages", description = "Operations for private 1-on-1 messaging")
 @RequiredArgsConstructor
-@lombok.extern.slf4j.Slf4j
+@Slf4j
 public class DirectMessageController {
 
     private final DirectMessageService directMessageService;
     private final SimpMessagingTemplate messagingTemplate;
-    private final UserService userService;
+    private final UserRepository userRepository;
 
     @Operation(summary = "Send Direct Message", description = "Send a private message to another user.")
     @PostMapping
@@ -42,18 +41,30 @@ public class DirectMessageController {
             throw new IllegalArgumentException("User is null or unauthenticated");
         }
         Long senderId = user.getId();
+
+        // Lưu tin nhắn vào DB
         DirectMessageResponse response = directMessageService.sendMessage(senderId, request);
 
-        // 1. Send to receiver
-        userService.findById(request.getReceiverId()).ifPresentOrElse(receiver -> {
+        // 1. Send to receiver (Gửi tin nhắn Real-time cho người nhận)
+        // Sử dụng userRepository.findById để chắc chắn lấy được username chính xác
+        userRepository.findById(request.getReceiverId()).ifPresentOrElse(receiver -> {
             log.info("REST: Sending DM from {} to Receiver Username: {}", user.getUsername(), receiver.getUsername());
-            messagingTemplate.convertAndSendToUser(receiver.getUsername(), "/queue/dm", response);
+            // Gửi đến /user/{username}/queue/dm
+            messagingTemplate.convertAndSendToUser(
+                    receiver.getUsername(),
+                    "/queue/dm",
+                    response
+            );
         }, () -> {
             log.error("REST: Receiver not found with ID: {}", request.getReceiverId());
         });
 
-        // 2. Send back to sender (for multi-device sync)
-        messagingTemplate.convertAndSendToUser(user.getUsername(), "/queue/dm", response);
+        // 2. Send back to sender (for multi-device sync - Gửi lại cho chính mình để đồng bộ)
+        messagingTemplate.convertAndSendToUser(
+                user.getUsername(),
+                "/queue/dm",
+                response
+        );
         log.info("REST: Synced DM back to Sender: {}", user.getUsername());
 
         return ResponseEntity.ok(response);
