@@ -1,0 +1,92 @@
+<aside class="channels-sidebar" th:fragment="channel-sidebar" xmlns:th="http://www.thymeleaf.org">
+
+    <div id="server-channels-view" style="display: none; flex: 1; flex-direction: column;">
+        <div class="channel-header" data-server-id="1">
+            <h4>Dev Community</h4>
+            <i class="fa-solid fa-chevron-down" style="font-size: 12px; margin-left: auto;"></i>
+        </div>
+
+        <div class="channel-list" id="server-channel-area">
+
+            <div class="uncategorized-channels">
+                <div class="channel-item active" data-channel-id="101">
+                    <i class="fa-solid fa-hashtag"></i> quy-tắc
+                </div>
+                <div class="channel-item" data-channel-id="102">
+                    <i class="fa-solid fa-hashtag"></i> giới-thiệu
+                </div>
+            </div>
+
+            <div class="category-wrapper" data-category-id="cat-1">
+                <div class="category-header">
+                    <div class="cat-info">
+                        <i class="fa-solid fa-angle-down"></i>
+                        <span>THÔNG TIN</span>
+                    </div>
+                    <i class="fa-solid fa-plus add-channel-icon" id="createChannelInCategoryBtn-cat-1"
+                        onclick="openCreateChannelModal(event, 'THÔNG TIN', 'cat-1')" title="Tạo kênh"></i>
+                </div>
+                <div class="category-content">
+                    <div class="channel-item" data-channel-id="201">
+                        <i class="fa-solid fa-hashtag"></i> thông-báo
+                    </div>
+                </div>
+            </div>
+
+            <div class="category-wrapper" data-category-id="cat-2">
+                <div class="category-header">
+                    <div class="cat-info">
+                        <i class="fa-solid fa-angle-down"></i>
+                        <span>TRÒ CHUYỆN</span>
+                    </div>
+                    <i class="fa-solid fa-plus add-channel-icon" id="createChannelInCategoryBtn-cat-2"
+                        onclick="openCreateChannelModal(event, 'TRÒ CHUYỆN', 'cat-2')" title="Tạo kênh"></i>
+                </div>
+                <div class="category-content">
+                    <div class="channel-item" data-channel-id="301">
+                        <i class="fa-solid fa-hashtag"></i> chung
+                    </div>
+                    <div class="channel-item" data-channel-id="302">
+                        <i class="fa-solid fa-volume-high"></i> Sảnh chính
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="dm-channels-view" style="display: flex; flex: 1; flex-direction: column;">
+        <div class="search-bar-container">
+            <button class="search-btn">Tìm kiếm hoặc bắt đầu cuộc trò chuyện</button>
+        </div>
+        <div class="channel-list">
+            <div class="dm-header-item active">
+                <i class="fa-solid fa-user-group"></i> Bạn bè
+            </div>
+            <div class="category-name" style="margin-top: 16px;">
+                TIN NHẮN TRỰC TIẾP <span style="float: right; cursor: pointer;" id="createDmBtn">+</span>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="hidden-file-upload" style="display: none;" accept="image/png, image/jpeg, image/webp">
+    <div class="user-bar">
+        <div class="user-wrapper">
+            <div class="user-avatar"></div>
+            <div class="user-info">
+                <span id="user-display" class="username">User</span>
+                <span class="usertag">#1234</span>
+            </div>
+        </div>
+        <div class="user-actions">
+            <button class="btn-icon"><i class="fa-solid fa-microphone"></i></button>
+            <button class="btn-icon"><i class="fa-solid fa-headphones"></i></button>
+            <button class="btn-icon" id="btn-settings"><i class="fa-solid fa-gear"></i></button>
+        </div>
+        <div class="settings-popup" id="settings-popup">
+            <div class="menu-item logout" id="btn-logout-action">
+                <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
+            </div>
+        </div>
+    </div>
+</aside>

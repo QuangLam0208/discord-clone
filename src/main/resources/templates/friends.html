@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Bạn bè - Discord Clone</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tab-btn");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        // Hàm gọi API chấp nhận/từ chối
+        function handleRequest(actionUrl) {
+            fetch(actionUrl, { method: 'POST' }).then(res => {
+                if(res.ok) window.location.reload();
+                else alert('Lỗi xử lý!');
+            });
+        }
+    </script>
+</head>
+<body>
+<div class="main-container">
+    <div class="sidebar">
+        <div class="channel-list">
+            <a th:href="@{/friends}" class="active"><i class="fas fa-user-friends"></i> Bạn bè</a>
+            <a th:href="@{/servers}"><i class="fas fa-compass"></i> Khám phá</a>
+            <a th:href="@{/profile}"><i class="fas fa-user"></i> Tôi</a>
+        </div>
+    </div>
+
+    <div class="chat-area friends-view">
+        <div class="top-bar">
+            <h3><i class="fas fa-users"></i> Bạn bè</h3>
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="openTab(event, 'All')">Tất cả</button>
+                <button class="tab-btn" onclick="openTab(event, 'Pending')">
+                    Đang chờ <span class="badge" th:if="${pendingCount > 0}" th:text="${pendingCount}"></span>
+                </button>
+            </div>
+        </div>
+
+        <div class="friends-list-container">
+            <div id="All" class="tab-content">
+                <div th:each="friend : ${friends}" class="friend-item">
+                    <div class="friend-info">
+                        <img th:src="${friend.avatarUrl != null ? friend.avatarUrl : '/images/default.png'}" class="avatar-small">
+                        <span th:text="${friend.username}">User</span>
+                    </div>
+                    <div class="friend-actions">
+                        <a th:href="@{/dm/{id}(id=${friend.id})}" class="btn-icon"><i class="fas fa-comment"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <div id="Pending" class="tab-content" style="display:none">
+                <div th:each="req : ${inboundRequests}" class="request-item">
+                    <div class="request-info">
+                        <img th:src="${req.senderAvatar != null ? req.senderAvatar : '/images/default.png'}" class="avatar-small">
+                        <div class="request-details">
+                            <span th:text="${req.senderName}">Name</span>
+                            <small>Gửi lời mời kết bạn</small>
+                        </div>
+                    </div>
+                    <div class="friend-actions">
+                        <button class="btn-action btn-accept" th:onclick="'handleRequest(\'/api/friends/requests/' + ${req.id} + '/accept\')'">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <button class="btn-action btn-decline" th:onclick="'handleRequest(\'/api/friends/requests/' + ${req.id} + '/decline\')'">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div th:if="${#lists.isEmpty(inboundRequests)}" style="padding:20px; color:#aaa">Không có lời mời nào.</div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
