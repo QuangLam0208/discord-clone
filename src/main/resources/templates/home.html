@@ -6,6 +6,8 @@
     <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 </head>
 <body>
 
@@ -370,6 +372,93 @@
 </div>
 
 <script src="/js/home.js"></script>
+<script>
+    // WebSocket Setup for Real-time Direct Messages
+    var stompClient = null;
+    var dmSubscription = null;
+
+    function connectWebSocket() {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+            console.error('No access token found for WebSocket connection');
+            return;
+        }
+
+        // Connect to WebSocket endpoint
+        var socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
+
+        // Add Authorization header
+        var headers = {
+            'Authorization': 'Bearer ' + token
+        };
+
+        // Connect to WebSocket
+        stompClient.connect(headers, function(frame) {
+            console.log('WebSocket Connected: ' + frame);
+
+            // Subscribe to direct messages
+            dmSubscription = stompClient.subscribe('/user/queue/dm', function(message) {
+                console.log('Received DM via WebSocket:', message.body);
+                try {
+                    var dmMessage = JSON.parse(message.body);
+                    handleIncomingDirectMessage(dmMessage);
+                } catch (e) {
+                    console.error('Failed to parse DM message:', e);
+                }
+            });
+
+            console.log('Subscribed to /user/queue/dm for real-time direct messages');
+        }, function(error) {
+            console.error('WebSocket connection error:', error);
+            // Retry connection after 5 seconds
+            setTimeout(connectWebSocket, 5000);
+        });
+    }
+
+    function disconnectWebSocket() {
+        if (dmSubscription) {
+            dmSubscription.unsubscribe();
+            dmSubscription = null;
+        }
+        if (stompClient !== null) {
+            stompClient.disconnect();
+            stompClient = null;
+        }
+        console.log('WebSocket Disconnected');
+    }
+
+    function handleIncomingDirectMessage(dmMessage) {
+        console.log('Handling incoming DM:', dmMessage);
+        
+        // Dispatch a custom event that other parts of the application can listen to
+        const event = new CustomEvent('dmMessageReceived', { 
+            detail: dmMessage 
+        });
+        window.dispatchEvent(event);
+        
+        // Store the message globally so it can be accessed by other components
+        if (!window.pendingDMMessages) {
+            window.pendingDMMessages = [];
+        }
+        window.pendingDMMessages.push(dmMessage);
+        
+        // TODO: Once DM UI is implemented, add code here to:
+        // 1. Update the conversation list if needed
+        // 2. If the conversation is currently open, append the message to the chat
+        // 3. Show notification if the conversation is not open
+    }
+
+    // Initialize WebSocket connection when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        connectWebSocket();
+    });
+
+    // Clean up on page unload
+    window.addEventListener('beforeunload', function() {
+        disconnectWebSocket();
+    });
+</script>
 <script>
     // 1. Logic Switch View
     function switchToDM() { toggleViews('dm'); }
