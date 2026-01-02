@@ -217,3 +217,155 @@ input:checked + .slider:before { transform: translateX(16px); }
 .input-with-icon { position: relative; background-color: #1e1f22; border-radius: 3px; }
 .input-with-icon .input-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #b5bac1; font-size: 14px; }
 .input-with-icon input { padding-left: 30px !important; }
+
+/* =========================================
+   7. PROFILE & ADMIN STYLES
+   ========================================= */
+
+/* Profile Modal Upload */
+.profile-avatar-upload {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    cursor: pointer;
+    overflow: hidden;
+    border: 4px solid #2b2d31;
+}
+.profile-avatar-upload img { width: 100%; height: 100%; object-fit: cover; }
+.profile-overlay {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: 0.2s; color: white; font-size: 24px;
+}
+.profile-avatar-upload:hover .profile-overlay { opacity: 1; }
+
+/* Admin Tables */
+.admin-container { padding: 32px; width: 100%; overflow-y: auto; height: 100vh; background: #313338; }
+.admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+.admin-table { width: 100%; border-collapse: collapse; background: #1e1f22; border-radius: 8px; overflow: hidden; }
+.admin-table th, .admin-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #2b2d31; color: #dbdee1; }
+.admin-table th { background: #2b2d31; font-weight: 700; text-transform: uppercase; font-size: 12px; color: #b5bac1; }
+.admin-table tr:hover { background: #35373c; }
+.status-badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 700; }
+.status-active { background: #23a559; color: white; }
+.status-banned { background: #ed4245; color: white; }
+.action-btn { padding: 6px 12px; border-radius: 4px; border: none; cursor: pointer; font-size: 12px; font-weight: 600; margin-right: 4px; }
+.btn-danger { background: #ed4245; color: white; }
+.btn-warning { background: #fee75c; color: #1e1f22; }
+
+/* Pagination */
+.pagination { display: flex; justify-content: center; margin-top: 20px; gap: 8px; }
+.page-link { padding: 8px 12px; background: #1e1f22; color: #dbdee1; border-radius: 4px; text-decoration: none; }
+.page-link.active { background: #5865F2; color: white; }
+
+* =========================================
+   8. FRIEND REQUEST ACTIONS (Bổ sung)
+   ========================================= */
+
+/* 1. Badge số lượng (Hiển thị số đỏ cạnh tab "Đang chờ") */
+.tab-item .badge {
+    background-color: #ed4245;
+    color: white;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-left: 6px;
+    min-width: 16px;
+    text-align: center;
+}
+
+/* 2. Item trong danh sách Lời mời (Request Item) */
+.request-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 10px;
+    margin-bottom: 2px;
+    border-radius: 4px;
+    cursor: pointer;
+    border-top: 1px solid #3f414766; /* Đường kẻ mờ giữa các item */
+}
+
+.request-item:hover {
+    background-color: #393c43;
+}
+
+.request-item:hover .friend-actions {
+    opacity: 1;
+}
+
+/* Layout phần thông tin người gửi */
+.request-info {
+    display: flex;
+    align-items: center;
+}
+
+.request-info img.avatar-small {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-right: 12px;
+    background-color: #5865F2; /* Màu nền avatar mặc định */
+}
+
+.request-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.request-details span {
+    font-weight: 600;
+    color: white;
+    font-size: 15px;
+}
+
+.request-details small {
+    color: #b9bbbe;
+    font-size: 12px;
+}
+
+/* 3. Các nút Hành động (Chấp nhận / Từ chối) */
+.friend-actions {
+    display: flex;
+    gap: 10px;
+    opacity: 0.8; /* Mờ nhẹ khi chưa hover */
+    transition: opacity 0.2s;
+}
+
+/* Nút chung */
+.btn-action {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    background-color: #2f3136; /* Nền tối mặc định */
+    font-size: 16px;
+}
+
+/* Nút Chấp nhận (Tick Xanh) */
+.btn-accept {
+    color: #3ba55d;
+}
+.btn-accept:hover {
+    background-color: #3ba55d;
+    color: white;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+/* Nút Từ chối / Hủy (X Đỏ) */
+.btn-decline {
+    color: #ed4245;
+}
+.btn-decline:hover {
+    background-color: #ed4245;
+    color: white;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
