@@ -1,4 +1,4 @@
-package hcmute.edu.vn.discord.controller;
+package hcmute.edu.vn.discord.controller.api;
 
 import hcmute.edu.vn.discord.entity.jpa.Invite;
 import hcmute.edu.vn.discord.service.InviteService;

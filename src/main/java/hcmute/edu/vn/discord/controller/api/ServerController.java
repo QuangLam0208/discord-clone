@@ -1,4 +1,4 @@
-package hcmute.edu.vn.discord.controller;
+package hcmute.edu.vn.discord.controller.api;
 
 import hcmute.edu.vn.discord.dto.request.ServerRequest;
 import hcmute.edu.vn.discord.dto.response.*;

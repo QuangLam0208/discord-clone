@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Admin Dashboard · Discord Clone</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+    <!-- SweetAlert (tuỳ chọn) -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Admin CSS -->
+    <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body>
+<div class="admin-root">
+    <!-- Sidebar trái -->
+    <aside class="admin-sidebar">
+        <div class="brand">
+            <i class="fa-brands fa-discord"></i>
+            <span class="brand-text">Admin</span>
+        </div>
+
+        <nav class="nav">
+            <a class="nav-item active" href="/admin">
+                <i class="fa-solid fa-gauge"></i>
+                <span>Tổng quan</span>
+            </a>
+            <a class="nav-item" href="/admin/users">
+                <i class="fa-solid fa-user-shield"></i>
+                <span>Users</span>
+            </a>
+            <a class="nav-item" href="/admin/servers">
+                <i class="fa-solid fa-server"></i>
+                <span>Servers</span>
+            </a>
+            <a class="nav-item" href="/admin/messages">
+                <i class="fa-solid fa-envelope"></i>
+                <span>Messages</span>
+            </a>
+            <div class="separator"></div>
+            <a class="nav-item" href="/home">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>Về ứng dụng</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="current-user">
+                <div class="avatar" id="admin-avatar"></div>
+                <div class="uinfo">
+                    <div class="uname" id="admin-name">Admin</div>
+                    <div class="utag">#admin</div>
+                </div>
+            </div>
+            <button class="btn-logout" id="btn-admin-logout" title="Đăng xuất">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Nội dung chính -->
+    <main class="admin-main">
+        <header class="topbar">
+            <div class="page-title">
+                <i class="fa-solid fa-gauge"></i>
+                <span>Dashboard</span>
+            </div>
+            <div class="ws-indicator" id="ws-indicator" title="WebSocket status"></div>
+        </header>
+
+        <section class="content">
+            <!-- Cards thống kê -->
+            <div class="stats">
+                <div class="card stat">
+                    <div class="stat-icon users"><i class="fa-solid fa-user-group"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Tổng Users</div>
+                        <div class="stat-value" id="stat-users">--</div>
+                    </div>
+                </div>
+                <div class="card stat">
+                    <div class="stat-icon servers"><i class="fa-solid fa-server"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Tổng Servers</div>
+                        <div class="stat-value" id="stat-servers">--</div>
+                    </div>
+                </div>
+                <div class="card stat">
+                    <div class="stat-icon msgs"><i class="fa-solid fa-message"></i></div>
+                    <div class="stat-info">
+                        <div class="stat-label">Tin nhắn 24h</div>
+                        <div class="stat-value" id="stat-messages">--</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hai bảng: Users mới & Servers mới -->
+            <div class="grids">
+                <div class="card table-card">
+                    <div class="card-header">
+                        <span>Users mới</span>
+                        <a class="link" href="/admin/users">Xem tất cả</a>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th>Display</th>
+                                <th>Active</th>
+                            </tr>
+                            </thead>
+                            <tbody id="tbl-latest-users">
+                            <tr><td colspan="4" class="muted">Đang tải...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card table-card">
+                    <div class="card-header">
+                        <span>Servers mới</span>
+                        <a class="link" href="/admin/servers">Xem tất cả</a>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tên</th>
+                                <th>Owner</th>
+                            </tr>
+                            </thead>
+                            <tbody id="tbl-latest-servers">
+                            <tr><td colspan="3" class="muted">Đang tải...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+</div>
+
+<!-- API wrapper dùng lại từ app -->
+<script src="/js/api.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>
