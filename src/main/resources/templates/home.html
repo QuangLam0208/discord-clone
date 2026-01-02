@@ -374,10 +374,17 @@
 <script src="/js/home.js"></script>
 <script>
     // WebSocket Setup for Real-time Direct Messages
-    var stompClient = null;
-    var dmSubscription = null;
+    // Wrap in IIFE to avoid global namespace pollution
+    (function() {
+        let stompClient = null;
+        let dmSubscription = null;
+        let reconnectAttempts = 0;
+        const MAX_RECONNECT_ATTEMPTS = 10;
+        const BASE_RECONNECT_DELAY = 1000; // 1 second
+        const pendingDMMessages = [];
+        const MAX_PENDING_MESSAGES = 100; // Limit array size to prevent memory leaks
 
-    function connectWebSocket() {
+        function connectWebSocket() {
         const token = localStorage.getItem('accessToken');
         if (!token) {
             console.error('No access token found for WebSocket connection');
@@ -385,23 +392,24 @@
         }
 
         // Connect to WebSocket endpoint
-        var socket = new SockJS('/ws');
+        const socket = new SockJS('/ws');
         stompClient = Stomp.over(socket);
 
         // Add Authorization header
-        var headers = {
+        const headers = {
             'Authorization': 'Bearer ' + token
         };
 
         // Connect to WebSocket
         stompClient.connect(headers, function(frame) {
             console.log('WebSocket Connected: ' + frame);
+            reconnectAttempts = 0; // Reset reconnect counter on successful connection
 
             // Subscribe to direct messages
             dmSubscription = stompClient.subscribe('/user/queue/dm', function(message) {
                 console.log('Received DM via WebSocket:', message.body);
                 try {
-                    var dmMessage = JSON.parse(message.body);
+                    const dmMessage = JSON.parse(message.body);
                     handleIncomingDirectMessage(dmMessage);
                 } catch (e) {
                     console.error('Failed to parse DM message:', e);
@@ -411,8 +419,16 @@
             console.log('Subscribed to /user/queue/dm for real-time direct messages');
         }, function(error) {
             console.error('WebSocket connection error:', error);
-            // Retry connection after 5 seconds
-            setTimeout(connectWebSocket, 5000);
+            
+            // Implement exponential backoff with retry limits
+            if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                reconnectAttempts++;
+                const delay = Math.min(BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempts - 1), 30000);
+                console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+                setTimeout(connectWebSocket, delay);
+            } else {
+                console.error('Max reconnection attempts reached. Please refresh the page to reconnect.');
+            }
         });
     }
 
@@ -437,14 +453,17 @@
         });
         window.dispatchEvent(event);
         
-        // Store the message globally so it can be accessed by other components
-        if (!window.pendingDMMessages) {
-            window.pendingDMMessages = [];
+        // Store the message with size limit to prevent memory leaks
+        pendingDMMessages.push(dmMessage);
+        if (pendingDMMessages.length > MAX_PENDING_MESSAGES) {
+            pendingDMMessages.shift(); // Remove oldest message
         }
-        window.pendingDMMessages.push(dmMessage);
+        
+        // Expose pending messages globally (read-only)
+        window.pendingDMMessages = [...pendingDMMessages];
         
         // Show a notification to the user
-        const senderName = dmMessage.senderName || dmMessage.senderId || 'Someone';
+        const senderName = dmMessage.senderName || dmMessage.senderId || 'Unknown User';
         const messagePreview = dmMessage.content ? 
             (dmMessage.content.length > 50 ? dmMessage.content.substring(0, 50) + '...' : dmMessage.content) : 
             'New message';
@@ -483,6 +502,13 @@
     window.getStompClient = function() {
         return stompClient;
     };
+    
+    // Allow manual reconnection
+    window.reconnectWebSocket = function() {
+        reconnectAttempts = 0;
+        connectWebSocket();
+    };
+})();
 </script>
 <script>
     // 1. Logic Switch View
