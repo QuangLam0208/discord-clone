@@ -1,13 +1,10 @@
-// MAIN APP ENTRY POINT (v9 - Robust WS reconnect + DM in Home)
-
-// Global app state shared across modules
 window.state = {
   currentServerId: null,
   currentChannelId: null,
   currentUser: null,
-  stompClient: null,       // STOMP client instance
-  tempCategoryId: null,    // For modals
-  pendingAttachments: []   // Shared between upload.js and chat.js
+  stompClient: null,
+  tempCategoryId: null,
+  pendingAttachments: []
 };
 
 window.elements = {
@@ -17,12 +14,11 @@ window.elements = {
   sidebar: document.querySelector('.sidebar'),
 };
 
-// Optional: catch unhandled promise errors for clearer logs
 window.addEventListener('unhandledrejection', (e) => {
   console.error('[App Unhandled Rejection]', e.reason);
 });
 
-// ==================== DM TRONG HOME ====================
+// ==================== DM IN HOME ====================
 const HomeDM = (() => {
   const st = {
     currentUserId: null,
@@ -31,14 +27,14 @@ const HomeDM = (() => {
     activeFriendName: '',
     conversationId: null,
 
-    // WS state
     wsConnected: false,
     subscription: null,
     onMessageHandler: null,
     retryCount: 0,
+    displayedMsgIds: new Set(),
   };
 
-  // ---- Auth helpers ----
+  // ----- Auth -----
   function getToken() {
     return localStorage.getItem('token') || localStorage.getItem('accessToken') || '';
   }
@@ -50,38 +46,27 @@ const HomeDM = (() => {
     return h;
   }
 
-  // ---- API calls ----
+  // ----- API -----
   async function fetchFriends() {
-    const res = await fetch('/api/friends', {
-      method: 'GET',
-      headers: authHeaders(false),
-      credentials: 'include'
-    });
+    const res = await fetch('/api/friends', { headers: authHeaders(false), credentials: 'include' });
     if (!res.ok) throw new Error(`Fetch friends failed (${res.status})`);
     return res.json();
   }
-
   async function getOrCreateConversation(friendUserId) {
     const res = await fetch(`/api/direct-messages/conversation/by-user/${friendUserId}`, {
-      method: 'GET',
-      headers: authHeaders(false),
-      credentials: 'include'
+      headers: authHeaders(false), credentials: 'include'
     });
     if (!res.ok) throw new Error(`Get/Create conversation failed (${res.status})`);
-    return res.json(); // ConversationResponse
+    return res.json();
   }
-
   async function fetchMessages(conversationId, page = 0, size = 50) {
     const res = await fetch(`/api/direct-messages/conversation/${conversationId}?page=${page}&size=${size}`, {
-      method: 'GET',
-      headers: authHeaders(false),
-      credentials: 'include'
+      headers: authHeaders(false), credentials: 'include'
     });
     if (!res.ok) throw new Error(`Fetch messages failed (${res.status})`);
     const pageData = await res.json();
     return pageData?.content || [];
   }
-
   async function sendMessage(receiverId, content) {
     const res = await fetch('/api/direct-messages', {
       method: 'POST',
@@ -90,20 +75,18 @@ const HomeDM = (() => {
       body: JSON.stringify({ receiverId, content })
     });
     if (!res.ok) throw new Error(`Send message failed (${res.status})`);
-    return res.json(); // DirectMessageResponse
+    return res.json();
   }
 
-  // ---- Robust WebSocket connect (auto-retry, heartbeat, re-subscribe) ----
+  // ----- WS connect (robust) -----
   function connectWS(onMessage) {
     st.onMessageHandler = onMessage;
 
-    // Avoid duplicate connects
     if (st.wsConnected && window.state.stompClient?.connected) return;
 
     const token = getToken();
-    const socket = new SockJS('/ws');
 
-    // Attach low-level handlers for visibility
+    const socket = new SockJS('/ws', null, { transports: ['websocket'] });
     socket.onopen = () => console.log('[SockJS] open');
     socket.onerror = (e) => console.error('[SockJS] error', e);
     socket.onclose = (e) => {
@@ -112,15 +95,9 @@ const HomeDM = (() => {
     };
 
     const client = Stomp.over(socket);
-
-    // Enable STOMP frame logging to help diagnose
-    client.debug = (str) => {
-      // comment out next line if too noisy
-      console.log('[STOMP]', str);
-    };
-
-    client.heartbeat.outgoing = 20000;  // send ping
-    client.heartbeat.incoming = 20000;  // expect ping
+    client.debug = (str) => console.log('[STOMP]', str);
+    client.heartbeat.outgoing = 20000;
+    client.heartbeat.incoming = 20000;
 
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -128,24 +105,23 @@ const HomeDM = (() => {
     client.connect(
       headers,
       () => {
-        // On Connected
         st.wsConnected = true;
         st.retryCount = 0;
         window.state.stompClient = client;
-        console.log('[WS] connected');
+        console.log('[WS] CONNECTED');
 
-        // Re/subscribe
         try { st.subscription?.unsubscribe(); } catch {}
+        // Subscribe user queue
         st.subscription = client.subscribe('/user/queue/dm', (frame) => {
           try {
             const msg = JSON.parse(frame.body);
+            console.log('[WS MESSAGE]', msg);
             st.onMessageHandler && st.onMessageHandler(msg);
-          } catch (e) {
-            console.error('WS parse error', e);
-          }
+          } catch (e) { console.error('WS parse error', e); }
         });
+        console.log('[WS] SUBSCRIBED /user/queue/dm');
 
-        // Hook close to schedule reconnect (STOMP-level)
+        // Hook close để tự reconnect
         try {
           if (client.ws) {
             const prevOnClose = client.ws.onclose;
@@ -166,12 +142,11 @@ const HomeDM = (() => {
 
   function scheduleReconnect() {
     st.wsConnected = false;
-    const delay = Math.min(30000, 2000 * Math.pow(2, st.retryCount++)); // 2s -> 4s -> 8s ... max 30s
+    const delay = Math.min(30000, 2000 * Math.pow(2, st.retryCount++));
     console.warn(`WS reconnect in ${delay}ms (attempt ${st.retryCount})`);
     setTimeout(() => connectWS(st.onMessageHandler), delay);
   }
 
-  // Reconnect when tab returns to foreground
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') {
       if (!st.wsConnected || !window.state.stompClient?.connected) {
@@ -181,21 +156,14 @@ const HomeDM = (() => {
     }
   });
 
-  // ---- UI helpers ----
+  // ----- UI -----
   function els() {
     return {
-      // Sidebar list (TIN NHẮN TRỰC TIẾP)
       dmList: document.getElementById('dm-direct-list'),
-
-      // Center list (dashboard Friends)
       dmCenterList: document.getElementById('dm-center-list'),
       dmCenterCount: document.getElementById('dm-center-count'),
-
-      // Views
       dmDashboard: document.getElementById('dm-dashboard-view'),
       dmConversation: document.getElementById('dm-conversation-view'),
-
-      // Conversation UI
       dmName: document.getElementById('dm-active-friend-name'),
       dmMessages: document.getElementById('dm-messages'),
       dmInput: document.getElementById('dm-input'),
@@ -214,7 +182,6 @@ const HomeDM = (() => {
     if (dmConversation) dmConversation.style.display = 'flex';
   }
 
-  // Sidebar friends (left)
   function renderFriendsSidebar(friends) {
     const { dmList } = els();
     if (!dmList) return;
@@ -241,7 +208,6 @@ const HomeDM = (() => {
       </div>`;
   }
 
-  // Center friends (dashboard)
   function renderFriendsCenter(friends) {
     const { dmCenterList, dmCenterCount } = els();
     if (!dmCenterList) return;
@@ -278,21 +244,28 @@ const HomeDM = (() => {
   function renderMessages(list) {
     const { dmMessages } = els();
     if (!dmMessages) return;
-    dmMessages.innerHTML = list.slice().reverse().map(msgBubble).join('');
+    st.displayedMsgIds.clear();
+    dmMessages.innerHTML = list.slice().reverse().map(m => {
+      if (m.id != null) st.displayedMsgIds.add(String(m.id));
+      return msgBubble(m);
+    }).join('');
     dmMessages.scrollTop = dmMessages.scrollHeight;
   }
   function appendMessage(m) {
     const { dmMessages } = els();
     if (!dmMessages) return;
+    const mid = m.id != null ? String(m.id) : null;
+    if (mid && st.displayedMsgIds.has(mid)) return; // chống trùng
+    if (mid) st.displayedMsgIds.add(mid);
     dmMessages.insertAdjacentHTML('beforeend', msgBubble(m));
     dmMessages.scrollTop = dmMessages.scrollHeight;
   }
   function msgBubble(m) {
-    const mine = m.senderId === st.currentUserId;
+    const mine = String(m.senderId) === String(st.currentUserId);
     const time = new Date(m.createdAt).toLocaleString();
     const safe = (m.content || '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
     return `
-      <div class="message" style="display:flex; ${mine ? 'justify-content:flex-end;' : ''}">
+      <div class="message" data-msg-id="${m.id ?? ''}" style="display:flex; ${mine ? 'justify-content:flex-end;' : ''}">
         <div style="max-width:70%; background:${mine ? '#4752c4' : '#2b2d31'}; color:#fff; padding:8px 12px; border-radius:8px;">
           <div style="font-size:12px;color:#c7c7c7; margin-bottom:4px;">${time}</div>
           <div>${safe}</div>
@@ -300,18 +273,16 @@ const HomeDM = (() => {
       </div>`;
   }
 
-  // ---- Handlers ----
+  // ----- Handlers -----
   async function onSelectFriend(friendId, friendName) {
     st.activeFriendId = friendId;
     st.activeFriendName = friendName || ('User ' + friendId);
     setActiveFriendName(st.activeFriendName);
 
-    // Switch to conversation view
     showConversation();
 
-    // Load conversation + messages
     const conv = await getOrCreateConversation(friendId);
-    st.conversationId = conv.id;
+    st.conversationId = String(conv.id);      // chuẩn hóa String
     const msgs = await fetchMessages(st.conversationId, 0, 50);
     renderMessages(msgs);
   }
@@ -323,10 +294,13 @@ const HomeDM = (() => {
     if (!content) return;
     try {
       const sent = await sendMessage(st.activeFriendId, content);
-      appendMessage(sent);      // append optimistically
+
+      // Luôn append lạc quan để sender thấy ngay; WS về sẽ được de-dup theo id
+      appendMessage(sent);
+
       dmInput.value = '';
-      if (!st.conversationId && sent.conversationId) {
-        st.conversationId = sent.conversationId;
+      if (!st.conversationId && sent.conversationId != null) {
+        st.conversationId = String(sent.conversationId);
       }
     } catch (e) {
       console.error('[Send DM Error]', e);
@@ -337,30 +311,43 @@ const HomeDM = (() => {
   }
 
   function onIncomingMessage(msg) {
-    // Only show if it's the active conversation
-    if (st.conversationId && msg.conversationId === st.conversationId) {
-      appendMessage(msg);
+      console.log('%c[SOCKET] TIN NHẮN ĐẾN!', 'color: red; font-size: 16px; font-weight: bold;');
+      console.log('Dữ liệu tin nhắn:', msg);
+      console.log('ID Hội thoại hiện tại (State):', st.conversationId, typeof st.conversationId);
+      console.log('ID Hội thoại tin nhắn (Msg):', msg.conversationId, typeof msg.conversationId);
+      const currentId = String(st.conversationId || '');
+      const msgId = String(msg.conversationId || '');
+      console.log(`So sánh: "${currentId}" giống "${msgId}" không? -> ${currentId === msgId}`);
+      if (currentId === msgId) {
+          console.log('ID KHỚP -> ĐANG CẬP NHẬT GIAO DIỆN...');
+          appendMessage(msg);
+          // Scroll xuống dưới cùng sau khi thêm tin
+          const { dmMessages } = els();
+          if (dmMessages) {
+              // Dùng setTimeout để đảm bảo HTML render xong mới scroll
+              setTimeout(() => {
+                  dmMessages.scrollTop = dmMessages.scrollHeight;
+              }, 50);
+          }
+      } else {
+          console.warn('⚠ID KHÔNG KHỚP -> KHÔNG HIỂN THỊ. (Bạn đang chat với người khác?)');
+      }
     }
-    // TODO: update preview/unread in sidebar if needed
-  }
 
-  // ---- Init ----
+  // ----- Init -----
   async function init() {
     try {
       st.currentUserId = window.state.currentUser?.id || null;
 
-      // Bind send events
       const { dmSendBtn, dmInput } = els();
       dmSendBtn?.addEventListener('click', onSend);
       dmInput?.addEventListener('keydown', (e) => { if (e.key === 'Enter') onSend(); });
 
-      // Load friends to both sidebar and center (dashboard)
       st.friends = await fetchFriends();
       renderFriendsSidebar(st.friends);
       renderFriendsCenter(st.friends);
-      showDashboard(); // Default view like dm-ui
+      showDashboard();
 
-      // Robust WS connect (auto-reconnect)
       connectWS(onIncomingMessage);
     } catch (err) {
       console.error('[HomeDM.init Error]', err);

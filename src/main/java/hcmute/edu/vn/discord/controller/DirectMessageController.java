@@ -4,39 +4,31 @@ import hcmute.edu.vn.discord.dto.request.DirectMessageRequest;
 import hcmute.edu.vn.discord.dto.request.EditMessageRequest;
 import hcmute.edu.vn.discord.dto.response.ConversationResponse;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
-import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.service.DirectMessageService;
 import hcmute.edu.vn.discord.service.UserService;
+import hcmute.edu.vn.discord.security.services.UserDetailsImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.user.SimpUserRegistry;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
-import hcmute.edu.vn.discord.security.services.UserDetailsImpl;
-
-import java.util.ArrayList;
-import java.util.List;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/direct-messages")
 @Tag(name = "Direct Messages", description = "Operations for private 1-on-1 messaging")
 @RequiredArgsConstructor
-@lombok.extern.slf4j.Slf4j
+@Slf4j
 public class DirectMessageController {
 
-    @Autowired
-    private SimpUserRegistry simpUserRegistry;
     private final DirectMessageService directMessageService;
     private final SimpMessagingTemplate messagingTemplate;
     private final UserService userService;
@@ -50,22 +42,25 @@ public class DirectMessageController {
             throw new IllegalArgumentException("User is null or unauthenticated");
         }
         Long senderId = user.getId();
+        // 1. Lưu tin nhắn xuống DB
         DirectMessageResponse response = directMessageService.sendMessage(senderId, request);
-
-        // 1. Receiver
         userService.findById(request.getReceiverId()).ifPresentOrElse(receiver -> {
-            log.info("REST: DM from {} to Receiver Username: {}", user.getUsername(), receiver.getUsername());
-            // gửi đến tất cả principal name có thể (username/email) nhưng chỉ nếu đang online
-            sendToOnlinePrincipalNames(receiver, response);
-        }, () -> log.error("REST: Receiver not found with ID: {}", request.getReceiverId()));
-
-        // 2. Sender (multi-device)
-        // sender cũng có thể dùng email làm principal; gửi theo registry
-        var senderPrincipals = List.of(user.getUsername());
-        for (String name : senderPrincipals) {
-            if (simpUserRegistry.getUser(name) != null) {
-                messagingTemplate.convertAndSendToUser(name, "/queue/dm", response);
+            if (receiver.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        receiver.getUsername(),
+                        "/queue/dm",
+                        response
+                );
+                log.info("WS: Đã gửi tin nhắn đến hàng đợi của user: {}", receiver.getUsername());
             }
+        }, () -> log.error("REST: Không tìm thấy người nhận ID: {}", request.getReceiverId()));
+        // 3. Gửi Real-time lại cho người gửi (để đồng bộ đa thiết bị/tab)
+        if (user.getUsername() != null) {
+            messagingTemplate.convertAndSendToUser(
+                    user.getUsername(),
+                    "/queue/dm",
+                    response
+            );
         }
 
         return ResponseEntity.ok(response);
@@ -110,6 +105,7 @@ public class DirectMessageController {
         return ResponseEntity.ok(
                 directMessageService.getOrCreateConversation(user.getId(), receiverId));
     }
+
     @Operation(summary = "Get or create DM conversation by friend userId")
     @GetMapping("/conversation/by-user/{friendId}")
     public ResponseEntity<ConversationResponse> getOrCreateConversationByUser(
@@ -120,17 +116,5 @@ public class DirectMessageController {
         }
         ConversationResponse conv = directMessageService.getOrCreateConversation(user.getId(), friendId);
         return ResponseEntity.ok(conv);
-    }
-    private void sendToOnlinePrincipalNames(User target, Object payload) {
-        List<String> names = new ArrayList<>();
-        if (target.getUsername() != null) names.add(target.getUsername());
-        if (target.getEmail() != null) names.add(target.getEmail());
-
-        for (String name : names) {
-            if (name != null && simpUserRegistry.getUser(name) != null) {
-                messagingTemplate.convertAndSendToUser(name, "/queue/dm", payload);
-                log.info("Sent DM to principal: {}", name);
-            }
-        }
     }
 }
