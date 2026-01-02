@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="https://www.thymeleaf.org">
+<head>
+    <title>Tin nhắn</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<div class="main-container">
+    <div class="sidebar dm-sidebar">
+        <div class="search-bar"><input type="text" placeholder="Tìm cuộc trò chuyện..."></div>
+        <div class="dm-list">
+            <div class="dm-user active">
+                <span th:text="${currentFriend.username}">Friend Name</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-area">
+        <div class="chat-header">
+            <h3><span style="color:gray">@</span> <span th:text="${currentFriend.username}">Username</span></h3>
+        </div>
+
+        <div class="messages-wrapper" id="messageContainer">
+            <div th:each="msg : ${messages}"
+                 th:class="${msg.senderId == currentUser.id} ? 'message self' : 'message other'">
+                <img th:if="${msg.senderId != currentUser.id}" th:src="${currentFriend.avatarUrl}" class="avatar-msg">
+                <div class="message-content">
+                    <span class="msg-sender" th:text="${msg.senderName}">Name</span>
+                    <p th:text="${msg.content}">Hello world</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            <form id="chatForm">
+                <input type="hidden" id="receiverId" th:value="${currentFriend.id}">
+                <button type="button" class="btn-upload">+</button>
+                <input type="text" id="msgInput" placeholder="Nhắn tin..." autocomplete="off">
+                <button type="submit">Gửi</button>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>
