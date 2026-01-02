@@ -209,6 +209,8 @@ public class ServerAuth {
 
     // Tạo lời mời
     public boolean canCreateInvite(Long serverId, String username) {
+        if (isOwner(serverId, username))
+            return true;
         if (!isMember(serverId, username))
             return false;
         return has(serverId, username, Set.of(

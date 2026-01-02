@@ -174,14 +174,25 @@
             <div class="modal-body">
                 <div class="input-group">
                     <label>TÌM KIẾM BẠN BÈ</label>
-                    <div class="search-box-invite"><input type="text" placeholder="Tìm kiếm bạn bè"><i
-                            class="fa-solid fa-magnifying-glass" style="color: #b5bac1;"></i></div>
+                    <div class="search-box-invite">
+                        <input type="text" id="invite-search-input" placeholder="Tìm kiếm bạn bè"
+                            onkeyup="filterInviteFriends()">
+                        <i class="fa-solid fa-magnifying-glass" style="color: #b5bac1;"></i>
+                    </div>
                 </div>
+
+                <div id="invite-friend-list" class="invite-friend-list custom-scrollbar"
+                    style="max-height: 200px; overflow-y: auto; margin-bottom: 20px;">
+                    <!-- Friend items will optionally be injected here by JS -->
+                </div>
+
                 <div class="invite-divider"></div>
                 <div class="input-group">
                     <label>HOẶC GỬI LIÊN KẾT</label>
-                    <div class="copy-link-box"><input type="text" value="https://discord.gg/hcmute" readonly><button
-                            class="btn-copy">Sao chép</button></div>
+                    <div class="copy-link-box">
+                        <input type="text" id="invite-link-input" value="Đang tải..." readonly>
+                        <button class="btn-copy" id="btn-copy-invite" onclick="copyInviteLink()">Sao chép</button>
+                    </div>
                 </div>
             </div>
         </div>

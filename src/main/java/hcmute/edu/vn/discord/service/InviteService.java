@@ -1,6 +1,8 @@
 package hcmute.edu.vn.discord.service;
 
 import hcmute.edu.vn.discord.entity.jpa.Invite;
+import jakarta.transaction.Transactional;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -15,7 +17,8 @@ public interface InviteService {
     boolean useInvite(String code);
 
     // XỬ LÝ GIA NHẬP SERVER
-    void joinServer(String code);
+    @Transactional
+    Long joinServer(String code);
 
     // Lấy danh sách invite của server
     List<Invite> getInvitesByServer(Long serverId);

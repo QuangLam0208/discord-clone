@@ -32,6 +32,7 @@ public class DatabaseSeeder implements CommandLineRunner {
     private final ServerMemberRepository serverMemberRepository;
     private final PermissionRepository permissionRepository;
     private final CategoryRepository categoryRepository;
+    private final ServerRoleRepository serverRoleRepository;
     // service để seed friend và messages
     private final FriendService friendService;
     private final MessageService messageService;
@@ -53,8 +54,10 @@ public class DatabaseSeeder implements CommandLineRunner {
 
         Server s1 = createServerWithMembers(users.get(0), "Admin's Server", "Server riêng tư", List.of());
         Server s2 = createServerWithMembers(users.get(1), "Duo Gaming", "Chơi game cặp", List.of(users.get(2)));
-        Server s3 = createServerWithMembers(users.get(3), "Trio Coding", "Hội lập trình 3 người", List.of(users.get(4), users.get(5)));
-        Server s4 = createServerWithMembers(users.get(6), "Squad Community", "Cộng đồng lớn", List.of(users.get(7), users.get(8), users.get(9)));
+        Server s3 = createServerWithMembers(users.get(3), "Trio Coding", "Hội lập trình 3 người",
+                List.of(users.get(4), users.get(5)));
+        Server s4 = createServerWithMembers(users.get(6), "Squad Community", "Cộng đồng lớn",
+                List.of(users.get(7), users.get(8), users.get(9)));
 
         createDefaultCategoriesAndAssignChannels(s1);
         createDefaultCategoriesAndAssignChannels(s2);
@@ -139,13 +142,34 @@ public class DatabaseSeeder implements CommandLineRunner {
         server.setStatus(ServerStatus.ACTIVE);
         server = serverRepository.save(server);
 
+        // Create @everyone Role
+        ServerRole everyoneRole = new ServerRole();
+        everyoneRole.setName("@everyone");
+        everyoneRole.setServer(server);
+        everyoneRole.setPriority(0);
+        everyoneRole.setPermissions(new HashSet<>());
+
+        // Assign VIEW_CHANNELS to @everyone so they can see public channels
+        Permission pView = permissionRepository.findByCode(EPermission.VIEW_CHANNELS.getCode()).orElse(null);
+        Permission pMsg = permissionRepository.findByCode(EPermission.SEND_MESSAGES.getCode()).orElse(null);
+        Permission pHistory = permissionRepository.findByCode(EPermission.READ_MESSAGE_HISTORY.getCode()).orElse(null);
+
+        if (pView != null)
+            everyoneRole.getPermissions().add(pView);
+        if (pMsg != null)
+            everyoneRole.getPermissions().add(pMsg);
+        if (pHistory != null)
+            everyoneRole.getPermissions().add(pHistory);
+
+        everyoneRole = serverRoleRepository.save(everyoneRole);
+
         Channel ch1 = createChannel(server, "general", ChannelType.TEXT);
         Channel ch2 = createChannel(server, "chat-dev", ChannelType.TEXT);
         Channel ch3 = createChannel(server, "Lobby Voice", ChannelType.VOICE);
 
-        addMemberToServer(server, owner);
+        addMemberToServer(server, owner, everyoneRole);
         for (User member : membersToAdd) {
-            addMemberToServer(server, member);
+            addMemberToServer(server, member, everyoneRole);
         }
 
         return server;
@@ -160,12 +184,13 @@ public class DatabaseSeeder implements CommandLineRunner {
         return channelRepository.save(channel);
     }
 
-    private void addMemberToServer(Server server, User user) {
+    private void addMemberToServer(Server server, User user, ServerRole everyoneRole) {
         ServerMember member = new ServerMember();
         member.setServer(server);
         member.setUser(user);
         member.setNickname(user.getDisplayName());
         member.setIsBanned(false);
+        member.setRoles(new HashSet<>(Set.of(everyoneRole)));
         serverMemberRepository.save(member);
     }
 
@@ -218,23 +243,28 @@ public class DatabaseSeeder implements CommandLineRunner {
     }
 
     private void seedChannelMessages(Server server) {
-        // Tạo 5 tin nhắn mẫu trong channel TEXT đầu tiên của server (nếu có MessageService)
+        // Tạo 5 tin nhắn mẫu trong channel TEXT đầu tiên của server (nếu có
+        // MessageService)
         List<Channel> textChannels = channelRepository.findByServerIdAndType(server.getId(), ChannelType.TEXT);
-        if (textChannels.isEmpty()) return;
+        if (textChannels.isEmpty())
+            return;
 
         Channel target = textChannels.get(0);
         // Lấy danh sách member để chọn người gửi
         List<ServerMember> members = serverMemberRepository.findByServerId(server.getId());
-        if (members.isEmpty()) return;
+        if (members.isEmpty())
+            return;
 
         List<User> senders = new ArrayList<>();
         for (ServerMember m : members) {
-            if (m.getUser() != null) senders.add(m.getUser());
+            if (m.getUser() != null)
+                senders.add(m.getUser());
         }
-        if (senders.isEmpty()) return;
+        if (senders.isEmpty())
+            return;
 
         // Gửi 5 tin nhắn theo thứ tự sender xoay vòng
-        String[] contents = new String[]{
+        String[] contents = new String[] {
                 "Chào mọi người 👋",
                 "Dự án Discord clone ngày 1: hoàn thiện auth + layout.",
                 "Nhớ merge vào dev giữa ngày nhé!",
@@ -261,8 +291,7 @@ public class DatabaseSeeder implements CommandLineRunner {
             var list = messageService.getMessagesByChannel(
                     target.getId(),
                     senders.get(0).getUsername(),
-                    PageRequest.of(0, 20, Sort.by("createdAt").descending())
-            );
+                    PageRequest.of(0, 20, Sort.by("createdAt").descending()));
             System.out.printf("Seeded %d messages in channel #%s (server %s)%n",
                     list.size(), target.getName(), server.getName());
         } catch (Exception e) {

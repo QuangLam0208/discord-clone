@@ -36,6 +36,7 @@
     <script src="/js/channel.js?v=2"></script>
     <script src="/js/chat.js?v=2"></script>
     <script src="/js/upload.js?v=2"></script>
+    <script src="/js/invite.js?v=1"></script>
     <script>
         // 1. Logic Switch View
         function switchToDM() { toggleViews('dm'); }
@@ -77,7 +78,7 @@
         }
 
         // 5. Triggers
-        function triggerInvite() { ctxMenu.classList.remove('visible'); openModal('inviteModal'); }
+        function triggerInvite() { ctxMenu.classList.remove('visible'); if (window.openInviteModal) window.openInviteModal(); }
         function triggerCreateChannelRoot() { ctxMenu.classList.remove('visible'); openModal('createChannelRootModal'); }
         function triggerCreateCategory() { ctxMenu.classList.remove('visible'); openModal('createCategoryModal'); }
 

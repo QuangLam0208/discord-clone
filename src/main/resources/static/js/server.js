@@ -74,94 +74,212 @@ window.onClickServer = function (serverId) {
 document.addEventListener('DOMContentLoaded', () => {
     const createServerBtn = document.getElementById('createServerBtn');
     if (createServerBtn) {
+        // Re-bind to handle Swal correctly
         createServerBtn.onclick = async () => {
-            await Swal.fire({
-                title: 'Tạo máy chủ mới',
-                html: `
+            const result = await Swal.fire({
+                title: 'Thêm máy chủ',
+                text: 'Bạn muốn tạo máy chủ mới hay tham gia máy chủ có sẵn?',
+                showCancelButton: true,
+                showDenyButton: true,
+                confirmButtonText: 'Tạo mới',
+                denyButtonText: 'Tham gia',
+                cancelButtonText: 'Hủy',
+                confirmButtonColor: '#23a559',
+                denyButtonColor: '#5865f2',
+                background: '#313338',
+                color: '#dbdee1'
+            });
+
+            if (result.isConfirmed) {
+                showCreateServerDialog();
+            } else if (result.isDenied) {
+                showJoinServerDialog();
+            }
+        };
+    }
+});
+
+// Helper: Show Join Dialog
+async function showJoinServerDialog() {
+    const { value: code } = await Swal.fire({
+        title: 'Tham gia máy chủ',
+        input: 'text',
+        inputLabel: 'Nhập mã mời hoặc liên kết',
+        inputPlaceholder: 'https://discord.gg/... hoặc mã code',
+        showCancelButton: true,
+        confirmButtonText: 'Tham gia',
+        cancelButtonText: 'Hủy',
+        background: '#313338',
+        color: '#dbdee1',
+        confirmButtonColor: '#5865f2',
+        inputValidator: (value) => {
+            if (!value) {
+                return 'Bạn cần nhập mã mời!';
+            }
+        }
+    });
+
+    if (code) {
+        // Extract code if it's a URL
+        let inviteCode = code;
+        if (code.includes('/invite/')) {
+            const parts = code.split('/invite/');
+            if (parts.length > 1) inviteCode = parts[1];
+        } else if (code.includes('/')) {
+            // Basic naive check if user pasted a full url not matching standard pattern
+            // Let's just try sending what they gave if it looks like a code, otherwise assume last part
+            const parts = code.split('/');
+            inviteCode = parts[parts.length - 1];
+        }
+
+        // Remove query parameters if any
+        if (inviteCode && inviteCode.includes('?')) {
+            inviteCode = inviteCode.split('?')[0];
+        }
+
+        inviteCode = inviteCode ? inviteCode.trim() : '';
+
+        if (!inviteCode || inviteCode === 'undefined') {
+            Swal.fire('Lỗi', 'Mã mời không hợp lệ (Trống hoặc lỗi)', 'error');
+            return;
+        }
+
+        console.log("Joining with code:", inviteCode);
+
+        try {
+            const response = await Api.post(`/api/invites/join/${inviteCode}`);
+            Swal.fire({
+                icon: 'success',
+                title: 'Thành công',
+                text: 'Bạn đã tham gia máy chủ!',
+                background: '#313338',
+                color: '#dbdee1',
+                timer: 1500,
+                showConfirmButton: false
+            });
+            await loadServers(); // Reload custom server list
+
+            // Auto switch to new server
+            if (response && response.serverId) {
+                console.log("Switching to new server:", response.serverId);
+                setTimeout(() => onClickServer(response.serverId), 500);
+            }
+        } catch (e) {
+            console.error(e);
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi',
+                text: e.message || 'Mã mời không hợp lệ hoặc đã hết hạn.',
+                background: '#313338',
+                color: '#dbdee1'
+            });
+        }
+    }
+}
+
+// Helper: Show Create Dialog (The original logic refactored)
+async function showCreateServerDialog() {
+    await Swal.fire({
+        title: 'Tạo máy chủ mới',
+        html: `
                     <div style="display: flex; flex-direction: column; align-items: center; gap: 15px; margin-bottom: 10px;">
                         <div id="swal-preview" style="width: 80px; height: 80px; border-radius: 50%; background-color: #333; display: flex; justify-content: center; align-items: center; overflow: hidden; border: 2px dashed #99aab5; cursor: pointer; position: relative;">
                             <span style="font-size: 10px; color: #b9bbbe; font-weight: bold; text-align: center;">UPLOAD<br>ICON</span>
                             <img id="swal-preview-img" style="width: 100%; height: 100%; object-fit: cover; display: none; position: absolute; top:0; left:0;">
                         </div>
                         <input type="file" id="swal-file" style="display: none" accept="image/*">
-                        <input id="swal-input1" class="swal2-input" placeholder="Tên máy chủ" style="margin: 0 !important; width: 80%;">
+                        <input id="swal-input1" class="swal2-input" placeholder="Tên máy chủ" style="margin: 0 !important; width: 80%; background: #1e1f22; color: #dbdee1; border: none;">
                     </div>
                 `,
-                focusConfirm: false,
-                showCancelButton: true,
-                confirmButtonText: 'Tạo',
-                cancelButtonText: 'Hủy',
-                didOpen: () => {
-                    const preview = document.getElementById('swal-preview');
-                    const fileInput = document.getElementById('swal-file');
-                    const previewImg = document.getElementById('swal-preview-img');
+        background: '#313338',
+        color: '#dbdee1',
+        focusConfirm: false,
+        showCancelButton: true,
+        confirmButtonText: 'Tạo',
+        cancelButtonText: 'Hủy',
+        confirmButtonColor: '#23a559',
+        didOpen: () => {
+            const preview = document.getElementById('swal-preview');
+            const fileInput = document.getElementById('swal-file');
+            const previewImg = document.getElementById('swal-preview-img');
 
-                    preview.onclick = () => fileInput.click();
+            preview.onclick = () => fileInput.click();
 
-                    fileInput.onchange = () => {
-                        const file = fileInput.files[0];
-                        if (file) {
-                            const reader = new FileReader();
-                            reader.onload = (e) => {
-                                previewImg.src = e.target.result;
-                                previewImg.style.display = 'block';
-                            }
-                            reader.readAsDataURL(file);
-                        }
-                    };
-                },
-                preConfirm: async () => {
-                    const name = document.getElementById('swal-input1').value;
-                    const file = document.getElementById('swal-file').files[0];
-
-                    if (!name) {
-                        Swal.showValidationMessage('Vui lòng nhập tên máy chủ');
-                        return false;
+            fileInput.onchange = () => {
+                const file = fileInput.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        previewImg.src = e.target.result;
+                        previewImg.style.display = 'block';
                     }
-
-                    let iconUrl = null;
-                    if (file) {
-                        if (file.size > 10 * 1024 * 1024) {
-                            Swal.showValidationMessage('File quá lớn (Max 10MB)');
-                            return false;
-                        }
-
-                        try {
-                            const formData = new FormData();
-                            formData.append('file', file);
-                            const res = await Api.upload('/api/upload', formData);
-                            iconUrl = res.url;
-                        } catch (e) {
-                            Swal.showValidationMessage('Lỗi upload ảnh: ' + e.message);
-                            return false;
-                        }
-                    }
-
-                    return { name, iconUrl };
+                    reader.readAsDataURL(file);
                 }
-            }).then(async (result) => {
-                if (result.isConfirmed) {
-                    const { name, iconUrl } = result.value;
-                    try {
-                        const newServer = await Api.post('/api/servers', {
-                            name: name,
-                            iconUrl: iconUrl
-                        });
+            };
+        },
+        preConfirm: async () => {
+            const name = document.getElementById('swal-input1').value;
+            const file = document.getElementById('swal-file').files[0];
 
-                        if (newServer) {
-                            Swal.fire('Thành công', 'Máy chủ đã được tạo!', 'success');
-                            await loadServers();
-                            onClickServer(newServer.id);
-                        }
-                    } catch (e) {
-                        console.error("Create server error:", e);
-                        Swal.fire('Lỗi', 'Không thể tạo máy chủ: ' + e.message, 'error');
-                    }
+            if (!name) {
+                Swal.showValidationMessage('Vui lòng nhập tên máy chủ');
+                return false;
+            }
+
+            let iconUrl = null;
+            if (file) {
+                if (file.size > 10 * 1024 * 1024) {
+                    Swal.showValidationMessage('File quá lớn (Max 10MB)');
+                    return false;
                 }
-            });
-        };
-    }
-});
+
+                try {
+                    const formData = new FormData();
+                    formData.append('file', file);
+                    const res = await Api.upload('/api/upload', formData);
+                    iconUrl = res.url;
+                } catch (e) {
+                    Swal.showValidationMessage('Lỗi upload ảnh: ' + e.message);
+                    return false;
+                }
+            }
+
+            return { name, iconUrl };
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const { name, iconUrl } = result.value;
+            try {
+                const newServer = await Api.post('/api/servers', {
+                    name: name,
+                    iconUrl: iconUrl
+                });
+
+                if (newServer) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Thành công',
+                        text: 'Máy chủ đã được tạo!',
+                        background: '#313338',
+                        color: '#dbdee1'
+                    });
+                    await loadServers();
+                    onClickServer(newServer.id);
+                }
+            } catch (e) {
+                console.error("Create server error:", e);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi',
+                    text: 'Không thể tạo máy chủ: ' + e.message,
+                    background: '#313338',
+                    color: '#dbdee1'
+                });
+            }
+        }
+    });
+}
+
 
 // 3. EDIT & DELETE SERVER
 window.editServer = async (id) => {
