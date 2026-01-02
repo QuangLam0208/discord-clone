@@ -21,10 +21,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.*;
+
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.Files;
@@ -46,6 +44,10 @@ import java.util.Set;
  * 3. Profile (Upload Avatar)
  * 4. Admin Users (CRUD)
  * 5. Admin Servers (CRUD)
+ *
+ * Đồng bộ với cơ chế của nhánh ui-js để tránh vòng lặp:
+ * - /login và /register luôn trả về view tương ứng, KHÔNG tự redirect sang /home.
+ * - / (root) nếu đã xác thực thì redirect /home, chưa xác thực thì trả về login.
  */
 @Controller
 @RequiredArgsConstructor
@@ -85,12 +87,12 @@ public class ViewController {
 
     @GetMapping("/login")
     public String loginPage() {
-        return getCurrentUser() != null ? "redirect:/home" : "login";
+        return "login";
     }
 
     @GetMapping("/register")
     public String registerPage() {
-        return getCurrentUser() != null ? "redirect:/home" : "register";
+        return "register";
     }
 
     @GetMapping("/home")
