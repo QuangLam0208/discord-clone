@@ -58,17 +58,6 @@ window.loadCategoriesAndChannels = async function (serverId) {
             });
         }
 
-        // ADD CREATE CATEGORY BUTTON
-        if (state.currentServerId) {
-            const createCatBtn = document.createElement('div');
-            createCatBtn.className = 'channel-item';
-            createCatBtn.style.color = '#aaa';
-            createCatBtn.style.cursor = 'pointer';
-            createCatBtn.innerHTML = '<i class="fa-solid fa-folder-plus"></i> Tạo Category mới';
-            createCatBtn.onclick = createCategory;
-            channelArea.appendChild(createCatBtn);
-        }
-
         // Auto Select First Channel
         const firstChannel = channelArea.querySelector('.channel-item:not([style*="color: #aaa"])');
         if (firstChannel) firstChannel.click();
@@ -367,6 +356,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     const serverId = targetServer.dataset.serverId;
                     const ownerId = parseInt(targetServer.dataset.ownerId);
                     const isOwner = state.currentUser && state.currentUser.id === ownerId;
+
+                    // Luôn cho phép tạo Category (hoặc check permission nếu cần)
+                    if (isOwner || true) { // Tạm thời cho phép all, hoặc check permission
+                        ctxMenu.innerHTML += `
+                            <div class="menu-item" onclick="createCategory()">
+                                <span>Tạo Category</span><i class="fa-solid fa-folder-plus"></i>
+                            </div>
+                            <div class="menu-separator"></div>
+                        `;
+                    }
 
                     if (isOwner) {
                         ctxMenu.innerHTML += `
