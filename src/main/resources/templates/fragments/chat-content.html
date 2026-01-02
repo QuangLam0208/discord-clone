@@ -1,4 +1,5 @@
 <main class="chat-content" th:fragment="chat-content" xmlns:th="http://www.thymeleaf.org">
+    <!-- Server view (giữ nguyên) -->
     <div id="server-chat-view" style="display: none; height: 100%; flex-direction: column;">
         <div class="top-bar">
             <i class="fa-solid fa-hashtag" style="color: #72767d; margin-right: 8px;"></i>
@@ -28,7 +29,8 @@
         </div>
     </div>
 
-    <div id="dm-chat-view" style="display: flex; height: 100%; flex-direction: column;">
+    <!-- DM default: Dashboard giống ảnh (bên trái danh sách bạn, giữa danh sách bạn bè, phải 'Đang hoạt động') -->
+    <div id="dm-dashboard-view" style="display: flex; height: 100%; flex-direction: column;">
         <div class="top-bar friend-header-bar">
             <div class="friend-header-left">
                 <div class="friend-title-wrapper">
@@ -45,16 +47,45 @@
         <div class="friend-dashboard-body">
             <div class="friend-list-section">
                 <div class="friend-search-wrapper">
-                    <input type="text" placeholder="Tìm kiếm">
+                    <input type="text" id="dm-center-search" placeholder="Tìm kiếm">
                     <i class="fa-solid fa-magnifying-glass"></i>
                 </div>
-                <div class="friend-label">TẤT CẢ BẠN BÈ — 0</div>
-                <div class="empty-list-container"></div>
+                <div class="friend-label">TẤT CẢ BẠN BÈ — <span id="dm-center-count">0</span></div>
+                <!-- Danh sách bạn hiển thị ở giữa (giống ảnh) -->
+                <div id="dm-center-list" class="empty-list-container"></div>
             </div>
             <div class="active-now-section">
                 <h3 class="active-now-title">Đang hoạt động</h3>
                 <div class="empty-active-state">
                     <div class="empty-text-bold">Hiện không có ai đang hoạt động</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DM conversation: khi chọn bạn sẽ bật view này -->
+    <div id="dm-conversation-view" style="display: none; height: 100%; flex-direction: column;">
+        <div class="top-bar friend-header-bar">
+            <div class="friend-header-left">
+                <div class="friend-title-wrapper">
+                    <i class="fa-solid fa-user icon-friend"></i>
+                    <span id="dm-active-friend-name" class="title-friend">Tin nhắn trực tiếp</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="dm-messages" class="custom-scrollbar" style="flex:1; overflow:auto; padding:16px; display:flex; flex-direction:column; gap:12px;">
+            <!-- Render bằng JS -->
+        </div>
+
+        <div class="input-area" style="padding:12px; border-top:1px solid #1f2023;">
+            <div class="input-wrapper" style="display:flex; align-items:center; gap:12px;">
+                <label for="dm-file-upload" class="upload-icon-btn"><i class="fa-solid fa-circle-plus"></i></label>
+                <input type="file" id="dm-file-upload" style="display:none;">
+                <input type="text" id="dm-input" placeholder="Nhắn tin cho @..." style="flex:1;">
+                <div class="input-right-icons">
+                    <i class="fa-solid fa-gift"></i>
+                    <i class="fa-solid fa-face-smile"></i>
                 </div>
             </div>
         </div>

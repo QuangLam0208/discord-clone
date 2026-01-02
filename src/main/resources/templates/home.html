@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-
 <head>
     <meta charset="UTF-8">
     <title>Discord Clone</title>
@@ -8,81 +7,52 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 </head>
-
 <body>
+<div class="app-layout" id="app" style="display: none;">
+    <nav th:replace="~{fragments/server-nav :: server-nav}"></nav>
+    <aside th:replace="~{fragments/channel-sidebar :: channel-sidebar}"></aside>
+    <main th:replace="~{fragments/chat-content :: chat-content}"></main>
+</div>
 
-    <div class="app-layout" id="app" style="display: none;">
+<div th:replace="~{fragments/modals :: modals}"></div>
 
-        <!-- Sidebar (Server Nav) -->
-        <nav th:replace="~{fragments/server-nav :: server-nav}"></nav>
+<script src="/js/api.js?v=1"></script>
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script src="/js/home.js?v=5"></script>
+<script src="/js/user.js?v=2"></script>
+<script src="/js/server.js?v=2"></script>
+<script src="/js/channel.js?v=2"></script>
+<script src="/js/chat.js?v=2"></script>
+<script src="/js/upload.js?v=2"></script>
 
-        <!-- Channels Sidebar -->
-        <aside th:replace="~{fragments/channel-sidebar :: channel-sidebar}"></aside>
+<script>
+    function switchToDM() { toggleViews('dm'); }
+    function switchToServer(el) {
+        document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
+        if (el) el.classList.add('active');
+        toggleViews('server');
+    }
+    function toggleViews(type) {
+        const isServer = type === 'server';
+        const serverChannels = document.getElementById('server-channels-view');
+        const dmChannels     = document.getElementById('dm-channels-view');
+        const serverChat     = document.getElementById('server-chat-view');
+        const dmDashboard    = document.getElementById('dm-dashboard-view');
+        const dmConversation = document.getElementById('dm-conversation-view');
 
-        <!-- Chat Content -->
-        <main th:replace="~{fragments/chat-content :: chat-content}"></main>
-    </div>
+        if (serverChannels) serverChannels.style.display = isServer ? 'flex' : 'none';
+        if (dmChannels)     dmChannels.style.display     = isServer ? 'none' : 'flex';
+        if (serverChat)     serverChat.style.display     = isServer ? 'flex' : 'none';
 
-    <!-- Modals & Context Menus -->
-    <div th:replace="~{fragments/modals :: modals}"></div>
+        // Mặc định DM -> Dashboard
+        const isDM = !isServer;
+        if (dmDashboard)    dmDashboard.style.display    = isDM ? 'flex' : 'none';
+        if (dmConversation) dmConversation.style.display = 'none';
+    }
 
-    <script src="/js/api.js?v=1"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
-    <!-- Load Modules (Order matters) -->
-    <script src="/js/home.js?v=2"></script> <!-- Main State & Init -->
-    <script src="/js/user.js?v=2"></script>
-    <script src="/js/server.js?v=2"></script>
-    <script src="/js/channel.js?v=2"></script>
-    <script src="/js/chat.js?v=2"></script>
-    <script src="/js/upload.js?v=2"></script>
-    <script>
-        // 1. Logic Switch View
-        function switchToDM() { toggleViews('dm'); }
-        function switchToServer(el) {
-            document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
-            el.classList.add('active');
-            toggleViews('server');
-        }
-        function toggleViews(type) {
-            const isServer = type === 'server';
-            document.getElementById('server-channels-view').style.display = isServer ? 'flex' : 'none';
-            document.getElementById('dm-channels-view').style.display = isServer ? 'none' : 'flex';
-            document.getElementById('server-chat-view').style.display = isServer ? 'flex' : 'none';
-            document.getElementById('dm-chat-view').style.display = isServer ? 'none' : 'flex';
-        }
-
-        // 2. Modal Helpers
-        function openModal(id) { document.getElementById(id).classList.add('active'); }
-        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-
-        // 3. Close when click outside
-        window.onclick = function (e) {
-            if (e.target.classList.contains('modal-overlay')) e.target.classList.remove('active');
-            if (!e.target.closest('.context-menu') && !e.target.closest('.channel-list')) {
-                document.getElementById('context-menu').classList.remove('visible');
-            }
-        }
-
-        // 4. Context Menu
-        const channelArea = document.getElementById('server-channel-area');
-        const ctxMenu = document.getElementById('context-menu');
-        if (channelArea) {
-            channelArea.addEventListener('contextmenu', e => {
-                e.preventDefault();
-                ctxMenu.style.top = `${e.clientY}px`;
-                ctxMenu.style.left = `${e.clientX}px`;
-                ctxMenu.classList.add('visible');
-            });
-        }
-
-        // 5. Triggers
-        function triggerInvite() { ctxMenu.classList.remove('visible'); openModal('inviteModal'); }
-        function triggerCreateChannelRoot() { ctxMenu.classList.remove('visible'); openModal('createChannelRootModal'); }
-        function triggerCreateCategory() { ctxMenu.classList.remove('visible'); openModal('createCategoryModal'); }
-
-        switchToDM();
-    </script>
+    // Mặc định mở DM như dm-ui
+    switchToDM();
+</script>
 </body>
-
 </html>

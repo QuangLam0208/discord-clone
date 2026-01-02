@@ -23,8 +23,10 @@
                         <i class="fa-solid fa-angle-down"></i>
                         <span>THÔNG TIN</span>
                     </div>
-                    <i class="fa-solid fa-plus add-channel-icon" id="createChannelInCategoryBtn-cat-1"
-                        onclick="openCreateChannelModal(event, 'THÔNG TIN', 'cat-1')" title="Tạo kênh"></i>
+                    <i class="fa-solid fa-plus add-channel-icon"
+                       id="createChannelInCategoryBtn-cat-1"
+                       onclick="openCreateChannelModal(event, 'THÔNG TIN', 'cat-1')"
+                       title="Tạo kênh"></i>
                 </div>
                 <div class="category-content">
                     <div class="channel-item" data-channel-id="201">
@@ -39,8 +41,10 @@
                         <i class="fa-solid fa-angle-down"></i>
                         <span>TRÒ CHUYỆN</span>
                     </div>
-                    <i class="fa-solid fa-plus add-channel-icon" id="createChannelInCategoryBtn-cat-2"
-                        onclick="openCreateChannelModal(event, 'TRÒ CHUYỆN', 'cat-2')" title="Tạo kênh"></i>
+                    <i class="fa-solid fa-plus add-channel-icon"
+                       id="createChannelInCategoryBtn-cat-2"
+                       onclick="openCreateChannelModal(event, 'TRÒ CHUYỆN', 'cat-2')"
+                       title="Tạo kênh"></i>
                 </div>
                 <div class="category-content">
                     <div class="channel-item" data-channel-id="301">
@@ -56,16 +60,25 @@
     </div>
 
     <div id="dm-channels-view" style="display: flex; flex: 1; flex-direction: column;">
+
         <div class="search-bar-container">
             <button class="search-btn">Tìm kiếm hoặc bắt đầu cuộc trò chuyện</button>
         </div>
+
         <div class="channel-list">
+
             <div class="dm-header-item active">
                 <i class="fa-solid fa-user-group"></i> Bạn bè
             </div>
+
             <div class="category-name" style="margin-top: 16px;">
-                TIN NHẮN TRỰC TIẾP <span style="float: right; cursor: pointer;" id="createDmBtn">+</span>
+                TIN NHẮN TRỰC TIẾP
+                <span style="float: right; cursor: pointer;" id="createDmBtn">+</span>
             </div>
+
+            <div id="dm-direct-list" class="channel-list" style="margin-top: 8px;">
+            </div>
+
         </div>
     </div>
 

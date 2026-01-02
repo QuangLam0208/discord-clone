@@ -1,45 +1,52 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="https://www.thymeleaf.org">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>Tin nhắn</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <meta charset="UTF-8">
+    <title>Direct Messages</title>
+    <link rel="stylesheet" href="/css/style.css?v=3">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body>
-<div class="main-container">
-    <div class="sidebar dm-sidebar">
-        <div class="search-bar"><input type="text" placeholder="Tìm cuộc trò chuyện..."></div>
-        <div class="dm-list">
-            <div class="dm-user active">
-                <span th:text="${currentFriend.username}">Friend Name</span>
+<body style="background:#313338; color:#dcddde; height:100vh; margin:0;">
+<div id="dm-root" style="display:flex; height:100%;">
+    <!-- Left: Friend list -->
+    <aside id="dm-sidebar" style="width:300px; border-right:1px solid #3f4147; display:flex; flex-direction:column;">
+        <div class="friend-search-wrapper" style="padding:12px; border-bottom:1px solid #1f2023;">
+            <input id="dm-search" type="text" placeholder="Tìm kiếm" style="width:100%; background:none; border:none; outline:none; color:#dcddde;">
+        </div>
+        <div class="friend-label" style="padding:8px 12px;">TẤT CẢ BẠN BÈ</div>
+        <div id="dm-friends-list" class="custom-scrollbar" style="flex:1; overflow:auto;"></div>
+    </aside>
+
+    <!-- Right: Conversation -->
+    <main id="dm-chat" style="flex:1; display:flex; flex-direction:column;">
+        <div id="dm-topbar" class="top-bar" style="display:flex; align-items:center; height:48px; border-bottom:1px solid #1f2023; padding:0 16px;">
+            <i class="fa-solid fa-user" style="color:#72767d; margin-right:8px;"></i>
+            <span id="dm-active-friend-name" style="font-weight:bold; color:white;"></span>
+        </div>
+
+        <div id="dm-messages" class="chat-area custom-scrollbar" style="flex:1; overflow:auto; padding:16px; display:flex; flex-direction:column; gap:12px;">
+            <!-- Messages render here -->
+        </div>
+
+        <div class="input-area" style="padding:12px; border-top:1px solid #1f2023;">
+            <div class="input-wrapper" style="display:flex; align-items:center; gap:12px;">
+                <label for="dm-file-upload" class="upload-icon-btn"><i class="fa-solid fa-circle-plus"></i></label>
+                <input type="file" id="dm-file-upload" style="display:none;">
+                <input type="text" id="dm-input" placeholder="Nhập tin nhắn..." style="flex:1;">
+                <button id="dm-send-btn" class="add-friend-btn" style="height:32px;">Gửi</button>
             </div>
         </div>
-    </div>
-
-    <div class="chat-area">
-        <div class="chat-header">
-            <h3><span style="color:gray">@</span> <span th:text="${currentFriend.username}">Username</span></h3>
-        </div>
-
-        <div class="messages-wrapper" id="messageContainer">
-            <div th:each="msg : ${messages}"
-                 th:class="${msg.senderId == currentUser.id} ? 'message self' : 'message other'">
-                <img th:if="${msg.senderId != currentUser.id}" th:src="${currentFriend.avatarUrl}" class="avatar-msg">
-                <div class="message-content">
-                    <span class="msg-sender" th:text="${msg.senderName}">Name</span>
-                    <p th:text="${msg.content}">Hello world</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="chat-input-area">
-            <form id="chatForm">
-                <input type="hidden" id="receiverId" th:value="${currentFriend.id}">
-                <button type="button" class="btn-upload">+</button>
-                <input type="text" id="msgInput" placeholder="Nhắn tin..." autocomplete="off">
-                <button type="submit">Gửi</button>
-            </form>
-        </div>
-    </div>
+    </main>
 </div>
+
+<!-- Libs -->
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+<!-- DM modules -->
+<script src="/js/dm.api.js?v=1"></script>
+<script src="/js/dm.ws.js?v=1"></script>
+<script src="/js/dm.ui.js?v=1"></script>
+<script src="/js/dm.js?v=1"></script>
 </body>
 </html>
