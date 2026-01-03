@@ -4,6 +4,8 @@ import hcmute.edu.vn.discord.dto.request.DirectMessageRequest;
 import hcmute.edu.vn.discord.dto.request.EditMessageRequest;
 import hcmute.edu.vn.discord.dto.response.ConversationResponse;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
+import hcmute.edu.vn.discord.repository.UserRepository;
+import hcmute.edu.vn.discord.security.services.UserDetailsImpl;
 import hcmute.edu.vn.discord.service.DirectMessageService;
 import hcmute.edu.vn.discord.service.UserService;
 import hcmute.edu.vn.discord.security.services.UserDetailsImpl;
@@ -31,7 +33,7 @@ public class DirectMessageController {
 
     private final DirectMessageService directMessageService;
     private final SimpMessagingTemplate messagingTemplate;
-    private final UserService userService;
+    private final UserRepository userRepository;
 
     @Operation(summary = "Send Direct Message", description = "Send a private message to another user.")
     @PostMapping
@@ -117,4 +119,5 @@ public class DirectMessageController {
         ConversationResponse conv = directMessageService.getOrCreateConversation(user.getId(), friendId);
         return ResponseEntity.ok(conv);
     }
+
 }

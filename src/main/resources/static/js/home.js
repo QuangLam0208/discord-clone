@@ -31,6 +31,5 @@ document.addEventListener('DOMContentLoaded', async function () {
       console.error('[App Init Error]', err);
     }
   }
-
   await init();
 });

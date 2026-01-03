@@ -10,6 +10,7 @@ import hcmute.edu.vn.discord.repository.ConversationRepository;
 import hcmute.edu.vn.discord.repository.DirectMessageRepository;
 import hcmute.edu.vn.discord.repository.UserRepository;
 import hcmute.edu.vn.discord.service.DirectMessageService;
+import hcmute.edu.vn.discord.entity.jpa.User;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -186,11 +187,25 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     }
 
     private DirectMessageResponse toResponse(DirectMessage m) {
+        // 1. Lấy thông tin người gửi từ UserRepository
+        User sender = userRepo.findById(m.getSenderId()).orElse(null);
+        String name = "Unknown";
+        String avatar = null;
+
+        if (sender != null) {
+            // Ưu tiên hiển thị Display Name, nếu không có thì dùng Username
+            name = (sender.getDisplayName() != null && !sender.getDisplayName().isEmpty())
+                    ? sender.getDisplayName()
+                    : sender.getUsername();
+            avatar = sender.getAvatarUrl();
+        }
         return DirectMessageResponse.builder()
                 .id(m.getId())
                 .conversationId(m.getConversationId())
                 .senderId(m.getSenderId())
                 .receiverId(m.getReceiverId())
+                .senderName(name)
+                .senderAvatar(avatar)
                 .content(m.getContent())
                 .createdAt(m.getCreatedAt())
                 .edited(m.isEdited())
