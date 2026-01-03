@@ -1,0 +1,68 @@
+<div class="stats">
+    <div class="card stat">
+        <div class="stat-icon users"><i class="fa-solid fa-user-group"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Tổng Users</div>
+            <div class="stat-value" th:text="${totalUsers}">--</div>
+        </div>
+    </div>
+    <div class="card stat">
+        <div class="stat-icon servers"><i class="fa-solid fa-server"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Tổng Servers</div>
+            <div class="stat-value" th:text="${totalServers}">--</div>
+        </div>
+    </div>
+    <div class="card stat">
+        <div class="stat-icon msgs"><i class="fa-solid fa-message"></i></div>
+        <div class="stat-info">
+            <div class="stat-label">Tin nhắn 24h</div>
+            <div class="stat-value" th:text="${messages24h}">--</div>
+        </div>
+    </div>
+</div>
+
+<div class="grids">
+    <div class="card table-card">
+        <div class="card-header">
+            <span>Users mới</span>
+            <a class="link" href="#" onclick="loadSection('users'); return false;">Xem tất cả</a>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Display</th>
+                    <th>Active</th>
+                </tr>
+                </thead>
+                <tbody id="tbl-latest-users">
+                <tr><td colspan="4" class="muted">Dùng tab Users để xem chi tiết</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card table-card">
+        <div class="card-header">
+            <span>Servers mới</span>
+            <a class="link" href="#" onclick="loadSection('servers'); return false;">Xem tất cả</a>
+        </div>
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Tên</th>
+                    <th>Owner</th>
+                </tr>
+                </thead>
+                <tbody id="tbl-latest-servers">
+                <tr><td colspan="3" class="muted">Dùng tab Servers để xem chi tiết</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

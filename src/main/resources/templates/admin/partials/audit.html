@@ -1,0 +1,55 @@
+<div class="discord-admin-container" style="padding:0;">
+  <div class="discord-header">
+    <h1><i class="fas fa-clipboard-list"></i> Audit Log</h1>
+    <form action="#" method="get" class="discord-search"
+          onsubmit="event.preventDefault(); loadSection('audit', { keyword: this.keyword.value, action: this.action.value, adminId: this.adminId.value });">
+      <input type="text" name="keyword" th:value="${keyword}" placeholder="Tìm theo detail...">
+      <input type="text" name="action" th:value="${action}" placeholder="Action (BAN_USER, DELETE_MESSAGE...)">
+      <input type="number" name="adminId" th:value="${adminId}" placeholder="Admin ID">
+      <button type="submit"><i class="fas fa-search"></i></button>
+    </form>
+  </div>
+
+  <div class="discord-table-wrapper">
+    <table class="discord-table">
+      <thead>
+      <tr>
+        <th>Thời gian</th>
+        <th>Admin ID</th>
+        <th>Action</th>
+        <th>Target</th>
+        <th>Detail</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr th:each="log : ${logs}">
+        <td th:text="${#dates.format(log.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2026-01-02 12:00:00</td>
+        <td th:text="${log.adminId}">1</td>
+        <td th:text="${log.action}">BAN_USER</td>
+        <td th:text="${log.target}">userId=42</td>
+        <td th:text="${log.detail}">Banned due to spam</td>
+      </tr>
+
+      <tr th:if="${#lists.isEmpty(logs)}">
+        <td colspan="5" class="muted" style="text-align:center;padding:40px;">
+          <i class="fas fa-ghost"></i> Chưa có dữ liệu audit.
+        </td>
+      </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="discord-pagination" th:if="${totalPages > 1}">
+    <a th:if="${currentPage > 0}"
+       href="#"
+       th:onclick="'loadSection(\\'audit\\', {page:' + (${currentPage} - 1) + ', keyword: \\'' + ${keyword} + '\\', action: \\'' + ${action} + '\\', adminId: ' + (${adminId} != null ? ${adminId} : 'null') + '})'"
+       class="page-btn"><i class="fas fa-chevron-left"></i> Trước</a>
+
+    <span class="page-info">Trang <b th:text="${currentPage + 1}"></b> / <span th:text="${totalPages}"></span></span>
+
+    <a th:if="${currentPage < totalPages - 1}"
+       href="#"
+       th:onclick="'loadSection(\\'audit\\', {page:' + (${currentPage} + 1) + ', keyword: \\'' + ${keyword} + '\\', action: \\'' + ${action} + '\\', adminId: ' + (${adminId} != null ? ${adminId} : 'null') + '})'"
+       class="page-btn">Sau <i class="fas fa-chevron-right"></i></a>
+  </div>
+</div>

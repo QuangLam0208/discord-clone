@@ -1,0 +1,126 @@
+<div class="discord-admin-container" style="padding:0;">
+    <div class="discord-header">
+        <h1><i class="fas fa-compass"></i> Quản lý Server</h1>
+        <form action="#" method="get" class="discord-search" onsubmit="event.preventDefault(); loadSection('servers', {keyword: this.keyword.value});">
+            <input type="text" name="keyword" th:value="${keyword}" placeholder="Tìm theo tên server...">
+            <button type="submit"><i class="fas fa-search"></i></button>
+        </form>
+    </div>
+
+    <div class="discord-table-wrapper">
+        <table class="discord-table">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Thông tin Server</th>
+                <th>Chủ sở hữu (Owner)</th>
+                <th>Thành viên</th>
+                <th>Trạng thái</th>
+                <th>Hành động</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="sv : ${servers}" th:attr="data-server-row=${sv.id}">
+                <td style="color:#b5bac1;font-family:monospace;" th:text="'#' + ${sv.id}">#1</td>
+                <td>
+                    <div class="user-cell">
+                        <div class="table-avatar" style="display:flex;align-items:center;justify-content:center;font-size:14px;background-color:#313338;color:#dbdee1;">
+                            <span th:if="${sv.id % 2 == 0}">🎮</span>
+                            <span th:unless="${sv.id % 2 == 0}">💬</span>
+                        </div>
+                        <span th:text="${sv.name}">Server Name</span>
+                    </div>
+                </td>
+                <td th:attr="data-server-owner=${sv.id}">
+                    <span th:if="${sv.owner != null}" th:text="${sv.owner.username}" style="color:#f2f3f5;font-weight:600;">Owner</span>
+                    <span th:unless="${sv.owner != null}" style="color:#da373c;">No Owner</span>
+                </td>
+                <td>
+          <span class="badge-role member" style="background-color:#2b2d31;color:#b9bbbe;">
+            <i class="fas fa-user-friends"></i> <span th:text="${sv.members != null ? sv.members.size() : 0}">0</span>
+          </span>
+                </td>
+                <td><span class="badge-status active">Active</span></td>
+                <td>
+                    <div class="action-buttons-wrapper">
+                        <button type="button" class="btn-mini edit"
+                                th:data-id="${sv.id}" th:data-name="${sv.name}"
+                                onclick="openTransferModal(this.getAttribute('data-id'), this.getAttribute('data-name'))">
+                            <i class="fas fa-exchange-alt"></i> Chuyển
+                        </button>
+                        <button type="button" class="btn-mini ban"
+                                th:data-id="${sv.id}" th:data-name="${sv.name}"
+                                onclick="openDeleteModal(this.getAttribute('data-id'), this.getAttribute('data-name'))">
+                            <i class="fas fa-trash"></i> Xóa
+                        </button>
+                    </div>
+                </td>
+            </tr>
+
+            <tr th:if="${#lists.isEmpty(servers)}">
+                <td colspan="6" class="muted" style="text-align:center;padding:40px;">
+                    <i class="fas fa-search"></i> Không tìm thấy server nào.
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="discord-pagination" th:if="${totalPages > 1}">
+        <a th:if="${currentPage > 0}"
+           href="#"
+           th:onclick="'loadSection(\\'servers\\', {page:' + (${currentPage} - 1) + ', keyword: \\'' + ${keyword} + '\\'})'"
+           class="page-btn"><i class="fas fa-chevron-left"></i> Trước</a>
+
+        <span class="page-info">Trang <b th:text="${currentPage + 1}"></b> / <span th:text="${totalPages}"></span></span>
+
+        <a th:if="${currentPage < totalPages - 1}"
+           href="#"
+           th:onclick="'loadSection(\\'servers\\', {page:' + (${currentPage} + 1) + ', keyword: \\'' + ${keyword} + '\\'})'"
+           class="page-btn">Sau <i class="fas fa-chevron-right"></i></a>
+    </div>
+</div>
+
+<!-- Modals -->
+<div id="deleteModal" class="modal-overlay">
+    <div class="discord-modal">
+        <div class="modal-header"><h2 class="danger-title">XÓA SERVER</h2></div>
+        <div class="modal-body">
+            <input type="hidden" id="deleteServerId">
+            <p class="confirm-text">Bạn có chắc chắn muốn xóa server <strong id="deleteServerName">...</strong> không?</p>
+            <div class="discord-warning-box">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p>Hành động này không thể hoàn tác. Tất cả dữ liệu tin nhắn và kênh sẽ mất vĩnh viễn.</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick="closeModal('deleteModal')">Hủy bỏ</button>
+            <button type="button" class="btn-danger-action" id="btnConfirmDelete">Xóa Server</button>
+        </div>
+    </div>
+</div>
+
+<div id="transferModal" class="modal-overlay">
+    <div class="discord-modal">
+        <div class="modal-header"><h2>Chuyển quyền sở hữu</h2></div>
+        <div class="modal-body">
+            <input type="hidden" id="transferServerId">
+            <div class="form-group" style="text-align:center;margin-bottom:24px;">
+                <label>Đang chọn Server</label>
+                <input type="text" id="transferServerName" class="discord-input read-only-label" readonly>
+            </div>
+            <div class="form-group">
+                <label>Username chủ mới</label>
+                <input type="text" id="newOwnerInput" class="discord-input" placeholder="Nhập username..." required autocomplete="off">
+            </div>
+            <div class="discord-warning-box">
+                <i class="fas fa-exclamation-triangle"></i>
+                <p><strong>Cảnh báo:</strong> Xác nhận sẽ chuyển quyền ngay lập tức.</p>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick="closeModal('transferModal')">Hủy bỏ</button>
+            <button type="button" class="btn-confirm" id="btnConfirmTransfer">Xác nhận chuyển</button>
+        </div>
+    </div>
+</div>
