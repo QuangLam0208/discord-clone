@@ -1,15 +1,18 @@
 package hcmute.edu.vn.discord.controller.api.admin;
 
 import hcmute.edu.vn.discord.dto.request.UpdateUserAdminRequest;
+import hcmute.edu.vn.discord.dto.response.UserDetailResponse;
 import hcmute.edu.vn.discord.entity.enums.ERole;
 import hcmute.edu.vn.discord.entity.jpa.Role;
 import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.repository.RoleRepository;
 import hcmute.edu.vn.discord.repository.UserRepository;
+import hcmute.edu.vn.discord.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -22,12 +25,13 @@ import java.util.Set;
 @RestController
 @RequestMapping("/api/admin/users")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('ADMIN','MODERATOR')")
+@PreAuthorize("hasAnyAuthority('ADMIN')")
 public class AdminUserController {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final UserService userService;
 
     @GetMapping
     public Page<User> listUsers(@RequestParam(defaultValue = "0") int page,
@@ -74,13 +78,17 @@ public class AdminUserController {
         return userRepository.save(u);
     }
 
-    // Endpoint mới: cập nhật displayName và/hoặc roles
     @PatchMapping("/{id}")
     public User updateUser(@PathVariable Long id, @Valid @RequestBody UpdateUserAdminRequest req) {
         User u = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("User not found"));
         if (req.getDisplayName() != null) u.setDisplayName(req.getDisplayName());
         if (req.getRoles() != null) applyRoles(u, req.getRoles());
         return userRepository.save(u);
+    }
+
+    @GetMapping("/{id}/detail")
+    public ResponseEntity<UserDetailResponse> getUserDetail(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.getUserDetail(id));
     }
 
     private void applyRoles(User u, List<String> roleNames) {

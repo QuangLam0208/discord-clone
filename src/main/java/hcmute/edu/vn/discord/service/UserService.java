@@ -1,6 +1,7 @@
 package hcmute.edu.vn.discord.service;
 
 import hcmute.edu.vn.discord.dto.request.RegisterRequest;
+import hcmute.edu.vn.discord.dto.response.UserDetailResponse;
 import hcmute.edu.vn.discord.entity.jpa.User;
 import java.util.Optional;
 
@@ -10,4 +11,6 @@ public interface UserService {
     Optional<User> findByUsername(String username);
     Optional<User> findById(Long id);
     boolean existsByEmail(String email);
-} 
+
+    UserDetailResponse getUserDetail(Long userId);
+}

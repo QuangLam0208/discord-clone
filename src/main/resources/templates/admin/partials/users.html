@@ -26,29 +26,32 @@
             <tr th:each="u : ${users}">
                 <td style="color:#b5bac1;font-family:monospace;" th:text="'#' + ${u.id}">#1</td>
 
-                <!-- Cột Người dùng: hiển thị username, giữ input ẩn displayName-* để modal lấy giá trị gốc -->
+                <!-- Username clickable để mở chi tiết -->
                 <td>
                     <div class="user-cell">
                         <img th:src="${u.avatarUrl != null ? u.avatarUrl : '/images/default.png'}" class="table-avatar">
-                        <span th:text="${u.username}">Username</span>
+                        <a href="#"
+                           class="username-link"
+                           th:text="${u.username}"
+                           th:attr="data-user-id=${u.id}"
+                           onclick="openUserDetail(this.getAttribute('data-user-id')); return false;">
+                            Username
+                        </a>
                         <input type="hidden" th:id="'displayName-' + ${u.id}" th:value="${u.displayName}">
                     </div>
                 </td>
 
-                <!-- Cột Tên hiển thị: sẽ được cập nhật sau khi xác nhận chỉnh sửa -->
                 <td th:attr="data-user-display=${u.id}">
                     <span th:text="${u.displayName}">Display Name</span>
                 </td>
 
                 <td th:text="${u.email}">email@example.com</td>
 
-                <!-- Vai trò hệ thống: ADMIN / PREMIUM / DEFAULT -->
                 <td th:attr="data-user-roles-cell=${u.id}">
                     <span th:if="${#lists.contains(u.roles.![name.toString()], 'ADMIN')}" class="badge-role admin">ADMIN</span>
                     <span th:if="${!#lists.contains(u.roles.![name.toString()], 'ADMIN') and #lists.contains(u.roles.![name.toString()], 'USER_PREMIUM')}" class="badge-role premium">PREMIUM</span>
                     <span th:if="${!#lists.contains(u.roles.![name.toString()], 'ADMIN') and !#lists.contains(u.roles.![name.toString()], 'USER_PREMIUM') and #lists.contains(u.roles.![name.toString()], 'USER_DEFAULT')}" class="badge-role default">DEFAULT</span>
 
-                    <!-- Danh sách role thô (ẩn) để JS biết roles hiện tại khi mở modal -->
                     <div style="display:none;" th:id="'roles-' + ${u.id}">
                         <span th:each="r : ${u.roles}" th:text="${r.name} + ','"></span>
                     </div>
@@ -67,6 +70,7 @@
                                 onclick="openEditModal(this.getAttribute('data-id'), this.getAttribute('data-username'))">
                             <i class="fas fa-pen"></i> Sửa
                         </button>
+                        <!-- Bỏ nút 'Chi tiết' tại đây theo yêu cầu -->
                         <button type="button" class="btn-mini ban"
                                 th:if="${u.isActive}"
                                 th:data-id="${u.id}" th:data-username="${u.username}"
@@ -168,6 +172,30 @@
         <div class="modal-footer">
             <button type="button" class="btn-cancel" onclick="closeModal('unbanModal')">Hủy</button>
             <button type="button" class="btn-confirm" id="btnUnbanConfirm">Unban</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal xem chi tiết user -->
+<div id="userDetailModal" class="modal-overlay">
+    <div class="discord-modal">
+        <div class="modal-header"><h2>Chi tiết người dùng</h2></div>
+        <div class="modal-body">
+            <div class="user-detail-grid">
+                <div><b>Username:</b> <span id="ud-username">...</span></div>
+                <div><b>Display Name:</b> <span id="ud-displayName">...</span></div>
+                <div><b>Birth Date:</b> <span id="ud-birthDate">...</span></div>
+                <div><b>Created At:</b> <span id="ud-createdAt">...</span></div>
+                <div><b>Last Active:</b> <span id="ud-lastActive">...</span></div>
+            </div>
+
+            <div style="margin-top:16px;">
+                <h3 style="margin:0 0 8px;">Servers tham gia</h3>
+                <div id="ud-servers" class="server-list"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick="closeModal('userDetailModal')">Đóng</button>
         </div>
     </div>
 </div>

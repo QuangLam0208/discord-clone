@@ -20,7 +20,14 @@ public interface ServerRepository extends JpaRepository<Server, Long> {
     @EntityGraph(attributePaths = {"owner"})
     Optional<Server> findById(@NonNull Long id);
 
+    @EntityGraph(attributePaths = {"owner"})
+    Optional<Server> findWithOwnerById(Long id);
+
     Page<Server> findByNameContainingIgnoreCase(String name, Pageable pageable);
+
+    // Danh sách server mà user (theo id) là member; nạp sẵn owner
+    @EntityGraph(attributePaths = {"owner"})
+    List<Server> findDistinctByMembers_User_Id(Long userId);
 
     @EntityGraph(attributePaths = {"owner"}) // nạp owner để hiện username
     List<Server> findDistinctByMembers_User_UsernameAndStatusIn(String username, Set<ServerStatus> active);

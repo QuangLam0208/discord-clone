@@ -109,7 +109,7 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
 .discord-search button:hover { color:#fff; }
 
 /* Bảng danh sách */
-.discord-table-wrapper { background-color:var(--sidebar);border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1); }
+.discord-table-wrapper { background-color:var(--sidebar);border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1); overflow:visible; }
 .discord-table { width:100%; border-collapse:collapse; }
 .discord-table thead { background-color:var(--panel); border-bottom:1px solid #1f2023; }
 .discord-table th {
@@ -124,12 +124,14 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
 .user-cell { display:flex;align-items:center;gap:12px; }
 .user-cell span { font-weight:600;color:#f2f3f5; }
 
-/* Trạng thái disabled cho nút xác nhận trong modal */
-.btn-confirm:disabled {
-    background-color: #6d6f78;
-    cursor: not-allowed;
-    opacity: 0.7;
+/* Username clickable (mở modal chi tiết user) */
+.username-link {
+    color: #f2f3f5;
+    text-decoration: none;
+    cursor: pointer;
+    font-weight: 600;
 }
+.username-link:hover { text-decoration: underline; }
 
 /* Badges */
 .badge-role {
@@ -140,7 +142,7 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
 .badge-role.premium { background-color: #e0bb2a; color: #1e1f22; }
 .badge-role.admin   { background-color: var(--danger); color: #fff; }
 
-/* Trạng thái: Active/Banned dạng badge (pill) */
+/* Trạng thái: Active/Banned/Freeze dạng badge (pill) */
 .badge-status {
     display: inline-flex;
     align-items: center;
@@ -303,6 +305,46 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
 .btn-danger-action:hover { background-color:#a1282c; }
 
 @keyframes fadeInOverlay { from{opacity:0} to{opacity:1} }
+
+/* ===== User Detail Modal extras (servers list inside modal) ===== */
+.user-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
+    gap: 8px 16px;
+    color: #f2f3f5;
+}
+.server-list { display: grid; gap: 8px; }
+.server-card {
+    background: #2b2d31;
+    border: 1px solid #3e4147;
+    border-radius: 8px;
+    padding: 10px;
+    display: grid;
+    grid-template-columns: 56px auto;
+    gap: 10px;
+    align-items: center;
+}
+.server-card .icon {
+    width: 56px;
+    height: 56px;
+    background: #1f2023;
+    border-radius: 12px;
+    background-size: cover;
+    background-position: center;
+}
+.server-meta {
+    color:#b5bac1;
+    font-size: 12px;
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+.server-meta .badge {
+    background:#1f2023;
+    border:1px solid #3e4147;
+    padding:2px 6px;
+    border-radius:6px;
+}
 
 /* =========================================================
    4) Responsive
