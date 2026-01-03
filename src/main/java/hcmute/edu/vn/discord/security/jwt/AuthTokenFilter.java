@@ -6,10 +6,10 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -21,15 +21,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 @Component
+@RequiredArgsConstructor
 public class AuthTokenFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthTokenFilter.class);
 
-    @Autowired
-    private JwtUtils jwtUtils;
-
-    @Autowired
-    private UserDetailsServiceImpl userDetailsService;
+    private final JwtUtils jwtUtils;
+    private final UserDetailsServiceImpl userDetailsService;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -50,6 +48,13 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
                 String username = jwtUtils.getUserNameFromJwtToken(jwt);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+                // Nếu user bị banned, th không set authentication
+                if (!userDetails.isEnabled()) {
+                    clearJwtCookieIfPresent(request, response);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
@@ -82,5 +87,21 @@ public class AuthTokenFilter extends OncePerRequestFilter {
             }
         }
         return null;
+    }
+
+    private void clearJwtCookieIfPresent(HttpServletRequest request, HttpServletResponse response) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies == null) return;
+        for (Cookie c : cookies) {
+            if ("jwt".equals(c.getName())) {
+                Cookie expired = new Cookie("jwt", "");
+                expired.setPath("/");
+                expired.setHttpOnly(true);
+                expired.setSecure(false); // đặt true nếu dùng HTTPS prod
+                expired.setMaxAge(0);
+                response.addCookie(expired);
+                break;
+            }
+        }
     }
 }
