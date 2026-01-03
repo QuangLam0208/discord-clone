@@ -6,27 +6,27 @@ import hcmute.edu.vn.discord.dto.response.ConversationResponse;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
 import hcmute.edu.vn.discord.service.DirectMessageService;
 import hcmute.edu.vn.discord.service.UserService;
+import hcmute.edu.vn.discord.security.services.UserDetailsImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.*;
 
-import hcmute.edu.vn.discord.security.services.UserDetailsImpl;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/direct-messages")
 @Tag(name = "Direct Messages", description = "Operations for private 1-on-1 messaging")
 @RequiredArgsConstructor
-@lombok.extern.slf4j.Slf4j
+@Slf4j
 public class DirectMessageController {
 
     private final DirectMessageService directMessageService;
@@ -42,19 +42,26 @@ public class DirectMessageController {
             throw new IllegalArgumentException("User is null or unauthenticated");
         }
         Long senderId = user.getId();
+        // 1. Lưu tin nhắn xuống DB
         DirectMessageResponse response = directMessageService.sendMessage(senderId, request);
-
-        // 1. Send to receiver
         userService.findById(request.getReceiverId()).ifPresentOrElse(receiver -> {
-            log.info("REST: Sending DM from {} to Receiver Username: {}", user.getUsername(), receiver.getUsername());
-            messagingTemplate.convertAndSendToUser(receiver.getUsername(), "/queue/dm", response);
-        }, () -> {
-            log.error("REST: Receiver not found with ID: {}", request.getReceiverId());
-        });
-
-        // 2. Send back to sender (for multi-device sync)
-        messagingTemplate.convertAndSendToUser(user.getUsername(), "/queue/dm", response);
-        log.info("REST: Synced DM back to Sender: {}", user.getUsername());
+            if (receiver.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        receiver.getUsername(),
+                        "/queue/dm",
+                        response
+                );
+                log.info("WS: Đã gửi tin nhắn đến hàng đợi của user: {}", receiver.getUsername());
+            }
+        }, () -> log.error("REST: Không tìm thấy người nhận ID: {}", request.getReceiverId()));
+        // 3. Gửi Real-time lại cho người gửi (để đồng bộ đa thiết bị/tab)
+        if (user.getUsername() != null) {
+            messagingTemplate.convertAndSendToUser(
+                    user.getUsername(),
+                    "/queue/dm",
+                    response
+            );
+        }
 
         return ResponseEntity.ok(response);
     }
@@ -97,5 +104,17 @@ public class DirectMessageController {
         }
         return ResponseEntity.ok(
                 directMessageService.getOrCreateConversation(user.getId(), receiverId));
+    }
+
+    @Operation(summary = "Get or create DM conversation by friend userId")
+    @GetMapping("/conversation/by-user/{friendId}")
+    public ResponseEntity<ConversationResponse> getOrCreateConversationByUser(
+            @PathVariable Long friendId,
+            @AuthenticationPrincipal UserDetailsImpl user) {
+        if (user == null || user.getId() == null) {
+            throw new IllegalArgumentException("User is null or unauthenticated");
+        }
+        ConversationResponse conv = directMessageService.getOrCreateConversation(user.getId(), friendId);
+        return ResponseEntity.ok(conv);
     }
 }
