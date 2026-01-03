@@ -282,6 +282,10 @@ window.openServerSettings = async function (serverId) {
     const ctxMenu = document.getElementById('context-menu');
     if (ctxMenu) ctxMenu.classList.remove('visible');
 
+    // Reset save bar immediately to prevent transition flash
+    const saveBar = document.getElementById('server-save-bar');
+    if (saveBar) saveBar.classList.remove('visible');
+
     try {
         const server = await Api.get(`/api/servers/${serverId}`);
         if (!server) return;
@@ -309,8 +313,6 @@ window.openServerSettings = async function (serverId) {
         // Reset Inputs & Bar
         document.getElementById('editServerIconInput').value = '';
         state.tempServerIcon = null; // Ensure this is definitely null
-        const saveBar = document.getElementById('server-save-bar');
-        if (saveBar) saveBar.classList.remove('visible');
 
         // Reset Tab
         switchServerSettingsTab('overview');
@@ -466,6 +468,18 @@ window.switchServerSettingsTab = function (tabName) {
     document.querySelectorAll('#serverSettingsModal .settings-nav-item').forEach(el => el.classList.remove('active'));
     document.getElementById(`nav-server-${tabName}`).classList.add('active');
 
+    // Handle Save Bar Logic BEFORE showing content to prevent glitches
+    const saveBar = document.getElementById('server-save-bar');
+    if (saveBar) {
+        if (tabName === 'overview') {
+            // When entering overview, verify if bar should be shown
+            checkServerChanges();
+        } else {
+            // When leaving overview, ensure it's hidden for next time
+            saveBar.classList.remove('visible');
+        }
+    }
+
     // Content areas
     document.querySelectorAll('#serverSettingsModal .settings-tab-content').forEach(el => el.classList.remove('active'));
     document.getElementById(`tab-server-${tabName}`).classList.add('active');
@@ -535,10 +549,15 @@ function renderMembersTable() {
     pageItems.forEach(m => {
         const user = m.user;
 
-        // Date formatting relative (mocked for now, simple string)
-        const joinedAt = new Date(m.joinedAt).toLocaleDateString('vi-VN');
-        const joinedDiscord = "2 năm trước"; // Mock data
-        const joinMethod = "Không xác định"; // Mock data
+        // Date formatting relative
+        const joinedAt = new Date(m.joinedAt).toLocaleDateString('vi-VN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+
+        let joinedDiscord = "Không xác định";
+        if (user.createdAt) {
+            joinedDiscord = calculateTimeAgo(user.createdAt);
+        }
+
+        const joinMethod = "Mời"; // Mock data for now as we don't track invite code used in Member entity yet
 
         const rolesHtml = ((m.roles && m.roles.length > 0)
             ? m.roles.map(r => `<span class="role-tag"><div class="role-dot" style="background-color: ${r.color || '#99aab5'}"></div>${r.name || 'New Role'}</span>`).join('')
@@ -826,3 +845,23 @@ window.confirmDeleteServer = async function () {
 };
 
 // Old helpers reference in case needed (deleted)
+
+// Helper: Calculate Time Ago
+function calculateTimeAgo(dateString) {
+    if (!dateString) return "Không xác định";
+    const now = new Date();
+    const joined = new Date(dateString);
+    const diffTime = Math.abs(now - joined);
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 1) return "Hôm nay";
+    if (diffDays < 30) {
+        return diffDays + " ngày trước";
+    } else if (diffDays < 365) {
+        const months = Math.floor(diffDays / 30);
+        return months + " tháng trước";
+    } else {
+        const years = Math.floor(diffDays / 365);
+        return years + " năm trước";
+    }
+}
