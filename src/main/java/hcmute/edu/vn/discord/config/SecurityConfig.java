@@ -59,6 +59,7 @@ public class SecurityConfig {
                                         "/api/auth/**", "/api/test/**",
                                         // swagger, ws, files...
                                         "/ws/**", "/ws-test.html",
+                                        "/admin/users",
                                         "/swagger-ui.html", "/swagger-ui/**",
                                         "/v3/api-docs/**", "/swagger-resources/**",
                                         "/webjars/**",

@@ -10,21 +10,30 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @Validated
 @RestController
 @RequestMapping("/api/friends")
 @RequiredArgsConstructor
+@Slf4j
 public class FriendController {
     private final FriendService friendService;
     private final UserService userService;
+
+    // WS components để realtime cập nhật bạn/bạn chờ xử lý
+    private final SimpMessagingTemplate messagingTemplate;
+    private final SimpUserRegistry simpUserRegistry;
 
     private User getCurrentUser(Authentication auth) {
         if (auth == null || auth.getName() == null) {
@@ -34,11 +43,29 @@ public class FriendController {
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
     }
 
+    // Gửi event tới principal nếu đang online
+    private void pushFriendEvent(User target, Object payload) {
+        if (target == null) return;
+        var candidates = new java.util.ArrayList<String>();
+        if (target.getUsername() != null) candidates.add(target.getUsername());
+        if (target.getEmail() != null) candidates.add(target.getEmail());
+        for (String p : candidates) {
+            if (p != null && simpUserRegistry.getUser(p) != null) {
+                messagingTemplate.convertAndSendToUser(p, "/queue/friends", payload);
+                log.info("WS Friend event pushed to principal: {}", p);
+            }
+        }
+    }
+
     @PostMapping("/requests")
     public ResponseEntity<FriendRequestResponse> sendFriendRequest(@Valid @RequestBody FriendRequestAction request,
                                                                    Authentication authentication) {
         User current = getCurrentUser(authentication);
         FriendRequestResponse created = friendService.sendRequest(current.getId(), request.getTargetUserId());
+        // WS notify both sides
+        userService.findById(request.getTargetUserId()).ifPresent(receiver ->
+                pushFriendEvent(receiver, Map.of("type", "FRIEND_REQUEST_SENT", "data", created)));
+        pushFriendEvent(current, Map.of("type", "FRIEND_REQUEST_SENT", "data", created));
         return ResponseEntity.ok(created);
     }
 
@@ -47,6 +74,10 @@ public class FriendController {
                                                                Authentication authentication) {
         User current = getCurrentUser(authentication);
         FriendRequestResponse updated = friendService.acceptRequest(requestId, current.getId());
+        userService.findById(updated.getSenderId()).ifPresent(sender ->
+                pushFriendEvent(sender, Map.of("type", "FRIEND_REQUEST_ACCEPTED", "data", updated)));
+        userService.findById(updated.getRecipientId()).ifPresent(receiver ->
+                pushFriendEvent(receiver, Map.of("type", "FRIEND_REQUEST_ACCEPTED", "data", updated)));
         return ResponseEntity.ok(updated);
     }
 
@@ -55,6 +86,10 @@ public class FriendController {
                                                                 Authentication authentication) {
         User current = getCurrentUser(authentication);
         FriendRequestResponse updated = friendService.declineRequest(requestId, current.getId());
+        userService.findById(updated.getSenderId()).ifPresent(sender ->
+                pushFriendEvent(sender, Map.of("type", "FRIEND_REQUEST_DECLINED", "data", updated)));
+        userService.findById(updated.getRecipientId()).ifPresent(receiver ->
+                pushFriendEvent(receiver, Map.of("type", "FRIEND_REQUEST_DECLINED", "data", updated)));
         return ResponseEntity.ok(updated);
     }
 
@@ -63,6 +98,8 @@ public class FriendController {
                                            Authentication authentication) {
         User current = getCurrentUser(authentication);
         friendService.cancelRequest(requestId, current.getId());
+        // WS notify sender (và có thể notify receiver nếu cần)
+        pushFriendEvent(current, Map.of("type", "FRIEND_REQUEST_CANCELED", "data", Map.of("id", requestId)));
         return ResponseEntity.noContent().build();
     }
 
@@ -98,7 +135,7 @@ public class FriendController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/block/{targetUserId}")
+    @PostMapping("/unblock/{targetUserId}")
     public ResponseEntity<?> unblock(@PathVariable Long targetUserId, Authentication authentication) {
         User current = getCurrentUser(authentication);
         friendService.unblockUser(current.getId(), targetUserId);

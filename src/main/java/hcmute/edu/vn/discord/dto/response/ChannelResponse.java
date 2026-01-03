@@ -18,6 +18,7 @@ public class ChannelResponse {
     private String name;
     private ChannelType type;
     private Boolean isPrivate;
+    private String description;
 
     private Long serverId;
     private String serverName;
@@ -26,7 +27,8 @@ public class ChannelResponse {
     private String categoryName;
 
     public static ChannelResponse from(Channel c) {
-        if (c == null) return null;
+        if (c == null)
+            return null;
         Server s = c.getServer();
         Category cat = c.getCategory();
         return ChannelResponse.builder()
@@ -34,6 +36,7 @@ public class ChannelResponse {
                 .name(c.getName())
                 .type(c.getType())
                 .isPrivate(c.getIsPrivate())
+                .description(c.getDescription())
                 .serverId(s != null ? s.getId() : null)
                 .serverName(s != null ? s.getName() : null)
                 .categoryId(cat != null ? cat.getId() : null)
