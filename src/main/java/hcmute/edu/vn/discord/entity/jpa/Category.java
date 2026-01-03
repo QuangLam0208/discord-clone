@@ -3,7 +3,9 @@ package hcmute.edu.vn.discord.entity.jpa;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Entity
 @Table(name = "categories")
@@ -13,13 +15,13 @@ public class Category {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "server_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "server_id", nullable = false)
     private Server server;
 
     private String name;
 
-    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL)
-    private List<Channel> channels;
+    @OneToMany(mappedBy = "category", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Channel> channels = new HashSet<>();
 }
 

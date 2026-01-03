@@ -1,4 +1,3 @@
-
 // ====== Helpers ======
 function closeModal(id){ const m=document.getElementById(id); if(m) m.classList.remove('active'); }
 function openModal(id){ const m=document.getElementById(id); if(m) m.classList.add('active'); }
@@ -7,8 +6,19 @@ function toastErr(t='Có lỗi xảy ra'){ if(window.Swal){ return Swal.fire({ic
 function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // Đóng modal khi click overlay / ESC
-window.addEventListener('click', e=>{ if(e.target.classList && e.target.classList.contains('modal-overlay')) e.target.classList.remove('active'); });
-window.addEventListener('keydown', e=>{ if(e.key==='Escape'){ document.querySelectorAll('.modal-overlay.active').forEach(el=>el.classList.remove('active')); } });
+window.addEventListener('click', e=>{
+    if(e.target.classList && e.target.classList.contains('modal-overlay')) e.target.classList.remove('active');
+    // Đóng mọi status-menu khi click ngoài
+    if (!e.target.closest('.status-menu') && !e.target.closest('.btn-mini.warn')) {
+        document.querySelectorAll('.status-menu.open').forEach(el => el.classList.remove('open'));
+    }
+});
+window.addEventListener('keydown', e=>{
+    if(e.key==='Escape'){
+        document.querySelectorAll('.modal-overlay.active').forEach(el=>el.classList.remove('active'));
+        document.querySelectorAll('.status-menu.open').forEach(el => el.classList.remove('open'));
+    }
+});
 
 // ====== SPA load fragments ======
 const routes = {
@@ -49,7 +59,7 @@ async function loadSection(section, params={}) {
         const html = await res.text();
         content.innerHTML = html;
 
-        // Sau khi inject fragment, gắn handlers cho các nút trong fragment
+        // Gắn handlers sau khi inject fragment
         attachAdminHandlers();
     } catch (e) {
         console.error('Load section error', e);
@@ -57,7 +67,7 @@ async function loadSection(section, params={}) {
     }
 }
 
-// Gắn click cho sidebar
+// Sidebar
 document.addEventListener('DOMContentLoaded', () => {
     const nav = document.getElementById('admin-nav');
     nav?.addEventListener('click', (e) => {
@@ -69,20 +79,17 @@ document.addEventListener('DOMContentLoaded', () => {
         history.replaceState({}, '', `/admin#${section}`);
     });
 
-    // Avatar/name
     const displayName = localStorage.getItem('displayName') || localStorage.getItem('username') || 'Admin';
     const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&color=fff&size=128&bold=true`;
     const avatarEl = document.getElementById('admin-avatar'); if (avatarEl) avatarEl.style.backgroundImage = `url('${avatarUrl}')`;
     const nameEl = document.getElementById('admin-name'); if (nameEl) nameEl.innerText = displayName;
 
-    // Logout
     const btnLogout = document.getElementById('btn-admin-logout');
     btnLogout?.addEventListener('click', () => {
         Swal.fire({ title:'Đăng xuất?', icon:'question', showCancelButton:true, confirmButtonText:'Đăng xuất', cancelButtonText:'Hủy', confirmButtonColor:'#ed4245', background:'#313338', color:'#fff' })
             .then(r => { if (r.isConfirmed) { localStorage.clear(); window.location.href = '/login'; }});
     });
 
-    // Load section từ hash nếu có
     const hashSection = (location.hash || '').replace('#','') || 'dashboard';
     loadSection(hashSection);
 });
@@ -106,6 +113,8 @@ function openTransferModal(id, name) {
     if (nameInput) nameInput.value = name || '';
     if (ownerInput) { ownerInput.value = ''; ownerInput.focus(); }
 }
+
+// ====== Users modals (ban/unban) ======
 function openBanModal(userId, username) {
     const modal = document.getElementById('banModal'); if (!modal) return;
     modal.classList.add('active');
@@ -123,7 +132,7 @@ function openUnbanModal(userId, username) {
     if (nameLabel) nameLabel.innerText = username || '';
 }
 
-// ====== Only enable "Lưu thay đổi" when form actually changed ======
+// ====== Edit user modal enable save on change ======
 function normalizeRoles(arr){
     return Array.from(new Set((arr||[]).map(x => String(x).trim()))).sort();
 }
@@ -137,7 +146,6 @@ function computeCurrentRoles(){
     return Array.from(document.querySelectorAll('input[name="roleNames"]:checked')).map(cb => cb.value);
 }
 function parseOriginalRolesStr(str){
-    // roles div chứa chuỗi kiểu "ADMIN, USER_DEFAULT," → tách theo ","
     return normalizeRoles(String(str||'').split(',').map(s => s.trim()).filter(Boolean));
 }
 function updateEditSaveEnabled(){
@@ -161,7 +169,6 @@ function openEditModal(userId, username) {
     const modal = document.getElementById('editModal'); if (!modal) return;
     modal.classList.add('active');
 
-    // Điền dữ liệu hiện tại
     const idInput = document.getElementById('editUserId');
     const usernameInput = document.getElementById('editUsername');
     const displayNameHidden = document.getElementById('displayName-' + userId);
@@ -170,7 +177,6 @@ function openEditModal(userId, username) {
     if (usernameInput) usernameInput.value = username || '';
     if (displayNameHidden && displayNameInput) displayNameInput.value = displayNameHidden.value || '';
 
-    // Reset và tick roles
     const checkboxes = document.querySelectorAll('input[name="roleNames"]');
     checkboxes.forEach(cb => cb.checked = false);
     const rolesDiv = document.getElementById('roles-' + userId);
@@ -178,32 +184,65 @@ function openEditModal(userId, username) {
     const origRoles = parseOriginalRolesStr(rolesStr);
     checkboxes.forEach(cb => { if (origRoles.includes(cb.value)) cb.checked = true; });
 
-    // Lưu trạng thái gốc vào dataset của modal
     modal.dataset.origDn = displayNameInput?.value || '';
     modal.dataset.origRoles = rolesStr || '';
 
-    // Disable nút Lưu khi chưa đổi gì
     const btn = document.getElementById('btnEditSave');
     if (btn) btn.disabled = true;
 
-    // Lắng nghe thay đổi để bật/tắt nút
     displayNameInput?.addEventListener('input', updateEditSaveEnabled, { once:false });
     checkboxes.forEach(cb => cb.addEventListener('change', updateEditSaveEnabled, { once:false }));
 }
 
-// Expose để gọi từ HTML
+// Expose
 window.openDeleteModal = openDeleteModal;
 window.openTransferModal = openTransferModal;
 window.openBanModal = openBanModal;
 window.openUnbanModal = openUnbanModal;
 window.openEditModal = openEditModal;
 
-// Escape cho string nhúng vào HTML/JS inline
 function escapeJsAttr(s){
     return String(s||'').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
-// ====== CONFIRM HANDLERS (gắn sau khi fragment được inject) ======
+// ====== Status menu (Servers) ======
+function toggleStatusMenu(btn, serverId) {
+    const menu = document.getElementById(`status-menu-${serverId}`);
+    if (!menu) return;
+    // Close other menus
+    document.querySelectorAll('.status-menu.open').forEach(el => { if (el !== menu) el.classList.remove('open'); });
+    // Toggle
+    menu.classList.toggle('open');
+    // Position under the button (basic)
+    const rect = btn.getBoundingClientRect();
+    menu.style.minWidth = `${Math.max(rect.width, 160)}px`;
+}
+
+async function updateServerStatus(serverId, status) {
+    try {
+        // Chỉ ACTIVE hoặc FREEZE
+        if (status !== 'ACTIVE' && status !== 'FREEZE') return;
+
+        await Api.patch(`/api/admin/servers/${serverId}/status`, { status });
+
+        // Update badge cell
+        const cell = document.querySelector(`[data-server-status="${serverId}"]`);
+        if (cell) {
+            if (status === 'ACTIVE') cell.innerHTML = '<span class="badge-status active">Active</span>';
+            else if (status === 'FREEZE') cell.innerHTML = '<span class="badge-status freeze">Freeze</span>';
+        }
+
+        // Close menu
+        const menu = document.getElementById(`status-menu-${serverId}`);
+        menu?.classList.remove('open');
+
+        toastOk('Đã cập nhật trạng thái server');
+    } catch (e) {
+        toastErr(e.message || 'Cập nhật trạng thái thất bại');
+    }
+}
+
+// ====== CONFIRM HANDLERS ======
 function attachAdminHandlers() {
     // Servers: Xóa
     const btnConfirmDelete = document.getElementById('btnConfirmDelete');
@@ -244,11 +283,9 @@ function attachAdminHandlers() {
             await Api.post(`/api/admin/users/${id}/ban`, {});
             closeModal('banModal');
 
-            // Cập nhật badge trạng thái
             const st = document.querySelector(`[data-user-status="${id}"]`);
             if (st) st.innerHTML = '<span class="badge-status banned">Banned</span>';
 
-            // Cập nhật nút hành động: chuyển Ban -> Unban
             const actions = document.querySelector(`[data-user-actions="${id}"]`);
             const username = actions?.dataset?.userUsername || '';
             if (actions) {
@@ -279,11 +316,9 @@ function attachAdminHandlers() {
             await Api.post(`/api/admin/users/${id}/unban`, {});
             closeModal('unbanModal');
 
-            // Cập nhật badge trạng thái
             const st = document.querySelector(`[data-user-status="${id}"]`);
             if (st) st.innerHTML = '<span class="badge-status active">Active</span>';
 
-            // Cập nhật nút hành động: chuyển Unban -> Ban
             const actions = document.querySelector(`[data-user-actions="${id}"]`);
             const username = actions?.dataset?.userUsername || '';
             if (actions) {
@@ -305,29 +340,23 @@ function attachAdminHandlers() {
         } catch (e) { toastErr(e.message || 'Mở khóa thất bại'); }
     });
 
-    // Users: Lưu roles + displayName (chỉ khi có thay đổi)
+    // Users: Save edit (displayName + roles)
     const btnEditSave = document.getElementById('btnEditSave');
     btnEditSave?.addEventListener('click', async () => {
-        if (btnEditSave.disabled) return; // không làm gì nếu chưa thay đổi
-
+        if (btnEditSave.disabled) return;
         const id = document.getElementById('editUserId')?.value;
         const displayName = document.getElementById('editDisplayName')?.value?.trim();
         const roles = Array.from(document.querySelectorAll('input[name="roleNames"]:checked')).map(cb => cb.value);
         if (!id) return;
-
         try {
-            // Gọi PATCH để lưu cả displayName & roles
             await Api.patch(`/api/admin/users/${id}`, { displayName, roles });
 
-            // Cập nhật UI: cột "Tên hiển thị"
             const displayCell = document.querySelector(`[data-user-display="${id}"]`);
             if (displayCell) displayCell.innerText = displayName || '';
 
-            // Cập nhật input ẩn để modal lần sau lấy đúng giá trị
             const hiddenDisplay = document.getElementById('displayName-' + id);
             if (hiddenDisplay) hiddenDisplay.value = displayName || '';
 
-            // Cập nhật vai trò hệ thống (ADMIN/PREMIUM/DEFAULT)
             const rolesCell = document.querySelector(`[data-user-roles-cell="${id}"]`);
             if (rolesCell) {
                 const set = new Set(roles.map(String));

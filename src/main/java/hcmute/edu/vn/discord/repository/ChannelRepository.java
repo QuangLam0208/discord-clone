@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Modifying;
+
+import jakarta.transaction.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,4 +24,16 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
     Optional<Long> findServerIdByChannelId(Long channelId);
 
     List<Channel> findByServerIdAndType(Long serverId, ChannelType type);
+
+    // Gỡ liên kết category khỏi mọi channel thuộc server (tránh lỗi FK khi xóa category)
+    @Modifying
+    @Transactional
+    @Query("update Channel c set c.category = null where c.server.id = :serverId")
+    int unsetCategoryByServerId(Long serverId);
+
+    // Xóa tất cả channel theo server trước khi xóa server (nếu cần)
+    @Modifying
+    @Transactional
+    @Query("delete from Channel c where c.server.id = :serverId")
+    int deleteByServerId(Long serverId);
 }

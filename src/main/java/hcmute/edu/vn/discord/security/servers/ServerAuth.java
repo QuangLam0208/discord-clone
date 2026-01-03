@@ -1,6 +1,7 @@
 package hcmute.edu.vn.discord.security.servers;
 
 import hcmute.edu.vn.discord.entity.enums.EPermission;
+import hcmute.edu.vn.discord.entity.enums.ServerStatus;
 import hcmute.edu.vn.discord.entity.jpa.*;
 import hcmute.edu.vn.discord.entity.mongo.Message;
 import hcmute.edu.vn.discord.repository.ChannelRepository;
@@ -28,13 +29,11 @@ public class ServerAuth {
     private final MessageRepository messageRepository;
     private final CategoryRepository categoryRepository;
 
-    // Helper: lấy User theo username
     private User requireUser(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found: " + username));
     }
 
-    // Helper: lấy ServerMember theo serverId + username
     private ServerMember requireMember(Long serverId, String username) {
         User user = requireUser(username);
         return serverMemberRepository.findByServerIdAndUserId(serverId, user.getId())
@@ -53,7 +52,6 @@ public class ServerAuth {
         return server.getOwner() != null && Objects.equals(server.getOwner().getId(), user.getId());
     }
 
-    // Kiểm tra có bất kỳ permission code nào trong tập codes
     public boolean has(Long serverId, String username, Set<String> codes) {
         ServerMember member = requireMember(serverId, username);
         return member.getRoles().stream()
@@ -62,15 +60,30 @@ public class ServerAuth {
                 .anyMatch(codes::contains);
     }
 
-    // Helper: Lấy ServerID từ CategoryID (dùng cho Update/Delete Category)
     public Long serverIdOfCategory(Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new EntityNotFoundException("Category not found"));
         return category.getServer().getId();
     }
 
+    private boolean isServerFrozen(Long serverId) {
+        Server s = serverRepository.findById(serverId)
+                .orElseThrow(() -> new EntityNotFoundException("Server not found"));
+        return s.getStatus() == ServerStatus.FREEZE;
+    }
+
+    private boolean hasServerAdmin(Long serverId, String username) {
+        return has(serverId, username, Set.of(EPermission.ADMIN.getCode()));
+    }
+
+    private boolean allowInFreeze(Long serverId, String username) {
+        if (!isServerFrozen(serverId)) return true;
+        return hasServerAdmin(serverId, username);
+    }
+
     // Quản lý kênh: Owner hoặc ADMIN/MANAGE_CHANNELS
     public boolean canManageChannels(Long serverId, String username) {
+        if (!allowInFreeze(serverId, username)) return false;
         if (isOwner(serverId, username))
             return true;
         return has(serverId, username, Set.of(
@@ -80,6 +93,7 @@ public class ServerAuth {
 
     // Quản lý role: Owner hoặc ADMIN/MANAGE_ROLES
     public boolean canManageRole(Long serverId, String username) {
+        if (!allowInFreeze(serverId, username)) return false;
         if (isOwner(serverId, username))
             return true;
         return has(serverId, username, Set.of(
@@ -90,6 +104,7 @@ public class ServerAuth {
     // Quản lý thành viên: Owner hoặc
     // ADMIN/MANAGE_SERVER/KICK_APPROVE_REJECT_MEMBERS/BAN_MEMBERS
     public boolean canManageMembers(Long serverId, String username) {
+        if (!allowInFreeze(serverId, username)) return false;
         if (isOwner(serverId, username))
             return true;
         return has(serverId, username, Set.of(
@@ -140,6 +155,8 @@ public class ServerAuth {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
         Long serverId = channel.getServer().getId();
+
+        if (!allowInFreeze(serverId, username)) return false;
         if (isOwner(serverId, username))
             return true;
         return has(serverId, username, Set.of(EPermission.SEND_MESSAGES.getCode()));
@@ -152,6 +169,8 @@ public class ServerAuth {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
         Long serverId = channel.getServer().getId();
+
+        if (!allowInFreeze(serverId, username)) return false;
         if (isOwner(serverId, username))
             return true;
         return has(serverId, username, Set.of(
@@ -169,6 +188,8 @@ public class ServerAuth {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
         Long serverId = channel.getServer().getId();
+
+        if (!allowInFreeze(serverId, username)) return false;
         if (isOwner(serverId, username))
             return true;
         return has(serverId, username, Set.of(
@@ -192,6 +213,8 @@ public class ServerAuth {
         if (!canViewChannel(channelId, username))
             return false;
         Long serverId = serverIdOfChannel(channelId);
+        if (!allowInFreeze(serverId, username)) return false;
+
         return has(serverId, username, Set.of(
                 EPermission.ATTACH_FILES.getCode(),
                 EPermission.ADMIN.getCode()));
@@ -202,6 +225,8 @@ public class ServerAuth {
         if (!canViewChannel(channelId, username))
             return false;
         Long serverId = serverIdOfChannel(channelId);
+        if (!allowInFreeze(serverId, username)) return false;
+
         return has(serverId, username, Set.of(
                 EPermission.EMBED_LINK.getCode(),
                 EPermission.ADMIN.getCode()));
@@ -211,6 +236,8 @@ public class ServerAuth {
     public boolean canCreateInvite(Long serverId, String username) {
         if (!isMember(serverId, username))
             return false;
+        if (!allowInFreeze(serverId, username)) return false;
+
         return has(serverId, username, Set.of(
                 EPermission.CREATE_INVITE.getCode(),
                 EPermission.ADMIN.getCode()));
@@ -220,6 +247,8 @@ public class ServerAuth {
     public boolean canChangeNickname(Long serverId, String username) {
         if (!isMember(serverId, username))
             return false;
+        if (!allowInFreeze(serverId, username)) return false;
+
         return has(serverId, username, Set.of(
                 EPermission.CHANGE_NICKNAME.getCode(),
                 EPermission.ADMIN.getCode()));
@@ -229,25 +258,24 @@ public class ServerAuth {
     public boolean canMentionEveryone(Long serverId, String username) {
         if (!isMember(serverId, username))
             return false;
+        if (!allowInFreeze(serverId, username)) return false;
+
         return has(serverId, username, Set.of(
                 EPermission.MENTION_EVERYONE_HERE_ALLROLES.getCode(),
                 EPermission.ADMIN.getCode()));
     }
 
-    // Helper: lấy serverId từ channel
     public Long serverIdOfChannel(Long channelId) {
         return channelRepository.findServerIdByChannelId(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
     }
 
-    // Helper: lấy channelId từ message
     public Long channelIdOfMessage(String messageId) {
         Message msg = messageRepository.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("Message not found"));
         return msg.getChannelId();
     }
 
-    // Helper: lấy serverId từ message
     public Long serverIdOfMessage(String messageId) {
         Long channelId = channelIdOfMessage(messageId);
         return serverIdOfChannel(channelId);

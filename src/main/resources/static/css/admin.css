@@ -162,6 +162,11 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     color: #ed4245;
     border-color: rgba(237,66,69,.3);
 }
+.badge-status.freeze {
+    background-color: rgba(88,101,242,.15);
+    color: #5865F2;
+    border-color: rgba(88,101,242,.3);
+}
 
 /* Nút xác nhận disabled */
 .btn-confirm:disabled {
@@ -179,6 +184,41 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
 .btn-mini.edit:hover { background-color:#6d6f78; }
 .btn-mini.ban { background-color:#da373c;color:#fff; }
 .btn-mini.ban:hover { background-color:#a1282c; }
+.btn-mini.warn { background-color:#ffd166; color:#1e1f22; }
+.btn-mini.warn:hover { background-color:#e0bb2a; }
+
+/* Dropdown menu trạng thái */
+.status-menu {
+    position:absolute;
+    top:100%;
+    right:0;
+    background:var(--sidebar);
+    border:1px solid var(--border);
+    border-radius:8px;
+    box-shadow:0 8px 24px rgba(0,0,0,.35);
+    padding:8px;
+    min-width:180px;
+    display:none;
+    z-index:1000;
+}
+.status-menu.open { display:block; }
+.status-menu-header {
+    font-size:11px; font-weight:800; color:#b5bac1; text-transform:uppercase; padding:6px 8px; border-bottom:1px solid var(--border); margin-bottom:6px;
+}
+.status-item {
+    width:100%;
+    text-align:left;
+    padding:8px 10px;
+    border:none;
+    border-radius:6px;
+    background:transparent;
+    color:#f2f3f5;
+    cursor:pointer;
+    display:flex; align-items:center; gap:8px;
+}
+.status-item:hover { background:#35373c; }
+.status-item.active i { color:#23a559; }
+.status-item.freeze i { color:#5865F2; }
 
 /* Pagination */
 .discord-pagination { display:flex;justify-content:center;align-items:center;margin-top:24px;gap:12px; }
