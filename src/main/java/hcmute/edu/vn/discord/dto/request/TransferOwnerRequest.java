@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class TransferOwnerRequest {
-    private Long newOwnerId;
-    private String newOwnerUsername;
+    // Bắt buộc truyền memberId của người sẽ trở thành chủ mới
+    private Long newOwnerMemberId;
 }

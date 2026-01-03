@@ -28,6 +28,12 @@ public interface ServerMemberRepository extends JpaRepository<ServerMember, Long
     @EntityGraph(attributePaths = {"roles", "roles.permissions"})
     Optional<ServerMember> findWithRolesByServerIdAndUserId(Long serverId, Long userId);
 
+    @EntityGraph(attributePaths = {"user", "roles", "roles.permissions"})
+    List<ServerMember> findWithUserAndRolesByServerId(Long serverId);
+
+    @EntityGraph(attributePaths = {"user", "roles"})
+    Optional<ServerMember> findWithUserAndRolesById(Long memberId);
+
     // Lấy trực tiếp các permission code của member bằng JOIN (tránh đụng collection LAZY)
     @Query("""
         select distinct p.code

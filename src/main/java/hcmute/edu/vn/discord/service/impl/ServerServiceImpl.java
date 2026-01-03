@@ -1,7 +1,8 @@
 package hcmute.edu.vn.discord.service.impl;
 
 import hcmute.edu.vn.discord.dto.request.ServerRequest;
-import hcmute.edu.vn.discord.dto.response.ServerResponse;
+import hcmute.edu.vn.discord.dto.request.TransferOwnerRequest;
+import hcmute.edu.vn.discord.dto.response.*;
 import hcmute.edu.vn.discord.entity.enums.ChannelType;
 import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.enums.ServerStatus;
@@ -10,6 +11,7 @@ import hcmute.edu.vn.discord.repository.*;
 import hcmute.edu.vn.discord.service.ServerService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,7 @@ public class ServerServiceImpl implements ServerService {
     private final ServerRoleRepository serverRoleRepository;
     private final ChannelRepository channelRepository;
     private final PermissionRepository permissionRepository;
+    private final CategoryRepository categoryRepository;
 
     @Override
     @Transactional
@@ -176,5 +179,79 @@ public class ServerServiceImpl implements ServerService {
                 u.getUsername(),
                 Set.of(ServerStatus.ACTIVE, ServerStatus.FREEZE)
         );
+    }
+
+    @Override
+    public List<ServerMemberSummaryResponse> getMembersOfServer(Long serverId) {
+        Server server = serverRepository.findById(serverId)
+                .orElseThrow(() -> new EntityNotFoundException("Server not found: " + serverId));
+
+        List<ServerMember> members = serverMemberRepository.findWithUserAndRolesByServerId(serverId);
+
+        return members.stream().map(sm -> {
+            User u = sm.getUser();
+            boolean isOwner = server.getOwner() != null && server.getOwner().getId().equals(u.getId());
+            boolean isAdmin = sm.getRoles() != null && sm.getRoles().stream()
+                    .anyMatch(r -> "ADMIN".equalsIgnoreCase(r.getName()));
+            return new ServerMemberSummaryResponse(
+                    sm.getId(),
+                    u.getId(),
+                    u.getUsername(),
+                    u.getDisplayName(),
+                    u.getAvatarUrl(),
+                    isOwner,
+                    isAdmin
+            );
+        }).toList();
+    }
+
+    @Transactional
+    @Override
+    public void transferOwner(Long serverId, TransferOwnerRequest req) {
+        if (req == null || req.getNewOwnerMemberId() == null) {
+            throw new IllegalArgumentException("newOwnerMemberId is required");
+        }
+
+        Server server = serverRepository.findById(serverId)
+                .orElseThrow(() -> new EntityNotFoundException("Server not found: " + serverId));
+
+        ServerMember newOwnerMember = serverMemberRepository.findWithUserAndRolesById(req.getNewOwnerMemberId())
+                .orElseThrow(() -> new EntityNotFoundException("New owner member not found: " + req.getNewOwnerMemberId()));
+
+        if (!newOwnerMember.getServer().getId().equals(serverId)) {
+            throw new AccessDeniedException("User is not a member of this server");
+        }
+
+        User oldOwner = server.getOwner();
+        User newOwnerUser = newOwnerMember.getUser();
+
+        // Cập nhật owner
+        server.setOwner(newOwnerUser);
+        serverRepository.save(server);
+
+        // Role ADMIN trong server
+        ServerRole adminRole = serverRoleRepository.findByServerIdAndName(serverId, "ADMIN")
+                .orElse(null);
+
+        // Bỏ ADMIN khỏi owner cũ (nếu có và nếu khác owner mới)
+        if (oldOwner != null && !oldOwner.getId().equals(newOwnerUser.getId()) && adminRole != null) {
+            serverMemberRepository.findByServerIdAndUserId(serverId, oldOwner.getId())
+                    .ifPresent(oldMember -> {
+                        if (oldMember.getRoles() != null) {
+                            oldMember.getRoles().removeIf(r -> r.getId().equals(adminRole.getId()));
+                        }
+                        serverMemberRepository.save(oldMember);
+                    });
+        }
+
+        // Thêm ADMIN cho owner mới nếu chưa có
+        if (adminRole != null) {
+            boolean hasAdmin = newOwnerMember.getRoles() != null &&
+                    newOwnerMember.getRoles().stream().anyMatch(r -> r.getId().equals(adminRole.getId()));
+            if (!hasAdmin) {
+                newOwnerMember.getRoles().add(adminRole);
+                serverMemberRepository.save(newOwnerMember);
+            }
+        }
     }
 }

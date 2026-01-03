@@ -1,8 +1,12 @@
 package hcmute.edu.vn.discord.service;
 
 import hcmute.edu.vn.discord.dto.request.ServerRequest;
+import hcmute.edu.vn.discord.dto.request.TransferOwnerRequest;
+import hcmute.edu.vn.discord.dto.response.ServerMemberSummaryResponse;
 import hcmute.edu.vn.discord.dto.response.ServerResponse;
 import hcmute.edu.vn.discord.entity.jpa.Server;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.List;
 
 public interface ServerService {
@@ -16,4 +20,9 @@ public interface ServerService {
 
     List<Server> getServersByCurrentUsername();
     void deleteServer(Long serverId);
+
+    List<ServerMemberSummaryResponse> getMembersOfServer(Long serverId);
+
+    @Transactional
+    void transferOwner(Long serverId, TransferOwnerRequest req);
 }

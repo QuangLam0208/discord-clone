@@ -50,22 +50,19 @@
                         <button type="button" class="btn-mini edit"
                                 th:data-id="${sv.id}" th:data-name="${sv.name}"
                                 onclick="openTransferModal(this.getAttribute('data-id'), this.getAttribute('data-name'))">
-                            <i class="fas fa-exchange-alt"></i> Chuyển
+                            <i class="fas fa-right-left"></i> Chuyển
                         </button>
-                        <!-- Nút cảnh báo mở menu trạng thái -->
                         <button type="button" class="btn-mini warn"
                                 th:attr="data-id=${sv.id}"
                                 onclick="toggleStatusMenu(this, this.getAttribute('data-id'))">
-                            <i class="fas fa-exclamation-triangle"></i>
+                            <i class="fas fa-triangle-exclamation"></i>
                         </button>
-                        <!-- Nút xóa server -->
                         <button type="button" class="btn-mini ban"
                                 th:data-id="${sv.id}" th:data-name="${sv.name}"
                                 onclick="openDeleteModal(this.getAttribute('data-id'), this.getAttribute('data-name'))">
                             <i class="fas fa-trash"></i>
                         </button>
 
-                        <!-- Menu trạng thái (dropdown) -->
                         <div class="status-menu" th:id="'status-menu-' + ${sv.id}">
                             <div class="status-menu-header">Gán trạng thái</div>
                             <button type="button" class="status-item active"
@@ -126,22 +123,31 @@
     </div>
 </div>
 
-<div id="transferModal" class="modal-overlay">
-    <div class="discord-modal">
-        <div class="modal-header"><h2>Chuyển quyền sở hữu</h2></div>
+<div id="transferModal" class="modal-overlay" data-selected-member-id="">
+    <div class="discord-modal" style="width:560px;">
+        <div class="modal-header">
+            <h2>Chuyển quyền sở hữu</h2>
+            <div id="transferServerNameTitle" class="modal-subtitle server-name-title">Tên server</div>
+        </div>
         <div class="modal-body">
             <input type="hidden" id="transferServerId">
-            <div class="form-group" style="text-align:center;margin-bottom:24px;">
-                <label>Đang chọn Server</label>
-                <label for="transferServerName"></label><input type="text" id="transferServerName" class="discord-input read-only-label" readonly>
+
+            <div class="form-group" style="margin-bottom:8px;">
+                <label>Chọn thành viên làm Owner mới</label>
+                <div class="discord-search search-inline" style="margin-bottom:8px;">
+                    <input type="text" id="transferMemberSearch" placeholder="Tìm theo username hoặc display name...">
+                    <button type="button" class="search-btn-inline" onclick="filterTransferMemberList()" aria-label="Tìm">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </button>
+                </div>
+
+                <div id="transferMemberList" style="max-height:260px; overflow:auto; background:#1e1f22; border:1px solid #3f4147; border-radius:6px;"></div>
+                <div class="muted" id="transferMemberHint" style="margin-top:8px;">Chỉ thành viên của server này mới có thể trở thành Owner.</div>
             </div>
-            <div class="form-group">
-                <label>Username chủ mới</label>
-                <label for="newOwnerInput"></label><input type="text" id="newOwnerInput" class="discord-input" placeholder="Nhập username..." required autocomplete="off">
-            </div>
+
             <div class="discord-warning-box">
                 <i class="fas fa-exclamation-triangle"></i>
-                <p><strong>Cảnh báo:</strong> Xác nhận sẽ chuyển quyền ngay lập tức.</p>
+                <p><strong>Cảnh báo:</strong> Xác nhận sẽ chuyển quyền ngay lập tức. Owner cũ sẽ mất role ADMIN; Owner mới sẽ được gán role ADMIN.</p>
             </div>
         </div>
         <div class="modal-footer">

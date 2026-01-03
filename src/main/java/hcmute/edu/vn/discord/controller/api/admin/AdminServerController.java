@@ -2,13 +2,13 @@ package hcmute.edu.vn.discord.controller.api.admin;
 
 import hcmute.edu.vn.discord.dto.request.TransferOwnerRequest;
 import hcmute.edu.vn.discord.dto.request.UpdateServerStatusRequest;
+import hcmute.edu.vn.discord.dto.response.ServerMemberSummaryResponse;
 import hcmute.edu.vn.discord.entity.enums.ServerStatus;
 import hcmute.edu.vn.discord.entity.jpa.Server;
-import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.repository.CategoryRepository;
 import hcmute.edu.vn.discord.repository.ChannelRepository;
 import hcmute.edu.vn.discord.repository.ServerRepository;
-import hcmute.edu.vn.discord.repository.UserRepository;
+import hcmute.edu.vn.discord.service.ServerService;
 import hcmute.edu.vn.discord.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
@@ -20,18 +20,20 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin/servers")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyAuthority('ADMIN')") // theo hệ thống của bạn
+@PreAuthorize("hasAnyAuthority('ADMIN')")
 public class AdminServerController {
 
     private final ServerRepository serverRepository;
     private final UserService userService;
     private final ChannelRepository channelRepository;
     private final CategoryRepository categoryRepository;
+    private final ServerService serverService;
 
     // GET /api/admin/servers?page=&size=&q=
     @GetMapping
@@ -77,20 +79,15 @@ public class AdminServerController {
         }
     }
 
-    // POST /api/admin/servers/{id}/transfer-owner
-    @PostMapping("/{id}/transfer-owner")
-    public Server transferOwner(@PathVariable Long id, @Valid @RequestBody TransferOwnerRequest req) {
-        Server s = serverRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Server not found"));
-        User newOwner = (req.getNewOwnerUsername() != null)
-                ? userService.findByUsername(req.getNewOwnerUsername()).orElse(null)
-                : (req.getNewOwnerId() != null
-                ? userService.findById(req.getNewOwnerId()).orElse(null)
-                : null);
-        if (newOwner == null) {
-            throw new EntityNotFoundException("New owner not found");
-        }
-        s.setOwner(newOwner);
-        return serverRepository.save(s);
+    @GetMapping("/{serverId}/members")
+    public ResponseEntity<List<ServerMemberSummaryResponse>> getMembers(@PathVariable Long serverId) {
+        return ResponseEntity.ok(serverService.getMembersOfServer(serverId));
+    }
+
+    @PostMapping("/{serverId}/transfer-owner")
+    public ResponseEntity<Void> transferOwner(@PathVariable Long serverId, @RequestBody TransferOwnerRequest req) {
+        serverService.transferOwner(serverId, req);
+        return ResponseEntity.ok().build();
     }
 
     // PATCH /api/admin/servers/{id}/status

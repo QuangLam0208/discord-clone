@@ -346,6 +346,62 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     border-radius:6px;
 }
 
+/* Kính lúp nằm cuối ô nhập trong modal chuyển owner */
+.search-inline {
+    position: relative;
+}
+.search-inline input {
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    padding: 10px 34px 10px 10px; /* chừa chỗ bên phải cho icon */
+    outline: none;
+    font-size: 14px;
+}
+.search-inline .search-btn-inline {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: #b5bac1;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+.search-inline .search-btn-inline:hover { color: #fff; }
+
+/* Tên server hiển thị giữa header modal */
+.modal-subtitle.server-name-title {
+    margin-top: 4px;
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: #f2f3f5;
+    opacity: .95;
+}
+
+/* Row member: trạng thái disabled cho owner hiện tại */
+.transfer-member-row[aria-disabled="true"] {
+    opacity: .6;
+    cursor: not-allowed;
+}
+.transfer-member-row .owner-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .3px;
+    background-color: rgba(35,165,89,.15);
+    color: #23a559;
+    border: 1px solid rgba(35,165,89,.3);
+    margin-left: 6px;
+}
+
 /* =========================================================
    4) Responsive
    ========================================================= */

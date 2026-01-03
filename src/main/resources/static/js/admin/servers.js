@@ -13,19 +13,121 @@
     function openTransferModal(id, name) {
         const modal = document.getElementById('transferModal'); if (!modal) return;
         modal.classList.add('active');
-        const idInput = document.getElementById('transferServerId');
-        const nameInput = document.getElementById('transferServerName');
-        const ownerInput = document.getElementById('newOwnerInput');
-        if (idInput) idInput.value = id;
-        if (nameInput) nameInput.value = name || '';
-        if (ownerInput) { ownerInput.value = ''; ownerInput.focus(); }
+        document.getElementById('transferServerId').value = id;
+
+        // Đưa tên server lên giữa header
+        const titleNameEl = document.getElementById('transferServerNameTitle');
+        if (titleNameEl) titleNameEl.innerText = name || '';
+
+        // Lấy owner hiện tại từ cell trong bảng để fallback nếu API chưa set isOwner
+        const ownerCell = document.querySelector(`[data-server-owner="${id}"]`);
+        let currentOwnerUsername = (ownerCell?.innerText || '').trim();
+        if (!currentOwnerUsername || /^no owner$/i.test(currentOwnerUsername)) currentOwnerUsername = '';
+
+        // Lưu vào dataset modal
+        modal.dataset.currentOwnerUsername = currentOwnerUsername;
+
+        // Reset lựa chọn và disable nút xác nhận
+        modal.dataset.selectedMemberId = '';
+        const btnConfirm = document.getElementById('btnConfirmTransfer');
+        if (btnConfirm) btnConfirm.disabled = true;
+
+        // Clear và load danh sách
+        const list = document.getElementById('transferMemberList');
+        list.innerHTML = '<div class="muted" style="padding:12px;">Đang tải danh sách thành viên...</div>';
+
+        loadTransferMembers(id);
+    }
+
+    async function loadTransferMembers(serverId) {
+        try {
+            const members = await Api.get(`/api/admin/servers/${serverId}/members`);
+            renderTransferMemberList(members || []);
+        } catch (e) {
+            document.getElementById('transferMemberList').innerHTML =
+                `<div class="muted" style="padding:12px;color:#ed4245">Không tải được danh sách: ${escapeHtml(e.message||'Error')}</div>`;
+        }
+    }
+
+    function renderTransferMemberList(members) {
+        const list = document.getElementById('transferMemberList');
+        const modal = document.getElementById('transferModal');
+        const currentOwnerUsername = (modal?.dataset?.currentOwnerUsername || '').toLowerCase();
+
+        if (!Array.isArray(members) || !members.length) {
+            list.innerHTML = '<div class="muted" style="padding:12px;">Không có thành viên</div>';
+            return;
+        }
+
+        list.innerHTML = members.map(m => {
+            const username = String(m.username || '').trim();
+            const isOwnerApi = !!m.isOwner; // từ API nếu có
+            const isOwnerByName = currentOwnerUsername && username.toLowerCase() === currentOwnerUsername;
+            const isOwner = isOwnerApi || isOwnerByName;
+
+            const disabledAttr = isOwner ? 'aria-disabled="true" title="Owner hiện tại - không thể chọn"' : '';
+            const ownerChip = isOwner ? '<span class="owner-chip">Owner hiện tại</span>' : '';
+            const adminBadge = m.isAdminRole ? '<span class="badge-role admin" style="font-size:10px;">ADMIN</span>' : '';
+
+            return `
+        <div class="transfer-member-row"
+             data-member-id="${m.memberId}"
+             data-username="${escapeHtml(username)}"
+             data-display="${escapeHtml(m.displayName||'')}"
+             data-owner="${isOwner ? '1' : '0'}"
+             ${disabledAttr}
+             style="display:flex;align-items:center;gap:10px;padding:8px;cursor:pointer;border-bottom:1px solid #2b2d31;">
+          <img src="${escapeHtml(m.avatarUrl||'/images/default.png')}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">
+          <div style="flex:1;">
+            <div style="color:#fff;font-weight:600;display:flex;align-items:center;gap:6px;">
+              ${escapeHtml(username)}
+              ${ownerChip}
+            </div>
+            <div style="color:#b5bac1;font-size:12px;">${escapeHtml(m.displayName||'')}</div>
+          </div>
+          ${adminBadge}
+        </div>
+      `;
+        }).join('');
+
+        // Bind selection (không cho chọn owner hiện tại)
+        list.querySelectorAll('.transfer-member-row').forEach(row => {
+            row.addEventListener('click', () => {
+                const isOwner = row.getAttribute('data-owner') === '1' || row.getAttribute('aria-disabled') === 'true';
+                if (isOwner) {
+                    toastErr('Đây là owner hiện tại của server');
+                    return;
+                }
+
+                // Visual select
+                list.querySelectorAll('.transfer-member-row').forEach(r => r.style.background = '');
+                row.style.background = '#35373c';
+
+                // Save selected + enable nút xác nhận
+                const modal = document.getElementById('transferModal');
+                modal.dataset.selectedMemberId = row.getAttribute('data-member-id');
+
+                const btnConfirm = document.getElementById('btnConfirmTransfer');
+                if (btnConfirm) btnConfirm.disabled = false;
+            });
+        });
+    }
+
+    function filterTransferMemberList() {
+        const keyword = (document.getElementById('transferMemberSearch').value || '').trim().toLowerCase();
+        const list = document.getElementById('transferMemberList');
+        list.querySelectorAll('.transfer-member-row').forEach(row => {
+            const u = (row.getAttribute('data-username') || '').toLowerCase();
+            const d = (row.getAttribute('data-display') || '').toLowerCase();
+            const show = !keyword || u.includes(keyword) || d.includes(keyword);
+            row.style.display = show ? 'flex' : 'none';
+        });
     }
 
     function toggleStatusMenu(btn, serverId) {
         const menu = document.getElementById(`status-menu-${serverId}`);
         if (!menu) return;
 
-        // Đóng các menu khác và reset style
         document.querySelectorAll('.status-menu.open').forEach(el => {
             if (el !== menu) {
                 el.classList.remove('open', 'drop-up');
@@ -37,7 +139,6 @@
             }
         });
 
-        // Toggle open/close
         const willOpen = !menu.classList.contains('open');
         if (!willOpen) {
             menu.classList.remove('open', 'drop-up');
@@ -50,23 +151,19 @@
         }
         menu.classList.add('open');
 
-        // Định vị bằng fixed để thoát clipping
         const rect = btn.getBoundingClientRect();
         const gap = 6;
 
         menu.style.position = 'fixed';
         menu.style.minWidth = `${Math.max(rect.width, 180)}px`;
 
-        // Mặc định hiển thị dưới nút
         let top = rect.bottom + gap;
         let left = rect.left;
 
-        // Tạm set để đo kích thước
         menu.style.top = `${top}px`;
         menu.style.left = `${left}px`;
         menu.style.right = 'auto';
 
-        // Nếu tràn đáy viewport → drop-up
         const bottom = top + menu.offsetHeight;
         if (bottom > window.innerHeight) {
             const upTop = rect.top - menu.offsetHeight - gap;
@@ -76,14 +173,12 @@
             menu.classList.remove('drop-up');
         }
 
-        // Nếu tràn bên phải → nẹp vào lề phải
         const overflowRight = left + menu.offsetWidth > window.innerWidth - 12;
         if (overflowRight) {
             const safeLeft = Math.max(12, window.innerWidth - menu.offsetWidth - 12);
             menu.style.left = `${safeLeft}px`;
         }
 
-        // Auto-close khi scroll/resize/click ngoài
         const closeOnOutside = (e) => {
             if (!e.target.closest('.status-menu') && !e.target.closest('.btn-mini.warn')) {
                 menu.classList.remove('open', 'drop-up');
@@ -131,7 +226,7 @@
     }
 
     function attachAdminServerHandlers() {
-        // Servers: Xóa
+        // Xóa server
         const btnConfirmDelete = document.getElementById('btnConfirmDelete');
         btnConfirmDelete?.addEventListener('click', async () => {
             const id = document.getElementById('deleteServerId')?.value;
@@ -146,17 +241,25 @@
             } catch (e) { toastErr(e.message || 'Xóa server thất bại'); }
         });
 
-        // Servers: Chuyển owner
+        // Chuyển owner
         const btnConfirmTransfer = document.getElementById('btnConfirmTransfer');
         btnConfirmTransfer?.addEventListener('click', async () => {
-            const id = document.getElementById('transferServerId')?.value;
-            const newOwnerUsername = document.getElementById('newOwnerInput')?.value?.trim();
-            if (!id || !newOwnerUsername) { toastErr('Vui lòng nhập username owner mới'); return; }
+            const serverId = document.getElementById('transferServerId')?.value;
+            const modal = document.getElementById('transferModal');
+            const memberId = modal?.dataset?.selectedMemberId;
+            if (!serverId) { toastErr('Thiếu serverId'); return; }
+            if (!memberId) { toastErr('Vui lòng chọn một thành viên để chuyển'); return; }
             try {
-                await Api.post(`/api/admin/servers/${id}/transfer-owner`, { newOwnerUsername });
+                await Api.post(`/api/admin/servers/${serverId}/transfer-owner`, { newOwnerMemberId: Number(memberId) });
                 closeModal('transferModal');
-                const ownerCell = document.querySelector(`[data-server-owner="${id}"]`);
+
+                // Cập nhật hiển thị owner
+                const list = document.getElementById('transferMemberList');
+                const selected = list?.querySelector(`.transfer-member-row[data-member-id="${memberId}"]`);
+                const newOwnerUsername = selected?.getAttribute('data-username') || '';
+                const ownerCell = document.querySelector(`[data-server-owner="${serverId}"]`);
                 if (ownerCell) ownerCell.innerText = newOwnerUsername;
+
                 toastOk('Đã chuyển quyền owner');
             } catch (e) { toastErr(e.message || 'Chuyển owner thất bại'); }
         });
@@ -168,4 +271,5 @@
     window.toggleStatusMenu = toggleStatusMenu;
     window.updateServerStatus = updateServerStatus;
     window.attachAdminServerHandlers = attachAdminServerHandlers;
+    window.filterTransferMemberList = filterTransferMemberList;
 })();
