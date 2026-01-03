@@ -772,14 +772,15 @@ button:hover {
    background-color: #5865F2;
    color: white;
    border: none;
-   padding: 2px 10px;
+   padding: 0 16px;
    border-radius: 4px;
-   font-size: 13px;
-   font-weight: 500;
+   font-size: 14px;
+   font-weight: 600;
    cursor: pointer;
    transition: 0.2s;
    white-space: nowrap;
-   height: 24px;
+   height: 38px;
+   width: auto;
 }
 
 .add-friend-btn:hover {
@@ -1296,7 +1297,7 @@ input:checked+.slider:before {
 .input-with-icon input {
    padding-left: 30px !important;
 }
-  
+
   /* =========================================
    7. PROFILE & ADMIN STYLES
    ========================================= */
@@ -1375,7 +1376,7 @@ input:checked+.slider:before {
 /* =========================================
    9. CHANNEL SETTINGS MODAL (FULL OVERLAY STYLE)
    ========================================= */
-  
+
 .settings-layout {
    display: flex;
    width: 1000px;
@@ -1466,7 +1467,7 @@ input:checked+.slider:before {
 /* =========================================
    10. SAVE BAR
    ========================================= */
-  
+
 .save-notice-bar {
   position: absolute; bottom: 20px; left: 50%;
   transform: translateX(-50%) translateY(100px);
