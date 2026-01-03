@@ -7,8 +7,8 @@ import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
 import hcmute.edu.vn.discord.repository.UserRepository;
 import hcmute.edu.vn.discord.security.services.UserDetailsImpl;
 import hcmute.edu.vn.discord.service.DirectMessageService;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import hcmute.edu.vn.discord.service.UserService;
+import hcmute.edu.vn.discord.security.services.UserDetailsImpl;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +20,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/direct-messages")
@@ -41,31 +44,26 @@ public class DirectMessageController {
             throw new IllegalArgumentException("User is null or unauthenticated");
         }
         Long senderId = user.getId();
-
-        // Lưu tin nhắn vào DB
+        // 1. Lưu tin nhắn xuống DB
         DirectMessageResponse response = directMessageService.sendMessage(senderId, request);
-
-        // 1. Send to receiver (Gửi tin nhắn Real-time cho người nhận)
-        // Sử dụng userRepository.findById để chắc chắn lấy được username chính xác
-        userRepository.findById(request.getReceiverId()).ifPresentOrElse(receiver -> {
-            log.info("REST: Sending DM from {} to Receiver Username: {}", user.getUsername(), receiver.getUsername());
-            // Gửi đến /user/{username}/queue/dm
+        userService.findById(request.getReceiverId()).ifPresentOrElse(receiver -> {
+            if (receiver.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(
+                        receiver.getUsername(),
+                        "/queue/dm",
+                        response
+                );
+                log.info("WS: Đã gửi tin nhắn đến hàng đợi của user: {}", receiver.getUsername());
+            }
+        }, () -> log.error("REST: Không tìm thấy người nhận ID: {}", request.getReceiverId()));
+        // 3. Gửi Real-time lại cho người gửi (để đồng bộ đa thiết bị/tab)
+        if (user.getUsername() != null) {
             messagingTemplate.convertAndSendToUser(
-                    receiver.getUsername(),
+                    user.getUsername(),
                     "/queue/dm",
                     response
             );
-        }, () -> {
-            log.error("REST: Receiver not found with ID: {}", request.getReceiverId());
-        });
-
-        // 2. Send back to sender (for multi-device sync - Gửi lại cho chính mình để đồng bộ)
-        messagingTemplate.convertAndSendToUser(
-                user.getUsername(),
-                "/queue/dm",
-                response
-        );
-        log.info("REST: Synced DM back to Sender: {}", user.getUsername());
+        }
 
         return ResponseEntity.ok(response);
     }
@@ -109,4 +107,17 @@ public class DirectMessageController {
         return ResponseEntity.ok(
                 directMessageService.getOrCreateConversation(user.getId(), receiverId));
     }
+
+    @Operation(summary = "Get or create DM conversation by friend userId")
+    @GetMapping("/conversation/by-user/{friendId}")
+    public ResponseEntity<ConversationResponse> getOrCreateConversationByUser(
+            @PathVariable Long friendId,
+            @AuthenticationPrincipal UserDetailsImpl user) {
+        if (user == null || user.getId() == null) {
+            throw new IllegalArgumentException("User is null or unauthenticated");
+        }
+        ConversationResponse conv = directMessageService.getOrCreateConversation(user.getId(), friendId);
+        return ResponseEntity.ok(conv);
+    }
+
 }
