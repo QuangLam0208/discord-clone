@@ -12,35 +12,41 @@ import java.util.Set;
 @Table(name = "channels")
 public class Channel {
 
-        @Id
-        @GeneratedValue(strategy = GenerationType.IDENTITY)
-        private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-        @Column(nullable = false)
-        private String name;
+    @Column(nullable = false)
+    private String name;
 
-        @Enumerated(EnumType.STRING)
-        private ChannelType type; // TEXT, VOICE
+    @Enumerated(EnumType.STRING)
+    private ChannelType type; // TEXT, VOICE
 
-        @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "server_id", nullable = false)
-        private Server server;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "server_id", nullable = false)
+    private Server server;
 
-        @ManyToOne(fetch = FetchType.LAZY)
-        @JoinColumn(name = "category_id")
-        private Category category;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
 
-        @Column(name = "is_private")
-        private Boolean isPrivate = false;
+    @Column(name = "is_private")
+    private Boolean isPrivate = false;
 
-        @Column(columnDefinition = "TEXT")
-        private String description;
 
-        @ManyToMany(fetch = FetchType.LAZY)
-        @JoinTable(name = "channel_allowed_members", joinColumns = @JoinColumn(name = "channel_id"), inverseJoinColumns = @JoinColumn(name = "server_member_id"))
-        private Set<ServerMember> allowedMembers = new HashSet<>();
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "channel_allowed_members",
+            joinColumns = @JoinColumn(name = "channel_id"),
+            inverseJoinColumns = @JoinColumn(name = "server_member_id")
+    )
+    private Set<ServerMember> allowedMembers = new HashSet<>();
 
-        @ManyToMany(fetch = FetchType.LAZY)
-        @JoinTable(name = "channel_allowed_roles", joinColumns = @JoinColumn(name = "channel_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
-        private Set<ServerRole> allowedRoles = new HashSet<>();
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "channel_allowed_roles",
+            joinColumns = @JoinColumn(name = "channel_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<ServerRole> allowedRoles = new HashSet<>();
 }

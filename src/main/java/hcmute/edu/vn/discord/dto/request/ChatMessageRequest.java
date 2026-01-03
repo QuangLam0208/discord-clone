@@ -9,5 +9,4 @@ public class ChatMessageRequest {
 
     // Optional: dùng cho testing hoặc khi chưa integrate auth qua WebSocket
     private Long senderId;
-    private java.util.List<String> attachments;
 }

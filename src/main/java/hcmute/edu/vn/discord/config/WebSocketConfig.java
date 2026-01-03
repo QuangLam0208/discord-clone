@@ -17,21 +17,18 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     private final JwtChannelInterceptor jwtChannelInterceptor;
 
     @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) {
-        var endpointRegistration = registry.addEndpoint("/ws");
-        if (allowedOriginPatterns != null
-                && allowedOriginPatterns.length > 0
-                && !(allowedOriginPatterns.length == 1 && allowedOriginPatterns[0].isEmpty())) {
-            endpointRegistration.setAllowedOriginPatterns(allowedOriginPatterns);
-        }
-        endpointRegistration.withSockJS();
+    public void configureMessageBroker(MessageBrokerRegistry registry) {
+        registry.enableSimpleBroker("/topic", "/queue", "/user");
+
+        registry.setApplicationDestinationPrefixes("/app");
+        registry.setUserDestinationPrefix("/user");
     }
 
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/topic", "/queue");
-        registry.setApplicationDestinationPrefixes("/app");
-        registry.setUserDestinationPrefix("/user");
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
     }
 
     @Override

@@ -24,7 +24,7 @@ public class ChannelServiceImpl implements ChannelService {
     @Override
     @Transactional
     public Channel createChannel(Long serverId, String name, ChannelType type, Long categoryId,
-            Boolean isPrivate, String createdByUsername) {
+                                 Boolean isPrivate, String createdByUsername) {
         Server server = serverRepository.findById(serverId)
                 .orElseThrow(() -> new EntityNotFoundException("Server not found"));
 
@@ -61,16 +61,11 @@ public class ChannelServiceImpl implements ChannelService {
 
     @Override
     @Transactional
-    public Channel updateChannel(Long channelId, String name, String description, Long categoryId, Boolean isPrivate) {
+    public Channel updateChannel(Long channelId, String name, Long categoryId) {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
 
-        if (name != null && !name.isBlank())
-            channel.setName(name);
-        if (description != null)
-            channel.setDescription(description); // Allow empty string to clear
-        if (isPrivate != null)
-            channel.setIsPrivate(isPrivate);
+        if (name != null && !name.isBlank()) channel.setName(name);
 
         if (categoryId != null) {
             if (categoryId <= 0) {

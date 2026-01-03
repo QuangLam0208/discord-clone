@@ -27,6 +27,7 @@ public class ServerServiceImpl implements ServerService {
     private final ChannelRepository channelRepository;
     private final PermissionRepository permissionRepository;
 
+
     @Override
     @Transactional
     public Server createServer(ServerRequest request) {
@@ -64,7 +65,8 @@ public class ServerServiceImpl implements ServerService {
                 permMap.get(EPermission.ATTACH_FILES),
                 permMap.get(EPermission.ADD_REACTIONS),
                 permMap.get(EPermission.MENTION_EVERYONE_HERE_ALLROLES),
-                permMap.get(EPermission.READ_MESSAGE_HISTORY))));
+                permMap.get(EPermission.READ_MESSAGE_HISTORY)
+        )));
         serverRoleRepository.save(everyoneRole);
 
         // 5. Tạo Role Admin (Full quyền)
@@ -104,7 +106,8 @@ public class ServerServiceImpl implements ServerService {
         for (EPermission ep : EPermission.values()) {
             Permission perm = permissionRepository.findByCode(ep.name())
                     .orElseGet(() -> permissionRepository.save(
-                            new Permission(null, ep.name(), ep.getDescription())));
+                            new Permission(null, ep.name(), ep.getDescription())
+                    ));
             map.put(ep, perm);
         }
         return map;

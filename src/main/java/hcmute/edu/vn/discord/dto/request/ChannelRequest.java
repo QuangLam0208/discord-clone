@@ -17,9 +17,6 @@ public class ChannelRequest {
 
     private Boolean isPrivate;
     private Long categoryId;
-    @Size(max = 1024, message = "Mô tả không được quá 1024 ký tự")
-    private String description;
-
     public void normalize() {
         if (name != null) {
             name = name.trim();

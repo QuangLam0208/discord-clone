@@ -39,7 +39,8 @@ public class ChannelController {
                 request.getType(),
                 request.getCategoryId(),
                 request.getIsPrivate(),
-                authentication.getName()));
+                authentication.getName()
+        ));
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}").buildAndExpand(created.getId()).toUri();
         return ResponseEntity.created(location).body(created);
@@ -76,9 +77,8 @@ public class ChannelController {
         ChannelResponse updated = ChannelResponse.from(channelService.updateChannel(
                 channelId,
                 request.getName(),
-                request.getDescription(),
-                request.getCategoryId(),
-                request.getIsPrivate()));
+                request.getCategoryId()
+        ));
         return ResponseEntity.ok(updated);
     }
 
