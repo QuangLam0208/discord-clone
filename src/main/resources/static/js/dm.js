@@ -31,22 +31,28 @@ const DM = (() => {
   }
 
   async function onSelectFriend(friendId, friendName) {
-    st.activeFriendId = friendId;
-    st.activeFriendName = friendName || ('User ' + friendId);
-    st.unreadCounts.set(friendId, 0);
-    DMUI.updateSidebarItem(friendId, false);
-    DMUI.setActiveFriendName(st.activeFriendName);
-    DMUI.showConversation();
-    highlightServerLogo();
+      st.activeFriendId = friendId;
+      st.activeFriendName = friendName || ('User ' + friendId);
+      st.unreadCounts.set(friendId, 0);
 
-    try {
-      const conv = await DMApi.getOrCreateConversation(friendId);
-      st.conversationId = String(conv.id);
-      const msgs = await DMApi.fetchMessages(st.conversationId, 0, 50);
-      DMUI.renderMessages(msgs, st.currentUserId, st.displayedMsgIds);
-    } catch (e) {
-      console.error('Error loading conversation:', e);
-    }
+      const friendInfo = st.friends.find(f => f.friendUserId == friendId) || {
+          friendUserId: friendId, displayName: friendName, friendUsername: friendName
+      };
+
+      DMUI.updateSidebarItem(friendId, false);
+      DMUI.setActiveFriendName(st.activeFriendName);
+      DMUI.showConversation();
+      highlightServerLogo();
+
+      try {
+          const conv = await DMApi.getOrCreateConversation(friendId);
+          st.conversationId = String(conv.id);
+          const msgs = await DMApi.fetchMessages(st.conversationId, 0, 50);
+
+          DMUI.renderMessages(msgs, st.currentUserId, st.displayedMsgIds, friendInfo);
+      } catch (e) {
+          console.error('Error loading conversation:', e);
+      }
   }
 
   async function onSend() {

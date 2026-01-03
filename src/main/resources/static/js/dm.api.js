@@ -78,16 +78,18 @@ const DMApi = (() => {
     return res.json();
   }
   async function sendFriendRequestByUsername(username) {
-    const u = await userByUsername(username);
-    const res = await fetch('/api/friends/requests', {
-      method: 'POST',
-      headers: authHeaders(true),
-      credentials: 'include',
-      body: JSON.stringify({ targetUserId: u.id })
-    });
-    handleResponse(res);
-    return res.json();
-  }
+      const u = await userByUsername(username);
+      const res = await fetch('/api/friends/requests', {
+        method: 'POST',
+        headers: authHeaders(true),
+        body: JSON.stringify({ targetUserId: u.id })
+      });
+      if (!res.ok) {
+          const errData = await res.json();
+          throw new Error(errData.message || 'Gửi yêu cầu thất bại');
+      }
+      return res.json();
+    }
   async function acceptRequest(id) {
     const res = await fetch(`/api/friends/requests/${id}/accept`, { method: 'POST', headers: authHeaders(false), credentials: 'include' });
     handleResponse(res);
@@ -103,19 +105,34 @@ const DMApi = (() => {
     handleResponse(res);
   }
 
+  async function blockUser(targetUserId) {
+      const res = await fetch(`/api/friends/block/${targetUserId}`, {
+        method: 'POST', headers: authHeaders(true), credentials: 'include'
+      });
+      handleResponse(res);
+    }
+
+    async function reportUser(targetUserId, type = 'SPAM') {
+      const res = await fetch('/api/reports', {
+        method: 'POST', headers: authHeaders(true), credentials: 'include',
+        body: JSON.stringify({ targetUserId: Number(targetUserId), type: type })
+      });
+      handleResponse(res);
+    }
+
   return {
-    // DM chat
     getToken,
     fetchFriends,
     getOrCreateConversation,
     fetchMessages,
     sendMessage,
-    // Friends
     listInboundRequests,
     listOutboundRequests,
     sendFriendRequestByUsername,
     acceptRequest,
     declineRequest,
-    cancelRequest
+    cancelRequest,
+    blockUser,
+    reportUser
   };
 })();
