@@ -15,6 +15,11 @@
         </div>
     </div>
 
+
+
+    <!-- Role Context Menu -->
+
+
     <div class="modal-overlay" id="createServerModal">
         <div class="modal-box">
             <button class="close-modal-btn" onclick="closeModal('createServerModal')">&times;</button>
@@ -411,36 +416,212 @@
                     </div>
                 </div>
 
+
+
+                <!-- TAB: ROLES -->
+                <div id="tab-server-roles" class="settings-tab-content">
+                    <h2>Vai Trò</h2>
+                    <p class="placeholder-text" style="font-size: 13px; margin-bottom: 16px;">
+                        Thành viên sử dụng màu của vai trò cao nhất trong danh sách.
+                    </p>
+
+                    <div class="members-controls-row" style="margin-bottom: 24px;">
+                        <div class="members-search-box-styled search-box-flex">
+                            <input type="text" id="role-search-input" placeholder="Tìm kiếm vai trò">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <button class="btn-create-role-styled" onclick="createNewRoleFromEditor()"
+                            style="margin-left: 16px;">Tạo Vai Trò</button>
+                    </div>
+
+                    <div class="roles-list-header"
+                        style="display: flex; color: #b5bac1; font-size: 12px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; padding: 0 10px;">
+                        <span style="flex: 1;">VAI TRÒ - <span id="roles-count-label">0</span></span>
+                        <span style="width: 100px; text-align: center;">THÀNH VIÊN</span>
+                        <span style="width: 80px;"></span>
+                    </div>
+
+                    <div class="roles-list-body" id="roles-list-body">
+                        <!-- Roles will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- TAB: AUDIT LOG -->
+                <div id="tab-server-audit" class="settings-tab-content">
+                    <h2>Nhật ký chỉnh sửa</h2>
+                    <p class="placeholder-text">Nhật ký thay đổi sẽ hiển thị tại đây.</p>
+                </div>
+
+                <!-- TAB: BANS -->
+                <div id="tab-server-bans" class="settings-tab-content">
+                    <h2>Chặn</h2>
+                    <p class="placeholder-text">Danh sách người dùng bị chặn.</p>
+                </div>
+
+                <!-- TAB: DELETE -->
+                <div id="tab-server-delete" class="settings-tab-content">
+                    <h2>Xóa Máy Chủ</h2>
+                    <div class="warning-box">
+                        <div class="warning-msg">Bạn có chắc chắn muốn xóa máy chủ này? <strong
+                                id="delete-server-name-display"></strong>? <br>Hành động này không thể hoàn tác.</div>
+                        <button class="btn-danger-large" onclick="confirmDeleteServer()">Xóa Máy Chủ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROLE EDITOR FULL SCREEN VIEW -->
+        <div class="settings-layout roles-editor-layout" id="roles-editor-view" style="display: none;">
+            <div class="settings-sidebar role-edit-sidebar">
+                <div class="role-edit-nav-header" onclick="closeRoleEditor()">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>QUAY LẠI</span>
+                </div>
+                <div class="settings-nav-separator"></div>
+                <div class="role-list-header-small"
+                    style="padding: 6px 10px; font-size: 12px; font-weight: 700; color: #b5bac1;">VAI TRÒ</div>
+                <div class="role-edit-list" id="role-edit-list-container">
+                    <!-- List of roles to select will be rendered here via JS -->
+                </div>
+                <div class="role-edit-footer" style="padding: 10px; border-top: 1px solid #2b2d31;">
+                    <button class="btn-create-role-sidebar" onclick="createNewRoleFromEditor()"
+                        style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: transparent; border: none; color: #b5bac1; font-size: 13px; cursor: pointer; padding: 5px;">
+                        <i class="fas fa-plus"></i> Tạo vai trò
+                    </button>
+                </div>
             </div>
 
-            <!-- TAB: ROLES -->
-            <div id="tab-server-roles" class="settings-tab-content">
-                <h2>Vai trò</h2>
-                <p class="placeholder-text">Quản lý vai trò sẽ ở đây.</p>
-            </div>
+            <div class="settings-content-wrapper role-edit-content">
+                <div class="settings-close-btn" onclick="closeModal('serverSettingsModal')">
+                    <i class="fa-solid fa-xmark"></i>
+                    <span>ESC</span>
+                </div>
 
-            <!-- TAB: AUDIT LOG -->
-            <div id="tab-server-audit" class="settings-tab-content">
-                <h2>Nhật ký chỉnh sửa</h2>
-                <p class="placeholder-text">Nhật ký thay đổi sẽ hiển thị tại đây.</p>
-            </div>
+                <div id="role-editor-main-content">
+                    <h2 id="role-editor-title" style="margin-bottom: 20px;">SỬA ĐỔI VAI TRÒ</h2>
 
-            <!-- TAB: BANS -->
-            <div id="tab-server-bans" class="settings-tab-content">
-                <h2>Chặn</h2>
-                <p class="placeholder-text">Danh sách người dùng bị chặn.</p>
-            </div>
+                    <div class="role-editor-tabs"
+                        style="display: flex; gap: 20px; border-bottom: 1px solid #3f4147; margin-bottom: 20px; padding-bottom: 10px;">
+                        <div class="role-tab-item active" style="color: white; cursor: pointer; font-weight: 500;"
+                            onclick="switchRoleEditorTab('display')">Hiển thị</div>
+                        <div class="role-tab-item" style="color: #b5bac1; cursor: pointer; font-weight: 500;"
+                            onclick="switchRoleEditorTab('permissions')">Quyền hạn</div>
 
-            <!-- TAB: DELETE -->
-            <div id="tab-server-delete" class="settings-tab-content">
-                <h2>Xóa Máy Chủ</h2>
-                <div class="warning-box">
-                    <div class="warning-msg">Bạn có chắc chắn muốn xóa máy chủ này? <strong
-                            id="delete-server-name-display"></strong>? <br>Hành động này không thể hoàn tác.</div>
-                    <button class="btn-danger-large" onclick="confirmDeleteServer()">Xóa Máy Chủ</button>
+                        <div class="role-tab-item" style="color: #b5bac1; cursor: pointer; font-weight: 500;"
+                            onclick="switchRoleEditorTab('members')">Quản lý thành viên</div>
+                    </div>
+
+                    <div class="role-tab-content active" id="role-tab-display">
+                        <div style="display: flex; gap: 20px; align-items: flex-start;">
+                            <div class="input-group" style="flex: 1;">
+                                <label>TÊN VAI TRÒ</label>
+                                <input type="text" id="edit-role-name" class="role-input" oninput="showRoleSaveBar()"
+                                    style="background-color: #1e1f22; border: none; padding: 10px; color: #dbdee1; width: 100%; border-radius: 4px; margin-top: 8px;">
+
+                                <div style="margin-top: 20px; border-top: 1px solid #3f4147; padding-top: 20px;">
+                                    <button class="btn-delete-role" onclick="deleteCurrentRole()" style="width: auto;">
+                                        Xóa Vai Trò
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="input-group" style="flex: 1;">
+                                <label>MÀU VAI TRÒ</label>
+                                <div class="role-color-picker"
+                                    style="margin-top: 8px; display: flex; gap: 10px; align-items: center; background-color: #1e1f22; padding: 5px; border-radius: 4px;">
+                                    <input type="color" id="edit-role-color"
+                                        oninput="updateRoleColorPreview(this.value); showRoleSaveBar()"
+                                        style="height: 50px; width: 100%; border: none; background: transparent; cursor: pointer;">
+                                </div>
+                                <div style="font-size: 13px; color: #b5bac1; margin-top: 6px;">Chọn màu để phân biệt vai
+                                    trò này.</div>
+                            </div>
+                        </div>
+
+
+
+
+                    </div>
+
+                    <div class="role-tab-content" id="role-tab-permissions"
+                        style="display:none; height: 100%; flex-direction: column;">
+                        <div
+                            style="padding-bottom: 16px; border-bottom: 1px solid #3f4147; margin-bottom: 16px; position: relative;">
+                            <input type="text" id="permission-search-input" placeholder="Tìm quyền hạn"
+                                class="role-input"
+                                style="background-color: #1e1f22; border: none; padding: 10px; color: #dbdee1; width: 100%; border-radius: 4px;">
+                            <i class="fas fa-search"
+                                style="position: absolute; right: 10px; top: 10px; color: #b5bac1;"></i>
+                        </div>
+                        <div id="role-permissions-list" style="flex: 1; overflow-y: auto; padding-right: 8px;">
+                            <!-- Permissions will be rendered here dynamically -->
+                        </div>
+                    </div>
+
+
+
+                    <div class="role-tab-content" id="role-tab-members"
+                        style="display:none; height: 100%; flex-direction: column;">
+                        <div style="display:flex; gap: 10px; margin-bottom: 20px; align-items: center;">
+                            <div class="members-search-box-styled search-box-flex" style="flex:1;">
+                                <input type="text" id="role-members-search" placeholder="Tìm kiếm thành viên"
+                                    oninput="filterRoleMembers()">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <button class="btn-create-role-styled" onclick="openAddRoleMemberModal()">Thêm Thành
+                                Viên</button>
+                        </div>
+                        <div id="role-members-list" style="flex:1; overflow-y:auto;">
+                            <!-- Items go here -->
+                        </div>
+                    </div>
+
+                    <!-- Add Role Member Modal Overlay -->
+                    <div id="add-role-member-modal"
+                        style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10002; justify-content: center; align-items: center;">
+                        <div
+                            style="background: #313338; width: 440px; border-radius: 4px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 0 1px #1e1f22;">
+                            <div
+                                style="padding: 16px; display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="color: white; margin: 0; font-size: 16px; font-weight: 600;">Thêm thành viên
+                                    vào
+                                    vai trò</h3>
+                                <i class="fas fa-times" onclick="closeAddRoleMemberModal()"
+                                    style="color: #b5bac1; cursor: pointer;"></i>
+                            </div>
+                            <div style="padding: 0 16px 16px;">
+                                <div class="members-search-box-styled" style="width: 100%;">
+                                    <input type="text" id="add-role-member-search" placeholder="Tìm kiếm thành viên"
+                                        oninput="filterAddRoleMembers()">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                            </div>
+                            <div id="add-role-member-list"
+                                style="height: 300px; overflow-y: auto; padding: 0 8px 8px 8px;">
+                                <!-- Candidates go here -->
+                            </div>
+                            <div
+                                style="padding: 16px; background: #2b2d31; display: flex; justify-content: flex-end; gap: 10px;">
+                                <button
+                                    style="background: transparent; border: none; color: white; cursor: pointer; font-weight: 500;"
+                                    onclick="closeAddRoleMemberModal()">Hủy</button>
+                                <button class="btn-create-role-styled" onclick="submitAddRoleMembers()">Thêm</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="save-notice-bar" id="role-save-bar">
+                    <span>Bạn có thay đổi chưa lưu!</span>
+                    <div class="save-actions">
+                        <button class="btn-reset" onclick="resetRoleChanges()">ĐẶT LẠI</button>
+                        <button class="btn-save" onclick="saveRoleChanges()">LƯU THAY ĐỔI</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+</div>
+
+
 </div>

@@ -23,4 +23,7 @@ public interface ServerRoleService {
 
     @Transactional
     ServerMember assignRoles(Long serverId, AssignRolesRequest request, String actorUsername);
+
+    @Transactional(readOnly = true)
+    List<ServerMember> getMembersByRole(Long serverId, Long roleId, String actorUsername);
 }

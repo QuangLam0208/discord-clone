@@ -3,6 +3,7 @@ package hcmute.edu.vn.discord.controller;
 import hcmute.edu.vn.discord.dto.request.AssignRolesRequest;
 import hcmute.edu.vn.discord.dto.request.ServerRoleRequest;
 import hcmute.edu.vn.discord.dto.response.ServerRoleResponse;
+import hcmute.edu.vn.discord.dto.response.ServerMemberResponse;
 import hcmute.edu.vn.discord.entity.jpa.ServerRole;
 import hcmute.edu.vn.discord.service.ServerRoleService;
 import jakarta.validation.Valid;
@@ -80,5 +81,17 @@ public class ServerRoleController {
             Authentication authentication) {
         serverRoleService.assignRoles(serverId, request, authentication.getName());
         return ResponseEntity.ok().build();
+    }
+
+    // 7. Lấy danh sách thành viên của Role
+    @GetMapping("/{roleId}/members")
+    @PreAuthorize("@serverAuth.canManageRole(#serverId, authentication.name)")
+    public ResponseEntity<List<ServerMemberResponse>> getRoleMembers(@PathVariable Long serverId,
+            @PathVariable Long roleId,
+            Authentication authentication) {
+        return ResponseEntity.ok(serverRoleService.getMembersByRole(serverId, roleId, authentication.getName())
+                .stream()
+                .map(ServerMemberResponse::from)
+                .toList());
     }
 }

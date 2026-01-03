@@ -15,7 +15,6 @@ import hcmute.edu.vn.discord.service.ServerService;
 import hcmute.edu.vn.discord.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -48,15 +47,10 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         return server;
     }
 
-    private void ensureRoleNameUnique(Long serverId, String name) {
-        if (serverRoleRepository.existsByServerIdAndNameIgnoreCase(serverId, name)) {
-            throw new DataIntegrityViolationException("Role name đã tồn tại trong server");
-        }
-    }
-
     private Set<Permission> mapPermissionCodes(Set<String> codes) {
         Set<Permission> perms = new HashSet<>();
-        if (codes == null || codes.isEmpty()) return perms;
+        if (codes == null || codes.isEmpty())
+            return perms;
         for (String code : codes) {
             Permission p = permissionRepository.findByCode(code)
                     .orElseThrow(() -> new EntityNotFoundException("Permission not found: " + code));
@@ -70,7 +64,8 @@ public class ServerRoleServiceImpl implements ServerRoleService {
     public ServerRole createRole(Long serverId, ServerRoleRequest request, String actorUsername) {
         Server server = requireOwner(serverId, actorUsername);
         // Không cho tạo trùng tên trong server
-        ensureRoleNameUnique(serverId, request.getName());
+        // Không cho tạo trùng tên trong server -> DISABLED
+        // ensureRoleNameUnique(serverId, request.getName());
 
         // Không cho tạo role hệ thống với cách copy tên
         if (ROLE_ADMIN.equalsIgnoreCase(request.getName()) || ROLE_EVERYONE.equalsIgnoreCase(request.getName())) {
@@ -80,6 +75,7 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         ServerRole role = new ServerRole();
         role.setServer(server);
         role.setName(request.getName());
+        role.setColor(request.getColor());
         role.setPriority(request.getPriority());
         role.setPermissions(mapPermissionCodes(request.getPermissionCodes()));
 
@@ -103,11 +99,13 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         }
 
         // Nếu đổi tên, kiểm tra trùng
-        if (!role.getName().equalsIgnoreCase(request.getName())) {
-            ensureRoleNameUnique(serverId, request.getName());
-        }
+        // Nếu đổi tên, kiểm tra trùng -> DISABLED
+        // if (!role.getName().equalsIgnoreCase(request.getName())) {
+        // ensureRoleNameUnique(serverId, request.getName());
+        // }
 
         role.setName(request.getName());
+        role.setColor(request.getColor());
         role.setPriority(request.getPriority());
         role.setPermissions(mapPermissionCodes(request.getPermissionCodes()));
 
@@ -144,7 +142,7 @@ public class ServerRoleServiceImpl implements ServerRoleService {
     @Transactional
     @Override
     public ServerMember assignRoles(Long serverId, AssignRolesRequest request, String actorUsername) {
-        Server server = requireOwner(serverId, actorUsername);
+        requireOwner(serverId, actorUsername);
 
         ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, request.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("Member not found"));
@@ -163,5 +161,21 @@ public class ServerRoleServiceImpl implements ServerRoleService {
 
         member.setRoles(newRoles);
         return serverMemberRepository.save(member);
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<ServerMember> getMembersByRole(Long serverId, Long roleId, String actorUsername) {
+        User user = userService.findByUsername(actorUsername)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        // Check member
+        serverMemberRepository.findByServerIdAndUserId(serverId, user.getId())
+                .orElseThrow(() -> new AccessDeniedException("Bạn không phải thành viên server này"));
+
+        // Verify role belongs to server
+        serverRoleRepository.findByIdAndServerId(roleId, serverId)
+                .orElseThrow(() -> new EntityNotFoundException("Role not found in this server"));
+
+        return serverMemberRepository.findByRoleId(roleId);
     }
 }

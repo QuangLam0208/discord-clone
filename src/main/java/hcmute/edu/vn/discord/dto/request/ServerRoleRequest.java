@@ -13,6 +13,8 @@ public class ServerRoleRequest {
     @Size(max = 100, message = "Tên role không được vượt quá 100 ký tự")
     private String name;
 
+    private String color;
+
     @NotNull(message = "Độ ưu tiên (priority) là bắt buộc")
     private Integer priority;
 

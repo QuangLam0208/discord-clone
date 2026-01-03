@@ -11,7 +11,7 @@ import java.util.Optional;
 @Repository
 public interface ServerMemberRepository extends JpaRepository<ServerMember, Long> {
 
-    @EntityGraph(attributePaths = {"roles", "roles.permissions", "user"})
+    @EntityGraph(attributePaths = { "roles", "roles.permissions", "user" })
     List<ServerMember> findByServerId(Long serverId);
 
     boolean existsByServerIdAndUserId(Long serverId, Long userId);
@@ -19,5 +19,8 @@ public interface ServerMemberRepository extends JpaRepository<ServerMember, Long
     Optional<ServerMember> findByServerIdAndUserId(Long serverId, Long userId);
 
     List<ServerMember> findByUserUsername(String username);
+
+    @org.springframework.data.jpa.repository.Query("SELECT m FROM ServerMember m JOIN m.roles r WHERE r.id = :roleId")
+    List<ServerMember> findByRoleId(Long roleId);
 
 }

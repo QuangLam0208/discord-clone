@@ -116,9 +116,7 @@ public class ServerServiceImpl implements ServerService {
         Server server = getServerById(serverId);
         server.setName(request.getName());
         server.setDescription(request.getDescription());
-        if (request.getIconUrl() != null) {
-            server.setIconUrl(request.getIconUrl());
-        }
+        server.setIconUrl(request.getIconUrl());
         return serverRepository.save(server);
     }
 

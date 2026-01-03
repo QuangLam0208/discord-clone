@@ -460,6 +460,18 @@ window.resetServerOverview = function () {
     updateServerPreviews(original.name, original.iconUrl);
 
     checkServerChanges();
+
+    // Success Toast
+    Swal.fire({
+        icon: 'success',
+        title: 'Đã đặt lại!',
+        toast: true,
+        position: 'bottom-end',
+        showConfirmButton: false,
+        timer: 1500,
+        background: '#1e1f22',
+        color: '#fff'
+    });
 }
 
 // Switch Tab
@@ -487,6 +499,15 @@ window.switchServerSettingsTab = function (tabName) {
     // Load data if switching to members
     if (tabName === 'members') {
         loadServerMembers(state.editingServerId);
+    }
+
+    // Load data if switching to roles
+    if (tabName === 'roles') {
+        loadServerRoles(state.editingServerId);
+    }
+    // Load data if switching to roles
+    if (tabName === 'roles') {
+        loadServerRoles(state.editingServerId);
     }
 }
 
@@ -625,7 +646,669 @@ window.kickMember = async function (userId) {
     }
 }
 
-// ROLE MANAGEMENT
+// --- SERVER ROLES TAB LOGIC ---
+window.loadServerRoles = async function (serverId) {
+    const listBody = document.getElementById('roles-list-body');
+    const countLabel = document.getElementById('roles-count-label');
+    if (listBody) listBody.innerHTML = '<div style="padding: 20px; text-align: center; color: #b5bac1;">Đang tải...</div>';
+
+    try {
+        const roles = await Api.get(`/api/servers/${serverId}/roles`);
+        // Sort by priority desc (assuming higher priority = top)
+        if (roles) {
+            // Sort logic: higher priority means higher in list
+            // Assuming priority is number. If not provided, fallback by id or name
+            roles.sort((a, b) => b.priority - a.priority);
+
+            window.currentServerRoles = roles; // Store for drag reorder
+
+            renderRolesList(roles);
+            if (countLabel) countLabel.innerText = roles.length || 0;
+            setupRoleEditorEvents();
+        } else {
+            if (listBody) listBody.innerHTML = '<div style="padding: 20px; text-align: center; color: #b5bac1;">Không có vai trò nào.</div>';
+        }
+    } catch (e) {
+        console.error("Load Roles Error", e);
+        if (listBody) listBody.innerHTML = '<div style="padding: 20px; text-align: center; color: #f23f42;">Lỗi tải vai trò.</div>';
+    }
+}
+
+function renderRolesList(roles) {
+    const listBody = document.getElementById('roles-list-body');
+    if (!listBody) return;
+    listBody.innerHTML = '';
+
+    roles.forEach(role => {
+        const div = document.createElement('div');
+        div.className = 'settings-role-item';
+        div.draggable = true;
+        div.ondragstart = (e) => handleRoleDragStart(e, role.id);
+        div.ondragover = (e) => handleRoleDragOver(e);
+        div.ondrop = (e) => handleRoleDrop(e, role.id);
+
+        // Mock member count for now as backend DTO update might lag or need more queries
+        const memberCount = role.memberCount !== undefined ? role.memberCount : 0;
+
+        div.innerHTML = `
+            <div class="role-item-main">
+                <div class="role-drag-handle"><i class="fas fa-grip-vertical"></i></div>
+                <div class="role-shield" style="color: ${role.color || '#b5bac1'}"><i class="fas fa-shield-alt"></i></div>
+                <div class="role-name">${role.name}</div>
+            </div>
+            <div class="role-members-count">
+                ${memberCount} <i class="fas fa-user" style="margin-left: 4px; font-size: 12px;"></i>
+            </div>
+            <div class="role-actions">
+                 <button class="btn-role-action" title="Chỉnh sửa" onclick='openRoleEditor(${JSON.stringify(role)})'><i class="fas fa-pencil-alt"></i></button>
+                 <button class="btn-role-action" title="Khác" onclick="showRoleActionMenu(event, '${role.id}')"><i class="fas fa-ellipsis-h"></i></button>
+            </div>
+        `;
+        listBody.appendChild(div);
+    });
+}
+
+// DRAG AND DROP HANDLERS
+let draggedRoleId = null;
+
+window.handleRoleDragStart = function (e, roleId) {
+    draggedRoleId = roleId;
+    e.dataTransfer.effectAllowed = 'move';
+    e.target.style.opacity = '0.5';
+}
+
+window.handleRoleDragOver = function (e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    return false;
+}
+
+window.handleRoleDrop = function (e, targetRoleId) {
+    e.stopPropagation();
+    e.preventDefault();
+
+    const items = document.querySelectorAll('.settings-role-item');
+    items.forEach(i => i.style.opacity = '1');
+
+    if (draggedRoleId === targetRoleId) return;
+    if (!window.currentServerRoles) return;
+
+    const fromIndex = window.currentServerRoles.findIndex(r => r.id === draggedRoleId);
+    const toIndex = window.currentServerRoles.findIndex(r => r.id === targetRoleId);
+
+    if (fromIndex < 0 || toIndex < 0) return;
+
+    const movedItem = window.currentServerRoles.splice(fromIndex, 1)[0];
+    window.currentServerRoles.splice(toIndex, 0, movedItem);
+
+    renderRolesList(window.currentServerRoles);
+
+    const updates = window.currentServerRoles.map((r, index) => {
+        const newPriority = window.currentServerRoles.length - index;
+        return { id: r.id, priority: newPriority };
+    });
+
+    updates.forEach(u => {
+        const role = window.currentServerRoles.find(r => r.id === u.id);
+        if (role) {
+            role.priority = u.priority;
+            const payload = {
+                name: role.name,
+                color: role.color,
+                priority: u.priority,
+                permissionCodes: role.permissionCodes || []
+            };
+            Api.put(`/api/servers/${state.editingServerId}/roles/${u.id}`, payload)
+                .catch(err => console.error("Update priority failed", err));
+        }
+    });
+}
+
+// --- FULL SCREEN ROLE EDITOR LOGIC ---
+let currentEditorRoles = [];
+let currentEditingRole = null;
+
+function setupRoleEditorEvents() {
+    const mainCreateBtn = document.querySelector('#tab-server-roles .btn-create-role-styled');
+    if (mainCreateBtn) {
+        mainCreateBtn.onclick = () => {
+            // Create a specific "new role" object or just open editor with empty
+            createNewRoleFromEditor();
+        };
+    }
+}
+// Call setup once or when modal opens
+// We will call it in openServerSettings or ensure global binding
+
+window.openRoleEditor = function (role) {
+    // 1. Hide Main Settings
+    const settingsLayout = document.querySelector('#serverSettingsModal .settings-layout:not(.roles-editor-layout)');
+    const editorLayout = document.getElementById('roles-editor-view');
+
+    if (settingsLayout) settingsLayout.style.display = 'none';
+    if (editorLayout) editorLayout.style.display = 'flex';
+
+    // 2. Load Roles again to ensure fresh data in sidebar
+    // We can use the cached roles from the main list if available, or fetch
+    // For now, let's refetch or use what we have.
+    loadRolesForEditor(role ? role.id : null);
+}
+
+window.closeRoleEditor = function () {
+    const settingsLayout = document.querySelector('#serverSettingsModal .settings-layout:not(.roles-editor-layout)');
+    const editorLayout = document.getElementById('roles-editor-view');
+
+    if (editorLayout) editorLayout.style.display = 'none';
+    if (settingsLayout) settingsLayout.style.display = 'flex';
+
+    // Refresh the main roles list in case of changes
+    if (state.editingServerId) loadServerRoles(state.editingServerId);
+}
+
+async function loadRolesForEditor(activeRoleId) {
+    if (!state.editingServerId) return;
+    try {
+        const roles = await Api.get(`/api/servers/${state.editingServerId}/roles`);
+        if (roles) {
+            currentEditorRoles = roles.sort((a, b) => b.priority - a.priority);
+            renderRoleEditorSidebar(currentEditorRoles, activeRoleId);
+
+            // If activeRoleId is null (and not creating new), select default (first one or @everyone)
+            if (!activeRoleId && currentEditorRoles.length > 0) {
+                selectRoleInEditor(currentEditorRoles[0]);
+            } else if (activeRoleId) {
+                const found = currentEditorRoles.find(r => r.id === activeRoleId);
+                if (found) selectRoleInEditor(found);
+            }
+        }
+    } catch (e) {
+        console.error("Error loading roles for editor", e);
+    }
+}
+
+function renderRoleEditorSidebar(roles, activeRoleId) {
+    const container = document.getElementById('role-edit-list-container');
+    if (!container) return;
+    container.innerHTML = '';
+
+    roles.forEach(role => {
+        const item = document.createElement('div');
+        item.className = 'role-edit-item ' + (activeRoleId === role.id ? 'active' : '');
+        item.setAttribute('data-role-id', role.id); // For easy finding
+
+        // Color Circle
+        const colorCircle = document.createElement('div');
+        colorCircle.className = 'role-color-circle';
+        colorCircle.style.cssText = `width: 12px; height: 12px; border-radius: 50%; background-color: ${role.color || '#99aab5'}; margin-right: 8px; flex-shrink: 0;`;
+
+        const nameSpan = document.createElement('span');
+        nameSpan.innerText = role.name;
+        nameSpan.style.cssText = "white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
+
+        item.style.display = 'flex';
+        item.style.alignItems = 'center';
+
+        item.appendChild(colorCircle);
+        item.appendChild(nameSpan);
+
+        item.onclick = () => selectRoleInEditor(role);
+
+
+
+        container.appendChild(item);
+    });
+}
+
+window.updateRoleColorPreview = function (color) {
+    // 1. Update current editing role object
+    if (currentEditingRole) {
+        currentEditingRole.color = color;
+    }
+
+    // 2. Find active item in sidebar and update circle
+    let activeItem = document.querySelector('.role-edit-item.active .role-color-circle');
+
+    // Fallback: search by ID if active class missing for some reason
+    if (!activeItem && currentEditingRole && currentEditingRole.id) {
+        const item = document.querySelector(`.role-edit-item[data-role-id="${currentEditingRole.id}"]`);
+        if (item) activeItem = item.querySelector('.role-color-circle');
+    }
+
+    if (activeItem) {
+        activeItem.style.backgroundColor = color;
+    }
+}
+
+// ESC Key Listener for Modals
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        const settingsModal = document.getElementById('serverSettingsModal');
+        if (settingsModal && settingsModal.style.display !== 'none') {
+            // Check if we are in Role Editor?
+            const editorView = document.getElementById('roles-editor-view');
+            if (editorView && editorView.style.display !== 'none') {
+                closeModal('serverSettingsModal'); // Or closeRoleEditor()? Discord closes modal.
+            } else {
+                closeModal('serverSettingsModal');
+            }
+        }
+    }
+});
+
+// Update selectRoleInEditor to handle "New Role" active state in sidebar
+function selectRoleInEditor(role) {
+    currentEditingRole = role;
+    renderRoleEditorSidebar(currentEditorRoles, role.id); // Re-render to highlight correctly by ID
+
+    // Fill Form
+    document.getElementById('role-editor-title').innerText = `SỬA ĐỔI VAI TRÒ - ${(role.name || 'VAI TRÒ MỚI').toUpperCase()}`;
+    document.getElementById('edit-role-name').value = role.name;
+    document.getElementById('edit-role-color').value = role.color || '#99aab5';
+
+    switchRoleEditorTab('display');
+    document.getElementById('role-save-bar').classList.remove('visible');
+}
+
+// PERMISSIONS DATA
+const permissionsDefinitions = [
+    {
+        category: "Quyền Tổng Quát Máy Chủ",
+        permissions: [
+            { code: "VIEW_CHANNELS", name: "Xem Kênh", description: "Cho phép thành viên xem các kênh (không tính kênh riêng tư)." },
+            { code: "MANAGE_CHANNELS", name: "Quản Lý Kênh", description: "Cho phép tạo, chỉnh sửa hoặc xóa kênh." },
+            { code: "MANAGE_ROLES", name: "Quản Lý Vai Trò", description: "Cho phép thành viên tạo, chỉnh sửa hoặc xóa các vai trò thấp hơn vai trò của họ." },
+            { code: "MANAGE_SERVER", name: "Quản Lý Máy Chủ", description: "Cho phép thay đổi tên máy chủ và xem lời mời." },
+            { code: "VIEW_AUDIT_LOG", name: "Xem Nhật Ký Kiểm Tra", description: "Cho phép xem lịch sử thay đổi của máy chủ." }
+        ]
+    },
+    {
+        category: "Quản lý thành viên",
+        permissions: [
+            { code: "CREATE_INVITE", name: "Tạo Lời Mời", description: "Cho phép mời người mới vào máy chủ." },
+            { code: "CHANGE_NICKNAME", name: "Đổi Biệt Danh", description: "Cho phép thay đổi biệt danh của chính mình." },
+            { code: "MANAGE_NICKNAME", name: "Quản Lý Biệt Danh", description: "Cho phép thay đổi biệt danh của người khác." },
+            { code: "KICK_APPROVE_REJECT_MEMBERS", name: "Đuổi Thành Viên", description: "Cho phép đuổi thành viên khỏi máy chủ." },
+            { code: "BAN_MEMBERS", name: "Cấm Thành Viên", description: "Cho phép cấm vĩnh viễn thành viên khỏi máy chủ." },
+            { code: "TIME_OUT_MEMBERS", name: "Timeout Thành Viên", description: "Cho phép cách ly thành viên tạm thời." }
+        ]
+    },
+    {
+        category: "Kênh Văn Bản",
+        permissions: [
+            { code: "SEND_MESSAGES", name: "Gửi Tin Nhắn", description: "Cho phép gửi tin nhắn trong kênh chat." },
+            { code: "EMBED_LINK", name: "Nhúng Liên Kết", description: "Cho phép hiển thị bản xem trước của liên kết." },
+            { code: "ATTACH_FILES", name: "Đính Kèm Tệp", description: "Cho phép tải lên tệp và ảnh." },
+            { code: "ADD_REACTIONS", name: "Thêm Biểu Cảm", description: "Cho phép thêm biểu cảm (reaction) vào tin nhắn." },
+            { code: "MANAGE_MESSAGES", name: "Quản Lý Tin Nhắn", description: "Cho phép xóa tin nhắn của người khác." },
+            { code: "READ_MESSAGE_HISTORY", name: "Đọc Lịch Sử Tin Nhắn", description: "Cho phép xem tin nhắn cũ." }
+        ]
+    }
+];
+
+function renderRolePermissions(role) {
+    const list = document.getElementById('role-permissions-list');
+    if (!list) return;
+    list.innerHTML = '';
+
+    // Parse role permissions. 
+    // Backend returns permissions as array of objects [{id, code, description}] or strings?
+    // Based on ServerRoleServiceImpl, it maps codes to entities. 
+    // The GET /roles API likely returns Set<Permission> or similar.
+    // Let's assume role.permissions is an array of objects checking checks against .code
+
+    const rolePermCodes = new Set((role.permissionCodes || role.permissions || []).map(p => typeof p === 'string' ? p : p.code));
+    const searchQuery = (document.getElementById('permission-search-input').value || '').toLowerCase();
+
+    permissionsDefinitions.forEach(group => {
+        // Filter permissions in group
+        const filteredPerms = group.permissions.filter(p =>
+            p.name.toLowerCase().includes(searchQuery) ||
+            p.description.toLowerCase().includes(searchQuery)
+        );
+
+        if (filteredPerms.length === 0) return;
+
+        // Group Header
+        const header = document.createElement('div');
+        header.className = 'perm-group-header';
+        header.innerText = group.category;
+        header.style.cssText = "color: #b5bac1; font-size: 12px; font-weight: 700; text-transform: uppercase; margin: 20px 0 10px 0;";
+        list.appendChild(header);
+
+        // Perm Items
+        filteredPerms.forEach(perm => {
+            const item = document.createElement('div');
+            item.className = 'perm-item';
+            item.style.cssText = "display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #3f4147;";
+
+            const info = document.createElement('div');
+            info.innerHTML = `<div style="color: #dbdee1; font-weight: 500; font-size: 16px;">${perm.name}</div>
+                               <div style="color: #b5bac1; font-size: 14px; margin-top: 4px;">${perm.description}</div>`;
+
+            const toggle = document.createElement('div');
+            const isActive = rolePermCodes.has(perm.code);
+            toggle.className = `role-toggle ${isActive ? 'active' : ''}`;
+            toggle.style.cssText = `width: 40px; height: 24px; background: ${isActive ? '#23a559' : '#80848e'}; border-radius: 14px; position: relative; cursor: pointer; transition: background 0.2s;`;
+            toggle.innerHTML = `<div style="width: 18px; height: 18px; background: white; border-radius: 50%; position: absolute; top: 3px; left: ${isActive ? '19px' : '3px'}; transition: left 0.2s; display: flex; justify-content: center; align-items: center;">
+                                    ${!isActive ? '<i class="fas fa-times" style="font-size: 10px; color: #80848e;"></i>' : '<i class="fas fa-check" style="font-size: 10px; color: #23a559;"></i>'}
+                                 </div>`;
+
+            toggle.onclick = () => togglePermission(perm.code, toggle);
+
+            item.appendChild(info);
+            item.appendChild(toggle);
+            list.appendChild(item);
+        });
+    });
+}
+
+function togglePermission(code, toggleElement) {
+    if (!currentEditingRole) return;
+
+    // Determine target array (prefer permissionCodes as backend returns that)
+    let targetArray;
+    let isCodeArray = false;
+
+    if (currentEditingRole.permissionCodes) {
+        targetArray = currentEditingRole.permissionCodes;
+        isCodeArray = true; // backend usually returns list of strings
+    } else {
+        if (!currentEditingRole.permissions) currentEditingRole.permissions = [];
+        targetArray = currentEditingRole.permissions;
+    }
+
+    // Find index
+    // If isCodeArray, elements are strings. If not, could be objects or strings.
+    const permIndex = targetArray.findIndex(p => (typeof p === 'string' ? p : p.code) === code);
+
+    let isActive = false;
+    if (permIndex > -1) {
+        // Remove
+        targetArray.splice(permIndex, 1);
+        isActive = false;
+    } else {
+        // Add
+        if (isCodeArray) {
+            targetArray.push(code);
+        } else {
+            targetArray.push({ code: code });
+        }
+        isActive = true;
+    }
+
+    // Update UI
+    // Don't re-render entire list to keep scroll pos, just update toggle
+    toggleElement.style.background = isActive ? '#23a559' : '#80848e';
+    const circle = toggleElement.querySelector('div');
+    circle.style.left = isActive ? '19px' : '3px';
+    circle.innerHTML = isActive
+        ? '<i class="fas fa-check" style="font-size: 10px; color: #23a559;"></i>'
+        : '<i class="fas fa-times" style="font-size: 10px; color: #80848e;"></i>';
+    toggleElement.classList.toggle('active', isActive);
+
+    // Show save bar
+    showRoleSaveBar();
+}
+
+// Search Listener
+document.addEventListener('DOMContentLoaded', () => {
+    const searchInput = document.getElementById('permission-search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            if (currentEditingRole) renderRolePermissions(currentEditingRole);
+        });
+    }
+});
+
+window.createNewRoleFromEditor = async function () {
+    // 1. Ensure view is visible
+    const settingsLayout = document.querySelector('#serverSettingsModal .settings-layout:not(.roles-editor-layout)');
+    const editorLayout = document.getElementById('roles-editor-view');
+
+    // If editor is not visible, switch to it and load roles
+    if (editorLayout && editorLayout.style.display === 'none') {
+        if (settingsLayout) settingsLayout.style.display = 'none';
+        editorLayout.style.display = 'flex';
+
+        // Ensure roles are loaded before adding new one
+        if (state.editingServerId) {
+            // Populate currentEditorRoles first
+            try {
+                const roles = await Api.get(`/api/servers/${state.editingServerId}/roles`);
+                if (roles) currentEditorRoles = roles.sort((a, b) => b.priority - a.priority);
+            } catch (e) { console.error(e); }
+        }
+    }
+
+    // Draft Mode: Create a temporary role object
+    const tempRole = {
+        id: null, // Indicates it's new
+        name: 'new role',
+        color: '#99aab5',
+        permissions: 0,
+        priority: 0
+    };
+
+    // Add to current list temporarily for display
+    currentEditorRoles.unshift(tempRole); // Add to top
+    selectRoleInEditor(tempRole);
+    // Focus Name input
+    setTimeout(() => {
+        const input = document.getElementById('edit-role-name');
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 100);
+}
+
+
+window.saveRoleChanges = function () {
+    if (!currentEditingRole) return;
+
+    const name = document.getElementById('edit-role-name').value;
+    const color = document.getElementById('edit-role-color').value;
+
+    if (!name || name.trim() === '') {
+        Swal.fire('Lỗi', 'Tên vai trò không được để trống', 'error');
+        return;
+    }
+
+    const sourcePerms = currentEditingRole.permissionCodes || currentEditingRole.permissions || [];
+    const permCodes = sourcePerms.map(p => (typeof p === 'string' ? p : p.code));
+
+    const roleData = {
+        ...currentEditingRole,
+        name: name,
+        color: color,
+        permissionCodes: permCodes
+    };
+    delete roleData.permissions; // Don't send legacy field
+
+    if (roleData.id === null) {
+        // CREATE
+        Api.post(`/api/servers/${state.editingServerId}/roles`, roleData)
+            .then(created => {
+                // Update local list
+                currentEditorRoles.shift(); // Remove draft
+                currentEditorRoles.unshift(created); // Add real role
+                currentEditingRole = created;
+
+                renderRoleEditorSidebar(currentEditorRoles, created.id);
+                document.getElementById('role-save-bar').classList.remove('visible');
+                // Don't reset tab
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Đã tạo vai trò!',
+                    toast: true,
+                    position: 'bottom-end',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    background: '#1e1f22',
+                    color: '#fff'
+                });
+            })
+            .catch(e => Swal.fire('Lỗi', 'Tạo thất bại', 'error'));
+    } else {
+        // UPDATE
+        Api.put(`/api/servers/${state.editingServerId}/roles/${roleData.id}`, roleData)
+            .then(updated => {
+                // Update local list
+                const idx = currentEditorRoles.findIndex(r => r.id === updated.id);
+                if (idx !== -1) currentEditorRoles[idx] = updated;
+                currentEditingRole = updated;
+
+                renderRoleEditorSidebar(currentEditorRoles, updated.id);
+                document.getElementById('role-save-bar').classList.remove('visible');
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Đã lưu thay đổi!',
+                    toast: true,
+                    position: 'bottom-end',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    background: '#1e1f22',
+                    color: '#fff'
+                });
+
+                // Update main role list even if hidden, so it's fresh when exiting editor
+                renderRolesList(currentEditorRoles);
+            })
+            .catch(e => {
+                console.error(e);
+                Swal.fire('Lỗi', 'Lưu thất bại', 'error');
+            });
+    }
+}
+
+window.resetRoleChanges = async function () {
+    if (!currentEditingRole) return;
+
+    const roleId = currentEditingRole.id;
+
+    if (!roleId) {
+        // It's a draft (New Role)
+        document.getElementById('edit-role-name').value = 'new role';
+        document.getElementById('edit-role-color').value = '#99aab5';
+        updateRoleColorPreview('#99aab5');
+
+        // Reset permissions for draft (empty)
+        if (currentEditingRole.permissionCodes) currentEditingRole.permissionCodes = [];
+        if (currentEditingRole.permissions) currentEditingRole.permissions = [];
+
+        // Re-render permissions if on that tab
+        const permTab = document.getElementById('role-tab-permissions');
+        if (permTab && permTab.style.display !== 'none') {
+            renderRolePermissions(currentEditingRole);
+        }
+
+        document.getElementById('role-save-bar').classList.remove('visible');
+        Swal.fire({
+            icon: 'success',
+            title: 'Đã đặt lại!',
+            toast: true,
+            position: 'bottom-end',
+            showConfirmButton: false,
+            timer: 1500,
+            background: '#1e1f22',
+            color: '#fff'
+        });
+        return;
+    }
+
+    // Existing Role: Re-fetch text/color to be safe
+    // Ideally we re-fetch from server to be 100% sure we revert to saved state
+    try {
+        // Fetch single role or find in list re-fetched
+        const roles = await Api.get(`/api/servers/${state.editingServerId}/roles`);
+        const cleanRole = roles.find(r => r.id === roleId);
+
+        if (cleanRole) {
+            // Update reference
+            const idx = currentEditorRoles.findIndex(r => r.id === roleId);
+            if (idx !== -1) currentEditorRoles[idx] = cleanRole;
+            currentEditingRole = cleanRole;
+
+            // Restore UI inputs
+            document.getElementById('edit-role-name').value = cleanRole.name;
+            document.getElementById('edit-role-color').value = cleanRole.color || '#99aab5';
+            updateRoleColorPreview(cleanRole.color || '#99aab5');
+
+            // Restore Permissions Tab if visible
+            const permTab = document.getElementById('role-tab-permissions');
+            if (permTab && permTab.style.display !== 'none') {
+                renderRolePermissions(cleanRole);
+            }
+
+            // Hide Bar
+            document.getElementById('role-save-bar').classList.remove('visible');
+
+            // Toast
+            Swal.fire({
+                icon: 'success',
+                title: 'Đã đặt lại!',
+                toast: true,
+                position: 'bottom-end',
+                showConfirmButton: false,
+                timer: 1500,
+                background: '#1e1f22',
+                color: '#fff'
+            });
+        }
+    } catch (e) {
+        console.error("Reset failed", e);
+        Swal.fire('Lỗi', 'Không thể đặt lại dữ liệu', 'error');
+    }
+}
+
+// Monitor changes to show Save Bar
+document.getElementById('edit-role-name').addEventListener('input', showRoleSaveBar);
+document.getElementById('edit-role-color').addEventListener('input', showRoleSaveBar);
+
+function showRoleSaveBar() {
+    document.getElementById('role-save-bar').classList.add('visible');
+}
+
+
+
+window.switchRoleEditorTab = function (tabName) {
+    // Update tab headers
+    const headers = document.querySelectorAll('.role-tab-item');
+    headers.forEach(h => {
+        if (h.getAttribute('onclick').includes(tabName)) {
+            h.classList.add('active');
+            h.style.color = "white";
+        } else {
+            h.classList.remove('active');
+            h.style.color = "#b5bac1";
+        }
+    });
+
+    // Update content
+    const contents = document.querySelectorAll('.role-tab-content');
+    contents.forEach(c => c.style.display = 'none');
+
+    const activeContent = document.getElementById('role-tab-' + tabName);
+    if (activeContent) {
+        if (tabName === 'display' || tabName === 'permissions') {
+            activeContent.style.display = 'flex';
+        } else {
+            activeContent.style.display = 'block';
+        }
+
+        if (tabName === 'permissions') {
+            renderRolePermissions(currentEditingRole);
+        }
+        if (tabName === 'members') {
+            loadRoleMembers(currentEditingRole.id);
+        }
+    }
+}
+
+
+
+// MEMBER ROLE ASSIGNMENT POPUP (OLD NAME: ROLE MANAGEMENT)
 // We need a global listener for clicking outside popover
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.role-selector-popover') && !e.target.closest('.btn-add-role')) {
@@ -759,74 +1442,7 @@ window.kickMember = async function (userId) {
     }
 }
 
-// Save Overview
-window.saveServerOverview = async function () {
-    const name = document.getElementById('edit-server-name').value;
-    const description = document.getElementById('edit-server-desc').value;
-    const serverId = state.editingServerId;
 
-    if (!name) return alert("Tên máy chủ không được để trống");
-
-    // Handle Icon Upload
-    let iconUrl = state.editingServerData.iconUrl; // Keep old by default
-
-    // If removed
-    if (state.tempServerIcon === 'REMOVED') {
-        iconUrl = null;
-    }
-    // If new file
-    else if (state.tempServerIcon && typeof state.tempServerIcon === 'object') {
-        if (state.tempServerIcon.size > 10 * 1024 * 1024) {
-            return alert("File quá lớn (Max 10MB)");
-        }
-        try {
-            const formData = new FormData();
-            formData.append('file', state.tempServerIcon);
-            const res = await Api.upload('/api/upload', formData);
-            iconUrl = res.url;
-        } catch (e) {
-            return alert("Lỗi upload ảnh: " + e.message);
-        }
-    }
-
-    try {
-        await Api.put(`/api/servers/${serverId}`, {
-            name: name,
-            description: description,
-            iconUrl: iconUrl
-        });
-
-        // Success feedback
-        Swal.fire({
-            icon: 'success',
-            title: 'Đã lưu!',
-            toast: true,
-            position: 'bottom-end',
-            showConfirmButton: false,
-            timer: 3000,
-            background: '#313338',
-            color: '#dbdee1'
-        });
-
-        // Update State
-        state.editingServerData = { name, description, iconUrl };
-        state.tempServerIcon = null;
-        document.getElementById('server-save-bar').classList.remove('visible');
-
-        await loadServers(); // Refresh sidebar
-
-        // Update header if still open
-        const header = document.getElementById('server-settings-header');
-        if (header) header.querySelector('span').innerText = name.toUpperCase();
-
-        // Sync Delete Tab Name
-        const deleteNameDisplay = document.getElementById('delete-server-name-display');
-        if (deleteNameDisplay) deleteNameDisplay.innerText = name;
-
-    } catch (e) {
-        Swal.fire('Lỗi', e.message, 'error');
-    }
-}
 
 // Confirm Delete
 window.confirmDeleteServer = async function () {
@@ -865,3 +1481,456 @@ function calculateTimeAgo(dateString) {
         return years + " năm trước";
     }
 }
+
+// Save Overview
+window.saveServerOverview = async function () {
+    const nameInput = document.getElementById('edit-server-name');
+    const descInput = document.getElementById('edit-server-desc');
+
+    if (!nameInput || !nameInput.value.trim()) {
+        Swal.fire('Lỗi', 'Tên máy chủ không được để trống', 'error');
+        return;
+    }
+
+    let iconUrl = state.editingServerData.iconUrl;
+
+    // Handle Icon Upload
+    if (state.tempServerIcon && state.tempServerIcon !== 'REMOVED') {
+        const formData = new FormData();
+        formData.append('file', state.tempServerIcon);
+
+        try {
+            const uploadRes = await Api.upload('/api/upload', formData);
+            if (uploadRes && uploadRes.url) {
+                iconUrl = uploadRes.url;
+            }
+        } catch (e) {
+            console.error(e);
+            Swal.fire('Lỗi', 'Không thể upload ảnh: ' + e.message, 'error');
+            return;
+        }
+    } else if (state.tempServerIcon === 'REMOVED') {
+        iconUrl = ''; // Backend normalize sets to null if blank
+    }
+
+    const payload = {
+        name: nameInput.value.trim(),
+        description: descInput ? descInput.value.trim() : null,
+        iconUrl: iconUrl
+    };
+
+    try {
+        const updatedServer = await Api.put(`/api/servers/${state.editingServerId}`, payload);
+
+        // Update Success
+        state.editingServerData = updatedServer;
+        state.tempServerIcon = null;
+        document.getElementById('editServerIconInput').value = '';
+        const saveBar = document.getElementById('server-save-bar');
+        if (saveBar) saveBar.classList.remove('visible');
+
+        await loadServers(); // Refresh sidebar & cache
+
+        Swal.fire({
+            icon: 'success',
+            title: 'Đã lưu thay đổi!',
+            toast: true,
+            position: 'bottom-end',
+            showConfirmButton: false,
+            timer: 2000,
+            background: '#1e1f22',
+            color: '#fff'
+        });
+
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Lỗi', 'Lưu hồ sơ thất bại', 'error');
+    }
+}
+
+// --- ROLE MEMBERS MANAGEMENT LOGIC ---
+let currentRoleMembers = [];
+let addMemberCandidates = [];
+let selectedAddMemberIds = new Set();
+
+window.loadRoleMembers = async function (roleId) {
+    const listDiv = document.getElementById('role-members-list');
+    listDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #b5bac1;">Đang tải thành viên...</div>';
+
+    try {
+        const members = await Api.get(`/api/servers/${state.editingServerId}/roles/${roleId}/members`);
+        currentRoleMembers = members || [];
+        renderRoleMembers(currentRoleMembers);
+    } catch (e) {
+        console.error("Load Role Members Error", e);
+        listDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #f23f42;">Lỗi tải thành viên.</div>';
+    }
+}
+
+window.renderRoleMembers = function (members) {
+    const listDiv = document.getElementById('role-members-list');
+    listDiv.innerHTML = '';
+
+    if (!members || members.length === 0) {
+        listDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #b5bac1;">Chưa có thành viên nào đảm nhận vai trò này.</div>';
+        return;
+    }
+
+    members.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'role-member-item';
+        // Avatar fallback
+        const avatarUrl = m.user.avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png';
+        const displayName = m.nickname || m.user.displayName || m.user.username;
+
+        div.innerHTML = `
+            <div class="rm-info">
+                <img src="${avatarUrl}" class="rm-avatar">
+                <div>
+                    <span class="rm-name">${displayName}</span>
+                    <span class="rm-username">${m.user.username}</span>
+                </div>
+            </div>
+            <i class="fas fa-times btn-remove-member" title="Gỡ vai trò" onclick="removeRoleFromMember(${m.user.id})"></i>
+        `;
+        listDiv.appendChild(div);
+    });
+}
+
+window.filterRoleMembers = function () {
+    const keyword = document.getElementById('role-members-search').value.toLowerCase();
+    const filtered = currentRoleMembers.filter(m => {
+        const name = (m.nickname || m.user.displayName || '').toLowerCase();
+        const username = m.user.username.toLowerCase();
+        return name.includes(keyword) || username.includes(keyword);
+    });
+    renderRoleMembers(filtered);
+}
+
+window.removeRoleFromMember = async function (userId) {
+    if (!currentEditingRole) return;
+
+    // Find member to get current roles
+    const member = currentRoleMembers.find(m => m.user.id === userId);
+    if (!member) return;
+
+    const remainingRoleIds = member.roles
+        .filter(r => r.id !== currentEditingRole.id)
+        .map(r => r.id);
+
+    try {
+        await Api.post(`/api/servers/${state.editingServerId}/roles/assign`, {
+            userId: userId,
+            roleIds: remainingRoleIds
+        });
+
+        // Remove from local list immediately
+        currentRoleMembers = currentRoleMembers.filter(m => m.user.id !== userId);
+        filterRoleMembers(); // Re-render logic
+
+        // Also update main cache if needed
+        loadServerMembers(state.editingServerId);
+    } catch (e) {
+        Swal.fire('Lỗi', 'Không thể gỡ vai trò: ' + e.message, 'error');
+    }
+}
+
+// --- ADD MEMBER MODAL LOGIC ---
+window.openAddRoleMemberModal = async function () {
+    const modal = document.getElementById('add-role-member-modal');
+    modal.style.display = 'flex';
+    document.getElementById('add-role-member-list').innerHTML = '<div style="padding:10px; color:#b5bac1;">Đang tải...</div>';
+
+    // Refresh cache
+    await loadServerMembers(state.editingServerId);
+
+    // Filter candidates: All members who do NOT have this role
+    const currentRoleId = currentEditingRole.id;
+    addMemberCandidates = state.membersCache.filter(m => {
+        const hasRole = m.roles && m.roles.some(r => r.id === currentRoleId);
+        return !hasRole;
+    });
+
+    selectedAddMemberIds.clear();
+    renderAddMemberCandidates(addMemberCandidates);
+}
+
+window.closeAddRoleMemberModal = function () {
+    document.getElementById('add-role-member-modal').style.display = 'none';
+}
+
+window.renderAddMemberCandidates = function (list) {
+    const container = document.getElementById('add-role-member-list');
+    container.innerHTML = '';
+
+    if (list.length === 0) {
+        container.innerHTML = '<div style="padding:10px; color:#b5bac1;">Không tìm thấy thành viên phù hợp.</div>';
+        return;
+    }
+
+    list.forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'add-role-member-item';
+        if (selectedAddMemberIds.has(m.user.id)) div.classList.add('selected');
+
+        const avatarUrl = m.user.avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png';
+        const displayName = m.nickname || m.user.displayName || m.user.username;
+
+        div.onclick = () => toggleAddRoleMember(m.user.id, div);
+
+        div.innerHTML = `
+            <div class="selection-circle">
+                ${selectedAddMemberIds.has(m.user.id) ? '<i class="fas fa-check" style="font-size:10px;"></i>' : ''}
+            </div>
+            <img src="${avatarUrl}" style="width: 32px; height: 32px; border-radius: 50%; margin-right: 10px; object-fit: cover;">
+            <div style="font-weight: 500; color: #f2f3f5;">${displayName}</div>
+            <div style="color: #b5bac1; font-size: 12px; margin-left: 6px;">${m.user.username}</div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+window.filterAddRoleMembers = function () {
+    const keyword = document.getElementById('add-role-member-search').value.toLowerCase();
+    const filtered = addMemberCandidates.filter(m => {
+        const name = (m.nickname || m.user.displayName || '').toLowerCase();
+        const username = m.user.username.toLowerCase();
+        return name.includes(keyword) || username.includes(keyword);
+    });
+    renderAddMemberCandidates(filtered);
+}
+
+window.toggleAddRoleMember = function (userId, divElement) {
+    if (selectedAddMemberIds.has(userId)) {
+        selectedAddMemberIds.delete(userId);
+        divElement.classList.remove('selected');
+        divElement.querySelector('.selection-circle').innerHTML = '';
+        divElement.querySelector('.selection-circle').style.backgroundColor = 'transparent';
+        divElement.querySelector('.selection-circle').style.borderColor = '#b5bac1';
+    } else {
+        selectedAddMemberIds.add(userId);
+        divElement.classList.add('selected');
+        divElement.querySelector('.selection-circle').innerHTML = '<i class="fas fa-check" style="font-size:10px;"></i>';
+        divElement.querySelector('.selection-circle').style.backgroundColor = '#5865F2';
+        divElement.querySelector('.selection-circle').style.borderColor = '#5865F2';
+    }
+}
+
+window.submitAddRoleMembers = async function () {
+    if (selectedAddMemberIds.size === 0) return closeAddRoleMemberModal();
+
+    // Process additions
+    const currentRoleId = currentEditingRole.id;
+    let successCount = 0;
+
+    for (const userId of selectedAddMemberIds) {
+        const member = state.membersCache.find(m => m.user.id === userId);
+        if (member) {
+            const newRoleIds = member.roles.map(r => r.id);
+            newRoleIds.push(currentRoleId);
+
+            try {
+                await Api.post(`/api/servers/${state.editingServerId}/roles/assign`, {
+                    userId: userId,
+                    roleIds: newRoleIds
+                });
+                successCount++;
+            } catch (e) {
+                console.error(`Failed to add role for user ${userId}`, e);
+            }
+        }
+    }
+
+    if (successCount > 0) {
+        Swal.fire({
+            icon: 'success',
+            title: `Đã thêm ${successCount} thành viên`,
+            toast: true,
+            position: 'bottom-end',
+            showConfirmButton: false,
+            timer: 2000,
+            background: '#1e1f22',
+            color: '#fff'
+        });
+        loadRoleMembers(currentRoleId);
+    }
+
+    closeAddRoleMemberModal();
+}
+
+
+// Update deleteCurrentRole to accept optional ID or fallback to currentEditingRole
+window.deleteCurrentRole = async function (optionalId) {
+    const roleId = optionalId || (currentEditingRole ? currentEditingRole.id : null);
+
+    if (!roleId) return;
+
+    // Check @everyone logic locally if needed, or let backend fail
+    // @everyone likely has specific ID or Name. But simple safety:
+    // Fetch role details? Or just try delete.
+
+    const result = await Swal.fire({
+        title: 'Xóa Vai Trò?',
+        text: "Hành động này không thể hoàn tác.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#da373c',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy',
+        background: '#313338',
+        color: '#dbdee1'
+    });
+
+    if (result.isConfirmed) {
+        try {
+            await Api.delete(`/api/servers/${state.editingServerId}/roles/${roleId}`);
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Đã xóa!',
+                toast: true,
+                position: 'bottom-end',
+                showConfirmButton: false,
+                timer: 1500,
+                background: '#1e1f22',
+                color: '#fff'
+            });
+
+            // OPTIMISTIC UPDATE: Remove from local state immediately
+            if (window.currentServerRoles) {
+                // Fix: Ensure ID comparison is type-safe (String vs Number)
+                window.currentServerRoles = window.currentServerRoles.filter(r => String(r.id) !== String(roleId));
+
+                // Force re-render of lists immediately
+                renderRoleEditorSidebar(window.currentServerRoles);
+                renderRolesList(window.currentServerRoles); // Also update main list
+
+                // Update roles count label if exists
+                const countLabel = document.getElementById('roles-count-label');
+                if (countLabel) countLabel.innerText = window.currentServerRoles.length;
+            }
+
+            // If we deleted the currently editing role, switch to another
+            if (currentEditingRole && currentEditingRole.id === roleId) {
+                const first = window.currentServerRoles?.[0]; // Usually @everyone
+                if (first) {
+                    selectRoleInEditor(first);
+                } else {
+                    // Fallback if no roles left (unlikely due to @everyone)
+                    currentEditingRole = null;
+                }
+            } else {
+                // Refresh permissions/members for current role just in case
+                if (currentEditingRole) loadRolesForEditor(currentEditingRole.id);
+            }
+
+            // Sync with server in background (to be sure and get fresh data)
+            await loadServerRoles(state.editingServerId);
+
+            // CRITICAL FIX: Ensure sidebar is re-rendered with the data we just fetched from server
+            if (window.currentServerRoles) {
+                // Preserve active selection if possible, currently we might have lost it
+                renderRoleEditorSidebar(window.currentServerRoles, currentEditingRole ? currentEditingRole.id : null);
+            }
+
+        } catch (e) {
+            Swal.fire('Lỗi', 'Không thể xóa vai trò: ' + e.message, 'error');
+        }
+    }
+}
+
+// --- ROLE ACTION MENU LOGIC (Three Dots) ---
+let actionMenuTargetRoleId = null;
+
+window.showRoleActionMenu = function (e, roleId) {
+    e.stopPropagation();
+    e.preventDefault();
+
+    actionMenuTargetRoleId = roleId;
+
+    // Remove existing if any
+    const existing = document.getElementById('dynamic-role-menu');
+    if (existing) existing.remove();
+
+    // Create new menu
+    const menu = document.createElement('div');
+    menu.id = 'dynamic-role-menu';
+    // Base styles
+    Object.assign(menu.style, {
+        position: 'fixed',
+        zIndex: '100000',
+        minWidth: '220px',
+        backgroundColor: '#111214',
+        border: '1px solid #1e1f22',
+        borderRadius: '4px',
+        padding: '6px 8px',
+        boxShadow: '0 8px 16px rgba(0,0,0,0.24)',
+        display: 'block' // Always block
+    });
+
+    menu.innerHTML = `
+        <div class="dynamic-menu-item" onclick="handleViewAsRole()" 
+             onmouseover="this.style.backgroundColor='#404249'; this.style.color='white'" 
+             onmouseout="this.style.backgroundColor='transparent'; this.style.color='#b5bac1'"
+             style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 2px; cursor: pointer; color: #b5bac1; font-weight: 500; font-size: 14px; transition: all 0.1s;">
+            <span>Xem Máy Chủ Theo Vai Trò</span>
+            <i class="fas fa-arrow-right"></i>
+        </div>
+        <div style="height: 1px; background-color: #2b2d31; margin: 4px 0;"></div>
+        <div class="dynamic-menu-item" onclick="confirmDeleteRoleFromActionMenu()"
+             onmouseover="this.style.backgroundColor='#da373c'; this.style.color='white'" 
+             onmouseout="this.style.backgroundColor='transparent'; this.style.color='#da373c'"
+             style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 2px; cursor: pointer; color: #da373c; font-weight: 500; font-size: 14px; transition: all 0.1s;">
+            <span>Xóa</span>
+            <i class="fas fa-trash-can"></i>
+        </div>
+    `;
+
+    document.body.appendChild(menu);
+
+    // Position relative to mouse
+    let left = e.clientX - 210;
+    let top = e.clientY + 10;
+
+    // Boundary checks
+    const rect = { width: 220, height: 100 }; // Approx
+    if (left + rect.width > window.innerWidth) left = window.innerWidth - rect.width - 10;
+    if (top + rect.height > window.innerHeight) top = window.innerHeight - rect.height - 10;
+    if (left < 10) left = 10;
+
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+}
+
+window.closeRoleActionMenu = function () {
+    const menu = document.getElementById('dynamic-role-menu');
+    if (menu) menu.remove();
+}
+
+window.handleViewAsRole = function () {
+    closeRoleActionMenu();
+    Swal.fire({
+        title: 'Tính năng đang phát triển',
+        text: 'Chức năng "Xem máy chủ theo vai trò" sẽ sớm ra mắt!',
+        icon: 'info',
+        background: '#313338',
+        color: '#dbdee1'
+    });
+}
+
+window.confirmDeleteRoleFromActionMenu = function () {
+    if (actionMenuTargetRoleId) {
+        deleteCurrentRole(actionMenuTargetRoleId);
+    }
+    closeRoleActionMenu();
+}
+
+// Global click to close menus
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('#dynamic-role-menu') && !e.target.closest('.btn-role-action')) {
+        closeRoleActionMenu();
+    }
+});
+
+
