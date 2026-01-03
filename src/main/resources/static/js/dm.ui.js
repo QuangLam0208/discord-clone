@@ -1,20 +1,12 @@
 const DMUI = (() => {
   // ----- UI Elements -----
   function els() {
-    // [LOGIC MỚI] Tìm nút Bạn bè một cách chính xác nhất
-    // 1. Tìm theo ID trước
-    let btnFriends = document.getElementById('btn-friends');
-
-    // 2. Nếu không thấy ID, tìm phần tử .channel-item chứa icon 'fa-user-group'
-    if (!btnFriends) {
-        const icon = document.querySelector('.channel-sidebar .fa-user-group');
-        if (icon) {
-            btnFriends = icon.closest('.channel-item');
-        }
-    }
-
     return {
       dmList: document.getElementById('dm-direct-list'),
+      // Lấy chính xác theo ID bạn vừa thêm trong HTML
+      btnFriends: document.getElementById('btn-friends'),
+
+      // Các phần tử khác giữ nguyên
       dmCenterList: document.getElementById('dm-center-list'),
       dmCenterCount: document.getElementById('dm-center-count'),
       dmDashboard: document.getElementById('dm-dashboard-view'),
@@ -23,7 +15,6 @@ const DMUI = (() => {
       dmMessages: document.getElementById('dm-messages'),
       dmInput: document.getElementById('dm-input'),
       dmSendBtn: document.getElementById('dm-send-btn'),
-      btnFriends: btnFriends // Trả về nút đã tìm được
     };
   }
 
@@ -45,27 +36,26 @@ const DMUI = (() => {
     if (dmInput) dmInput.placeholder = `Nhắn tin cho @${name || ''}`;
   }
 
-  // === [QUẢN LÝ TRẠNG THÁI ACTIVE] ===
+  // === QUẢN LÝ HIGHLIGHT (QUAN TRỌNG) ===
 
-  // Xóa highlight của tất cả (gọi khi chuyển sang chat với user)
+  // 1. Reset: Tắt sáng tất cả (User + Nút bạn bè)
   function resetActiveItems() {
       const { dmList, btnFriends } = els();
 
-      // 1. Xóa active ở danh sách user
+      // Tắt sáng danh sách user (class .channel-item)
       if (dmList) {
           dmList.querySelectorAll('.channel-item.dm-item').forEach(e => e.classList.remove('active'));
       }
 
-      // 2. Xóa active ở nút Bạn bè (QUAN TRỌNG)
+      // Tắt sáng nút Bạn bè (class .dm-header-item)
       if (btnFriends) {
           btnFriends.classList.remove('active');
       }
   }
 
-  // Highlight nút Friends (gọi khi bấm logo hoặc nút bạn bè)
+  // 2. Highlight nút Bạn bè (Về Dashboard)
   function highlightFriendsButton() {
-      // Trước tiên phải reset hết các user đang sáng
-      resetActiveItems();
+      resetActiveItems(); // Tắt hết user đang sáng
 
       const { btnFriends } = els();
       if (btnFriends) {
@@ -79,17 +69,19 @@ const DMUI = (() => {
     if (!dmList) return;
     dmList.innerHTML = friends.map(friendSidebarItem).join('');
 
+    // Gán sự kiện click cho từng User
     dmList.querySelectorAll('.channel-item.dm-item').forEach(item => {
       item.addEventListener('click', () => {
-        // 1. QUAN TRỌNG: Xóa active của nút "Bạn bè" và các user khác
+        // 1. Tắt sáng nút Bạn bè & User khác
         resetActiveItems();
 
         // 2. Clear unread visual
         updateSidebarItem(Number(item.getAttribute('data-friend-id')), false);
 
-        // 3. Active item vừa click
+        // 3. Active User vừa click
         item.classList.add('active');
 
+        // 4. Callback
         const friendId = Number(item.getAttribute('data-friend-id'));
         const name = item.getAttribute('data-friend-name') || '';
         if (onSelectFriendCallback) onSelectFriendCallback(friendId, name);
@@ -97,7 +89,7 @@ const DMUI = (() => {
     });
   }
 
-  // Giao diện: Avatar + Tên
+  // HTML render cho User Item (dùng class channel-item)
   function friendSidebarItem(f) {
     const name = f.displayName || f.friendUsername || ('User ' + f.friendUserId);
     const initials = (name || 'U').split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase();
@@ -117,7 +109,6 @@ const DMUI = (() => {
       </div>`;
   }
 
-  // Đổi màu chữ (không badge)
   function updateSidebarItem(friendId, hasUnread) {
     const item = document.getElementById(`dm-item-${friendId}`);
     if (!item) return;
@@ -141,7 +132,6 @@ const DMUI = (() => {
     dmCenterList.querySelectorAll('.dm-center-item').forEach(item => {
       item.addEventListener('click', () => {
         const friendId = Number(item.getAttribute('data-friend-id'));
-        const name = item.getAttribute('data-friend-name') || '';
         const sidebarItem = document.getElementById(`dm-item-${friendId}`);
         if(sidebarItem) sidebarItem.click();
       });
@@ -160,7 +150,6 @@ const DMUI = (() => {
       </div>`;
   }
 
-  // --- Messages & Scrolling ---
   function isNearBottom() {
     const { dmMessages } = els();
     if (!dmMessages) return false;
@@ -172,7 +161,6 @@ const DMUI = (() => {
     const { dmMessages } = els();
     if (!dmMessages) return;
     if (displayedMsgIdsSet) displayedMsgIdsSet.clear();
-
     dmMessages.innerHTML = list.slice().reverse().map(m => {
       if (m.id != null && displayedMsgIdsSet) displayedMsgIdsSet.add(String(m.id));
       return msgBubble(m, currentUserId);

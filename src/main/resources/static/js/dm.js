@@ -10,42 +10,33 @@ const DM = (() => {
     pendingRetries: new Map()
   };
 
+  // Logic: Highlight Server Sidebar (Cột bên trái cùng)
   function highlightServerLogo() {
-      // Tìm Logo Home (Server item đầu tiên hoặc nút có switchToDM)
       document.querySelectorAll('.sidebar .sidebar-item').forEach(e => e.classList.remove('active'));
       const homeLogo = document.querySelector('.sidebar .sidebar-item[onclick*="switchToDM"]');
       if (homeLogo) homeLogo.classList.add('active');
   }
 
-  // Logic: Quay về trang chủ
+  // Logic: Quay về trang chủ (Dashboard)
   function goHome() {
       st.activeFriendId = null;
       st.activeFriendName = '';
       st.conversationId = null;
 
-      // 1. Hiện Dashboard, ẩn chat
       DMUI.showDashboard();
-
-      // 2. Highlight nút Bạn bè (Hàm này sẽ tự reset highlight các user)
       DMUI.highlightFriendsButton();
-
-      // 3. Highlight Logo Server bên trái
       highlightServerLogo();
 
-      console.log('[DM] Go Home -> Dashboard Active');
+      console.log('[DM] Switched to Dashboard');
   }
 
   async function onSelectFriend(friendId, friendName) {
     st.activeFriendId = friendId;
     st.activeFriendName = friendName || ('User ' + friendId);
-
     st.unreadCounts.set(friendId, 0);
     DMUI.updateSidebarItem(friendId, false);
-
     DMUI.setActiveFriendName(st.activeFriendName);
     DMUI.showConversation();
-
-    // Vẫn giữ sáng Logo Server khi chat DM
     highlightServerLogo();
 
     try {
@@ -123,44 +114,48 @@ const DM = (() => {
       st.pendingRetries.clear();
   }
 
+  // ----- Init -----
   async function init() {
     try {
       st.currentUserId = window.state.currentUser?.id || parseJwt(DMApi.getToken())?.id;
 
       const { dmSendBtn, dmInput } = DMUI.els();
+
+      // Gán sự kiện cho nút Gửi
       const newBtn = dmSendBtn?.cloneNode(true);
       if(dmSendBtn && newBtn) {
           dmSendBtn.parentNode.replaceChild(newBtn, dmSendBtn);
           newBtn.addEventListener('click', onSend);
       }
+
+      // Gán sự kiện cho ô Input
       const newInput = dmInput?.cloneNode(true);
       if(dmInput && newInput) {
           dmInput.parentNode.replaceChild(newInput, dmInput);
           newInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') onSend(); });
       }
 
-      // === SỰ KIỆN NÚT HOME VÀ FRIENDS ===
-
-      // 1. Logo Home (Sidebar trái cùng)
+      // === [SỰ KIỆN NÚT HOME VÀ FRIENDS] ===
+      // 1. Logo Home
       const homeLogo = document.querySelector('.sidebar .sidebar-item[onclick*="switchToDM"]');
       if (homeLogo) {
-          homeLogo.addEventListener('click', goHome);
+          // Xóa event cũ bằng cách clone
+          const newHomeLogo = homeLogo.cloneNode(true);
+          homeLogo.parentNode.replaceChild(newHomeLogo, homeLogo);
+          newHomeLogo.addEventListener('click', goHome);
       }
 
-      // 2. Nút "Bạn bè" (Sidebar DM) - Lấy từ DMUI.els() cho chắc ăn
+      // 2. Nút "Bạn bè"
       const { btnFriends } = DMUI.els();
       if (btnFriends) {
-          btnFriends.addEventListener('click', goHome);
-          // Gán ID nếu chưa có để debug dễ hơn
-          if (!btnFriends.id) btnFriends.id = 'btn-friends-auto-found';
-      } else {
-          console.warn('[DM] Vẫn chưa tìm thấy nút Bạn bè. Kiểm tra lại HTML class="fa-user-group"');
+          const newBtnFriends = btnFriends.cloneNode(true);
+          btnFriends.parentNode.replaceChild(newBtnFriends, btnFriends);
+          newBtnFriends.addEventListener('click', goHome);
       }
 
       st.friends = await DMApi.fetchFriends();
       DMUI.renderFriendsSidebar(st.friends, onSelectFriend);
       DMUI.renderFriendsCenter(st.friends, onSelectFriend);
-
       goHome();
 
       DMWS.connectWS(onIncomingMessage);
