@@ -17,19 +17,20 @@ public class ServerMemberResponse {
     private String nickname;
     private LocalDateTime joinedAt;
     private Boolean isBanned;
-    private Set<String> roles;
+    private Set<ServerRoleResponse> roles;
 
     public static ServerMemberResponse from(ServerMember m) {
-        if (m == null) return null;
+        if (m == null)
+            return null;
         return ServerMemberResponse.builder()
                 .id(m.getId())
                 .user(ServerMemberSummary.from(m.getUser()))
                 .nickname(m.getNickname())
                 .joinedAt(m.getJoinedAt())
                 .isBanned(m.getIsBanned())
-                .roles(m.getRoles() == null ? Set.of() :
-                        m.getRoles().stream()
-                                .map(ServerRole::getName)
+                .roles(m.getRoles() == null ? Set.of()
+                        : m.getRoles().stream()
+                                .map(ServerRoleResponse::from)
                                 .collect(Collectors.toSet()))
                 .build();
     }

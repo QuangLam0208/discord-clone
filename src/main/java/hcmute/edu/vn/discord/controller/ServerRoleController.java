@@ -1,5 +1,6 @@
 package hcmute.edu.vn.discord.controller;
 
+import hcmute.edu.vn.discord.dto.request.AssignRolesRequest;
 import hcmute.edu.vn.discord.dto.request.ServerRoleRequest;
 import hcmute.edu.vn.discord.dto.response.ServerRoleResponse;
 import hcmute.edu.vn.discord.entity.jpa.ServerRole;
@@ -24,8 +25,8 @@ public class ServerRoleController {
     @PostMapping
     @PreAuthorize("@serverAuth.canManageRole(#serverId, authentication.name)")
     public ResponseEntity<ServerRoleResponse> createRole(@PathVariable Long serverId,
-                                                         @RequestBody @Valid ServerRoleRequest request,
-                                                         Authentication authentication) {
+            @RequestBody @Valid ServerRoleRequest request,
+            Authentication authentication) {
         ServerRole role = serverRoleService.createRole(serverId, request, authentication.getName());
         return ResponseEntity.ok(ServerRoleResponse.from(role));
     }
@@ -34,9 +35,9 @@ public class ServerRoleController {
     @PutMapping("/{roleId}")
     @PreAuthorize("@serverAuth.canManageRole(#serverId, authentication.name)")
     public ResponseEntity<ServerRoleResponse> updateRole(@PathVariable Long serverId,
-                                                         @PathVariable Long roleId,
-                                                         @RequestBody @Valid ServerRoleRequest request,
-                                                         Authentication authentication) {
+            @PathVariable Long roleId,
+            @RequestBody @Valid ServerRoleRequest request,
+            Authentication authentication) {
         ServerRole role = serverRoleService.updateRole(serverId, roleId, request, authentication.getName());
         return ResponseEntity.ok(ServerRoleResponse.from(role));
     }
@@ -45,8 +46,8 @@ public class ServerRoleController {
     @DeleteMapping("/{roleId}")
     @PreAuthorize("@serverAuth.canManageRole(#serverId, authentication.name)")
     public ResponseEntity<Void> deleteRole(@PathVariable Long serverId,
-                                           @PathVariable Long roleId,
-                                           Authentication authentication) {
+            @PathVariable Long roleId,
+            Authentication authentication) {
         serverRoleService.deleteRole(serverId, roleId, authentication.getName());
         return ResponseEntity.noContent().build();
     }
@@ -55,7 +56,7 @@ public class ServerRoleController {
     @GetMapping
     @PreAuthorize("@serverAuth.canManageRole(#serverId, authentication.name)")
     public ResponseEntity<List<ServerRoleResponse>> getAllRoles(@PathVariable Long serverId,
-                                                                Authentication authentication) {
+            Authentication authentication) {
         return ResponseEntity.ok(serverRoleService.listRoles(serverId, authentication.getName()).stream()
                 .map(ServerRoleResponse::from)
                 .toList());
@@ -65,9 +66,19 @@ public class ServerRoleController {
     @GetMapping("/public")
     @PreAuthorize("@serverAuth.isMember(#serverId, authentication.name)")
     public ResponseEntity<List<ServerRoleResponse>> getPublicRoles(@PathVariable Long serverId,
-                                                                   Authentication authentication) {
+            Authentication authentication) {
         return ResponseEntity.ok(serverRoleService.listRoles(serverId, authentication.getName()).stream()
                 .map(ServerRoleResponse::from)
                 .toList());
+    }
+
+    // 6. Gán Role cho thành viên
+    @PostMapping("/assign")
+    @PreAuthorize("@serverAuth.canManageRole(#serverId, authentication.name)")
+    public ResponseEntity<Void> assignRolesToMember(@PathVariable Long serverId,
+            @RequestBody @Valid AssignRolesRequest request,
+            Authentication authentication) {
+        serverRoleService.assignRoles(serverId, request, authentication.getName());
+        return ResponseEntity.ok().build();
     }
 }
