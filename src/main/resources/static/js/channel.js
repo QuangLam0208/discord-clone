@@ -246,7 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCreateCategorySubmit.onclick = async () => {
             const modal = document.getElementById('createCategoryModal');
             const nameInput = modal.querySelector('input[type="text"]');
-            const isPrivateInput = modal.querySelector('.switch input');
 
             const name = nameInput.value.trim();
             if (!name) {
@@ -369,8 +368,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     if (isOwner) {
                         ctxMenu.innerHTML += `
-                            <div class="menu-item" onclick="editServer('${serverId}')">
-                                <span>Sửa Server</span><i class="fa-solid fa-pen"></i>
+                            <div class="menu-item" onclick="openServerSettings('${serverId}')">
+                                <span>Cài đặt</span><i class="fa-solid fa-gear"></i>
                             </div>
                             <div class="menu-separator"></div>
                             <div class="menu-item logout" onclick="deleteServer('${serverId}')">

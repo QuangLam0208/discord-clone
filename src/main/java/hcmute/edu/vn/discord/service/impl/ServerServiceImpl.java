@@ -1,6 +1,7 @@
 package hcmute.edu.vn.discord.service.impl;
 
 import hcmute.edu.vn.discord.dto.request.ServerRequest;
+import hcmute.edu.vn.discord.dto.response.ServerResponse;
 import hcmute.edu.vn.discord.entity.enums.ChannelType;
 import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.enums.ServerStatus;
@@ -144,12 +145,36 @@ public class ServerServiceImpl implements ServerService {
                 .orElseThrow(() -> new EntityNotFoundException("Server not found"));
     }
 
+    // Lấy servers theo username hiện tại, chỉ ACTIVE/FREEZE, kèm counts an toàn (không chạm LAZY)
+    @Override
+    @Transactional(readOnly = true)
+    public List<ServerResponse> getMyServersResponses() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User u = userRepository.findByUsername(username).orElseThrow();
+
+        List<Server> servers = serverRepository.findDistinctByMembers_User_UsernameAndStatusIn(
+                u.getUsername(),
+                Set.of(ServerStatus.ACTIVE, ServerStatus.FREEZE)
+        );
+
+        return servers.stream()
+                .map(s -> ServerResponse.from(
+                        s,
+                        channelRepository.countByServerId(s.getId()),
+                        serverMemberRepository.countByServerId(s.getId())
+                ))
+                .toList();
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<Server> getServersByCurrentUsername() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        return serverMemberRepository.findByUserUsername(username).stream()
-                .map(ServerMember::getServer)
-                .toList();
+        User u = userRepository.findByUsername(username).orElseThrow();
+        // Tải sẵn owner, nhưng KHÔNG dùng ServerResponse.from(server) trực tiếp (tránh LAZY size())
+        return serverRepository.findDistinctByMembers_User_UsernameAndStatusIn(
+                u.getUsername(),
+                Set.of(ServerStatus.ACTIVE, ServerStatus.FREEZE)
+        );
     }
 }

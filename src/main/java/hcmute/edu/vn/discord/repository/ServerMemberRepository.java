@@ -20,4 +20,6 @@ public interface ServerMemberRepository extends JpaRepository<ServerMember, Long
 
     List<ServerMember> findByUserUsername(String username);
 
+    int countByServerId(Long serverId);
+
 }

@@ -85,8 +85,8 @@ public class ServerController {
     @GetMapping("/me")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<ServerResponse>> getMyServers() {
-        return ResponseEntity.ok(serverService.getServersByCurrentUsername().stream()
-                .map(ServerResponse::from).toList());
+        // Dùng method trả DTO đã có counts, tránh đụng LAZY
+        return ResponseEntity.ok(serverService.getMyServersResponses());
     }
 
     @DeleteMapping("/{id}")

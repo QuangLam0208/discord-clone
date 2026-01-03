@@ -25,13 +25,15 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
 
     List<Channel> findByServerIdAndType(Long serverId, ChannelType type);
 
-    // Gỡ liên kết category khỏi mọi channel thuộc server (tránh lỗi FK khi xóa category)
+    // Đếm channel theo server để map DTO không đụng LAZY
+    int countByServerId(Long serverId);
+
+    // Các hàm phục vụ xóa server có category (nếu bạn đã thêm trước đó)
     @Modifying
     @Transactional
     @Query("update Channel c set c.category = null where c.server.id = :serverId")
     int unsetCategoryByServerId(Long serverId);
 
-    // Xóa tất cả channel theo server trước khi xóa server (nếu cần)
     @Modifying
     @Transactional
     @Query("delete from Channel c where c.server.id = :serverId")

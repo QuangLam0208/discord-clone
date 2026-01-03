@@ -40,5 +40,21 @@ public class ServerResponse {
                 .memberCount(server.getMembers() != null ? server.getMembers().size() : 0)
                 .build();
     }
+
+    // Dùng hàm này khi map danh sách (tránh đụng LAZY, truyền sẵn counts)
+    public static ServerResponse from(Server server, int channelCount, int memberCount) {
+        if (server == null) return null;
+        return ServerResponse.builder()
+                .id(server.getId())
+                .name(server.getName())
+                .description(server.getDescription())
+                .iconUrl(server.getIconUrl())
+                .status(server.getStatus())
+                .ownerId(server.getOwner() != null ? server.getOwner().getId() : null)
+                .ownerUsername(server.getOwner() != null ? server.getOwner().getUsername() : null)
+                .channelCount(channelCount)
+                .memberCount(memberCount)
+                .build();
+    }
 }
 

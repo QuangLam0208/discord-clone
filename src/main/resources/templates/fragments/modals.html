@@ -69,7 +69,7 @@
                 <div class="input-group">
                     <label>TÊN KÊNH</label>
                     <div class="input-with-icon"><i class="fa-solid fa-hashtag input-icon"></i><input type="text"
-                            placeholder="kênh-mới"></div>
+                                                                                                      placeholder="kênh-mới"></div>
                 </div>
                 <div class="toggle-group">
                     <div class="toggle-label">
@@ -100,16 +100,6 @@
                 <div class="input-group">
                     <label>TÊN DANH MỤC</label>
                     <input type="text" placeholder="Tên danh mục mới">
-                </div>
-                <div class="toggle-group">
-                    <div class="toggle-label">
-                        <div class="toggle-title">Danh mục riêng tư</div>
-                        <div class="toggle-desc">Chỉ thành viên được chọn mới thấy danh mục này.</div>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox">
-                        <span class="slider round"></span>
-                    </label>
                 </div>
             </div>
             <div class="modal-footer">
@@ -144,7 +134,7 @@
                 <div class="input-group">
                     <label>TÊN KÊNH</label>
                     <div class="input-with-icon"><i class="fa-solid fa-hashtag input-icon"></i><input type="text"
-                            placeholder="kênh-mới"></div>
+                                                                                                      placeholder="kênh-mới"></div>
                 </div>
                 <div class="toggle-group">
                     <div class="toggle-label">
@@ -174,14 +164,25 @@
             <div class="modal-body">
                 <div class="input-group">
                     <label>TÌM KIẾM BẠN BÈ</label>
-                    <div class="search-box-invite"><input type="text" placeholder="Tìm kiếm bạn bè"><i
-                            class="fa-solid fa-magnifying-glass" style="color: #b5bac1;"></i></div>
+                    <div class="search-box-invite">
+                        <input type="text" id="invite-search-input" placeholder="Tìm kiếm bạn bè"
+                               onkeyup="filterInviteFriends()">
+                        <i class="fa-solid fa-magnifying-glass" style="color: #b5bac1;"></i>
+                    </div>
                 </div>
+
+                <div id="invite-friend-list" class="invite-friend-list custom-scrollbar"
+                     style="max-height: 200px; overflow-y: auto; margin-bottom: 20px;">
+                    <!-- Friend items will optionally be injected here by JS -->
+                </div>
+
                 <div class="invite-divider"></div>
                 <div class="input-group">
                     <label>HOẶC GỬI LIÊN KẾT</label>
-                    <div class="copy-link-box"><input type="text" value="https://discord.gg/hcmute" readonly><button
-                            class="btn-copy">Sao chép</button></div>
+                    <div class="copy-link-box">
+                        <input type="text" id="invite-link-input" value="Đang tải..." readonly>
+                        <button class="btn-copy" id="btn-copy-invite" onclick="copyInviteLink()">Sao chép</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -219,8 +220,8 @@
 
                     <div class="input-group">
                         <label>CHỦ ĐỀ KÊNH (MÔ TẢ)</label>
-                        <textarea id="edit-channel-desc" placeholder="Cho mọi người biết kênh này nói về cái gì"
-                            rows="3"></textarea>
+                        <textarea id="edit-channel-desc" class="custom-textarea"
+                                  placeholder="Cho mọi người biết kênh này nói về cái gì" rows="3"></textarea>
                     </div>
 
                     <div class="setting-divider"></div>
@@ -254,6 +255,189 @@
                                 id="delete-channel-name-display"></strong>? Hành động này không thể hoàn tác.</div>
                         <button class="btn-danger-large" onclick="confirmDeleteChannel()">Xóa Kênh</button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="serverSettingsModal">
+        <div class="settings-layout">
+            <div class="settings-sidebar">
+                <div class="settings-sidebar-header" id="server-settings-header">
+                    <span>SERVER NAME</span>
+                </div>
+                <!-- Sidebar Items -->
+                <div class="settings-nav-item active" id="nav-server-overview"
+                     onclick="switchServerSettingsTab('overview')">
+                    Hồ sơ máy chủ
+                </div>
+                <div class="settings-nav-item" id="nav-server-members" onclick="switchServerSettingsTab('members')">
+                    Thành viên
+                </div>
+                <div class="settings-nav-item" id="nav-server-roles" onclick="switchServerSettingsTab('roles')">
+                    Vai trò
+                </div>
+                <div class="settings-nav-item" id="nav-server-audit" onclick="switchServerSettingsTab('audit')">
+                    Nhật ký chỉnh sửa
+                </div>
+                <div class="settings-nav-item" id="nav-server-bans" onclick="switchServerSettingsTab('bans')">
+                    Chặn
+                </div>
+
+                <div class="settings-nav-separator"></div>
+
+                <div class="settings-nav-item danger" id="nav-server-delete"
+                     onclick="switchServerSettingsTab('delete')">
+                    Xóa Máy Chủ
+                    <i class="fa-solid fa-trash-can" style="margin-left: auto;"></i>
+                </div>
+            </div>
+
+            <div class="settings-content-wrapper">
+                <div class="settings-close-btn" onclick="closeModal('serverSettingsModal')">
+                    <i class="fa-solid fa-xmark"></i>
+                    <span>ESC</span>
+                </div>
+
+                <!-- TAB: OVERVIEW (Hồ sơ máy chủ) -->
+                <div id="tab-server-overview" class="settings-tab-content active">
+                    <h2>Hồ sơ máy chủ</h2>
+
+                    <div class="server-overview-container">
+                        <!-- LEFT COLUMN: SETTINGS -->
+                        <div class="overview-left">
+
+                            <!-- Icon & Name Section -->
+                            <div class="input-group">
+                                <label>BIỂU TƯỢNG</label>
+                                <div class="icon-section">
+                                    <div class="current-icon-preview">
+                                        <img id="edit-server-icon-preview" style="display: none;">
+                                        <span id="edit-server-icon-placeholder" style="display: none;">SRV</span>
+                                    </div>
+                                    <div>
+                                        <div
+                                                style="font-size: 12px; color: #b5bac1; margin-bottom: 8px; max-width: 200px;">
+                                            Chúng tôi khuyến nghị sử dụng hình ảnh có kích thước tối thiểu 512x512.
+                                        </div>
+                                        <button class="btn-upload-icon"
+                                                onclick="document.getElementById('editServerIconInput').click()">Thay Đổi
+                                            Biểu Tượng</button>
+                                        <button class="remove-icon-btn" onclick="removeServerIcon()">Xóa biểu
+                                            tượng</button>
+                                        <input type="file" id="editServerIconInput" style="display: none;"
+                                               accept="image/*">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="input-group">
+                                <label>TÊN MÁY CHỦ</label>
+                                <input type="text" id="edit-server-name">
+                            </div>
+
+                            <div class="input-group">
+                                <label>MÔ TẢ MÁY CHỦ</label>
+                                <textarea id="edit-server-desc" class="custom-textarea" rows="3"
+                                          placeholder="Server này nói về cái gì?"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- RIGHT COLUMN: PREVIEW -->
+                        <div class="overview-right">
+                            <div class="preview-label">XEM TRƯỚC</div>
+                            <div class="server-card-preview">
+                                <div class="sc-header"></div> <!-- Gradients/Banner if needed -->
+                                <div class="sc-body">
+                                    <div class="sc-icon">
+                                        <img id="preview-card-icon-img" style="display: none;">
+                                        <span id="preview-card-icon-text"></span>
+                                    </div>
+                                    <div class="sc-info">
+                                        <div class="sc-name" id="preview-card-name">Tên Máy Chủ</div>
+                                        <div class="sc-status">
+                                            <span style="display: flex; align-items: center; gap: 4px;">
+                                                <div class="status-dot"></div> 1 Trực tuyến
+                                            </span>
+                                            <span>• 3 Thành viên</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="save-notice-bar" id="server-save-bar">
+                        <span>Bạn có thay đổi chưa lưu!</span>
+                        <div class="save-actions">
+                            <button class="btn-reset" onclick="resetServerOverview()">ĐẶT LẠI</button>
+                            <button class="btn-save" onclick="saveServerOverview()">LƯU THAY ĐỔI</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: MEMBERS -->
+                <div id="tab-server-members" class="settings-tab-content">
+                    <h2>Thành viên</h2>
+                    <div class="members-controls-row">
+                        <span
+                                style="font-size: 12px; font-weight: 700; color: #b5bac1; text-transform: uppercase;">Thành
+                            viên gần đây</span>
+                        <div class="members-search-box-styled">
+                            <input type="text" id="member-search-input" placeholder="Tìm kiếm">
+                            <i class="fas fa-search"></i>
+                        </div>
+                    </div>
+
+                    <div class="members-list-wrapper">
+                        <table class="members-table styled-table">
+                            <thead>
+                            <tr>
+                                <th style="width: 35%; padding-left: 16px;">TÊN</th>
+                                <th style="width: 20%;">GIA NHẬP MÁY CHỦ</th>
+                                <th style="width: 20%;">THAM GIA DISCORD</th>
+                                <th style="width: 20%;">VAI TRÒ</th>
+                                <th style="width: 5%;"></th> <!-- Actions -->
+                            </tr>
+                            </thead>
+                            <tbody id="members-table-body">
+                            <!-- JS renders rows here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="pagination-footer">
+                        <span id="members-count-display">Đang hiển thị...</span>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- TAB: ROLES -->
+            <div id="tab-server-roles" class="settings-tab-content">
+                <h2>Vai trò</h2>
+                <p class="placeholder-text">Quản lý vai trò sẽ ở đây.</p>
+            </div>
+
+            <!-- TAB: AUDIT LOG -->
+            <div id="tab-server-audit" class="settings-tab-content">
+                <h2>Nhật ký chỉnh sửa</h2>
+                <p class="placeholder-text">Nhật ký thay đổi sẽ hiển thị tại đây.</p>
+            </div>
+
+            <!-- TAB: BANS -->
+            <div id="tab-server-bans" class="settings-tab-content">
+                <h2>Chặn</h2>
+                <p class="placeholder-text">Danh sách người dùng bị chặn.</p>
+            </div>
+
+            <!-- TAB: DELETE -->
+            <div id="tab-server-delete" class="settings-tab-content">
+                <h2>Xóa Máy Chủ</h2>
+                <div class="warning-box">
+                    <div class="warning-msg">Bạn có chắc chắn muốn xóa máy chủ này? <strong
+                            id="delete-server-name-display"></strong>? <br>Hành động này không thể hoàn tác.</div>
+                    <button class="btn-danger-large" onclick="confirmDeleteServer()">Xóa Máy Chủ</button>
                 </div>
             </div>
         </div>
