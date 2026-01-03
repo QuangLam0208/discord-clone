@@ -15,7 +15,6 @@ const DMApi = (() => {
   // Hàm xử lý lỗi chung
   function handleResponse(res) {
     if (res.status === 401 || res.status === 403) {
-      console.warn('[API] Token expired or unauthorized. Redirecting to login...');
       alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
       window.location.href = '/login';
       throw new Error('Unauthorized');
@@ -26,7 +25,7 @@ const DMApi = (() => {
     return res;
   }
 
-  // ----- API -----
+  // ----- API: DM Chat (giữ nguyên) -----
   async function fetchFriends() {
     const res = await fetch('/api/friends', { headers: authHeaders(false), credentials: 'include' });
     handleResponse(res);
@@ -61,11 +60,62 @@ const DMApi = (() => {
     return res.json();
   }
 
+  // ----- API: Friends & Friend Requests -----
+  async function listInboundRequests() {
+    const res = await fetch('/api/friends/requests?type=inbound', { headers: authHeaders(false), credentials: 'include' });
+    handleResponse(res);
+    return res.json();
+  }
+  async function listOutboundRequests() {
+    const res = await fetch('/api/friends/requests?type=outbound', { headers: authHeaders(false), credentials: 'include' });
+    handleResponse(res);
+    return res.json();
+  }
+  async function userByUsername(username) {
+    const res = await fetch(`/api/users/username/${encodeURIComponent(username)}`, { headers: authHeaders(false), credentials: 'include' });
+    if (res.status === 404) throw new Error('Không tìm thấy người dùng');
+    handleResponse(res);
+    return res.json();
+  }
+  async function sendFriendRequestByUsername(username) {
+    const u = await userByUsername(username);
+    const res = await fetch('/api/friends/requests', {
+      method: 'POST',
+      headers: authHeaders(true),
+      credentials: 'include',
+      body: JSON.stringify({ targetUserId: u.id })
+    });
+    handleResponse(res);
+    return res.json();
+  }
+  async function acceptRequest(id) {
+    const res = await fetch(`/api/friends/requests/${id}/accept`, { method: 'POST', headers: authHeaders(false), credentials: 'include' });
+    handleResponse(res);
+    return res.json();
+  }
+  async function declineRequest(id) {
+    const res = await fetch(`/api/friends/requests/${id}/decline`, { method: 'POST', headers: authHeaders(false), credentials: 'include' });
+    handleResponse(res);
+    return res.json();
+  }
+  async function cancelRequest(id) {
+    const res = await fetch(`/api/friends/requests/${id}`, { method: 'DELETE', headers: authHeaders(false), credentials: 'include' });
+    handleResponse(res);
+  }
+
   return {
+    // DM chat
     getToken,
     fetchFriends,
     getOrCreateConversation,
     fetchMessages,
-    sendMessage
+    sendMessage,
+    // Friends
+    listInboundRequests,
+    listOutboundRequests,
+    sendFriendRequestByUsername,
+    acceptRequest,
+    declineRequest,
+    cancelRequest
   };
 })();

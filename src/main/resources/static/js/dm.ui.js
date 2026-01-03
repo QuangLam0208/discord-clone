@@ -1,12 +1,13 @@
 const DMUI = (() => {
+  // Lưu callback mở hội thoại để reload friends dùng lại
+  let onSelectFriendRef = null;
+
   // ----- UI Elements -----
   function els() {
     return {
       dmList: document.getElementById('dm-direct-list'),
-      // Lấy chính xác theo ID bạn vừa thêm trong HTML
       btnFriends: document.getElementById('btn-friends'),
 
-      // Các phần tử khác giữ nguyên
       dmCenterList: document.getElementById('dm-center-list'),
       dmCenterCount: document.getElementById('dm-center-count'),
       dmDashboard: document.getElementById('dm-dashboard-view'),
@@ -15,6 +16,21 @@ const DMUI = (() => {
       dmMessages: document.getElementById('dm-messages'),
       dmInput: document.getElementById('dm-input'),
       dmSendBtn: document.getElementById('dm-send-btn'),
+
+      // Tabs & Views
+      dmTabAll: document.getElementById('dmTabAll'),
+      dmTabPending: document.getElementById('dmTabPending'),
+      dmTabAddFriend: document.getElementById('dmTabAddFriend'),
+      dmAllView: document.getElementById('dm-all-view'),
+      dmPendingView: document.getElementById('dm-pending-view'),
+      dmAddFriendView: document.getElementById('dm-addfriend-view'),
+      dmPendingInList: document.getElementById('dm-pending-in-list'),
+      dmPendingOutList: document.getElementById('dm-pending-out-list'),
+      dmAddFriendInput: document.getElementById('dm-addfriend-username'),
+      dmAddFriendSend: document.getElementById('dm-addfriend-send'),
+      dmAddFriendResult: document.getElementById('dm-addfriend-result'),
+      dmSearch: document.getElementById('dm-center-search'),
+      dmSearchContainer: document.getElementById('dm-search-container'),
     };
   }
 
@@ -36,31 +52,16 @@ const DMUI = (() => {
     if (dmInput) dmInput.placeholder = `Nhắn tin cho @${name || ''}`;
   }
 
-  // === QUẢN LÝ HIGHLIGHT (QUAN TRỌNG) ===
-
-  // 1. Reset: Tắt sáng tất cả (User + Nút bạn bè)
+  // === QUẢN LÝ HIGHLIGHT ===
   function resetActiveItems() {
-      const { dmList, btnFriends } = els();
-
-      // Tắt sáng danh sách user (class .channel-item)
-      if (dmList) {
-          dmList.querySelectorAll('.channel-item.dm-item').forEach(e => e.classList.remove('active'));
-      }
-
-      // Tắt sáng nút Bạn bè (class .dm-header-item)
-      if (btnFriends) {
-          btnFriends.classList.remove('active');
-      }
+    const { dmList, btnFriends } = els();
+    dmList?.querySelectorAll('.channel-item.dm-item').forEach(e => e.classList.remove('active'));
+    btnFriends?.classList.remove('active');
   }
-
-  // 2. Highlight nút Bạn bè (Về Dashboard)
   function highlightFriendsButton() {
-      resetActiveItems(); // Tắt hết user đang sáng
-
-      const { btnFriends } = els();
-      if (btnFriends) {
-          btnFriends.classList.add('active');
-      }
+    resetActiveItems();
+    const { btnFriends } = els();
+    btnFriends?.classList.add('active');
   }
 
   // --- Sidebar & List ---
@@ -69,27 +70,18 @@ const DMUI = (() => {
     if (!dmList) return;
     dmList.innerHTML = friends.map(friendSidebarItem).join('');
 
-    // Gán sự kiện click cho từng User
     dmList.querySelectorAll('.channel-item.dm-item').forEach(item => {
       item.addEventListener('click', () => {
-        // 1. Tắt sáng nút Bạn bè & User khác
         resetActiveItems();
-
-        // 2. Clear unread visual
         updateSidebarItem(Number(item.getAttribute('data-friend-id')), false);
-
-        // 3. Active User vừa click
         item.classList.add('active');
-
-        // 4. Callback
         const friendId = Number(item.getAttribute('data-friend-id'));
         const name = item.getAttribute('data-friend-name') || '';
-        if (onSelectFriendCallback) onSelectFriendCallback(friendId, name);
+        onSelectFriendCallback && onSelectFriendCallback(friendId, name);
       });
     });
   }
 
-  // HTML render cho User Item (dùng class channel-item)
   function friendSidebarItem(f) {
     const name = f.displayName || f.friendUsername || ('User ' + f.friendUserId);
     const initials = (name || 'U').split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase();
@@ -116,11 +108,11 @@ const DMUI = (() => {
     if (!nameText) return;
 
     if (hasUnread) {
-        nameText.style.color = '#ffffff';
-        nameText.style.fontWeight = '700';
+      nameText.style.color = '#ffffff';
+      nameText.style.fontWeight = '700';
     } else {
-        nameText.style.color = '#96989d';
-        nameText.style.fontWeight = '500';
+      nameText.style.color = '#96989d';
+      nameText.style.fontWeight = '500';
     }
   }
 
@@ -133,7 +125,7 @@ const DMUI = (() => {
       item.addEventListener('click', () => {
         const friendId = Number(item.getAttribute('data-friend-id'));
         const sidebarItem = document.getElementById(`dm-item-${friendId}`);
-        if(sidebarItem) sidebarItem.click();
+        if (sidebarItem) sidebarItem.click();
       });
     });
   }
@@ -160,7 +152,7 @@ const DMUI = (() => {
   function renderMessages(list, currentUserId, displayedMsgIdsSet) {
     const { dmMessages } = els();
     if (!dmMessages) return;
-    if (displayedMsgIdsSet) displayedMsgIdsSet.clear();
+    displayedMsgIdsSet?.clear();
     dmMessages.innerHTML = list.slice().reverse().map(m => {
       if (m.id != null && displayedMsgIdsSet) displayedMsgIdsSet.add(String(m.id));
       return msgBubble(m, currentUserId);
@@ -172,7 +164,7 @@ const DMUI = (() => {
     const { dmMessages } = els();
     if (!dmMessages) return;
     const mid = m.id != null ? String(m.id) : null;
-    if (mid && displayedMsgIdsSet && displayedMsgIdsSet.has(mid)) return;
+    if (mid && displayedMsgIdsSet?.has(mid)) return;
     if (mid && displayedMsgIdsSet) displayedMsgIdsSet.add(mid);
 
     const wasNearBottom = isNearBottom();
@@ -184,7 +176,7 @@ const DMUI = (() => {
   function scrollToBottom(force = false) {
     const { dmMessages } = els();
     if (dmMessages && force) {
-        setTimeout(() => { dmMessages.scrollTop = dmMessages.scrollHeight; }, 50);
+      setTimeout(() => { dmMessages.scrollTop = dmMessages.scrollHeight; }, 50);
     }
   }
 
@@ -214,15 +206,151 @@ const DMUI = (() => {
   function markMessageError(tempId) {
     const tempEl = document.getElementById(`msg-${tempId}`);
     if (tempEl) {
-        const bubble = tempEl.querySelector('div[style*="background"]');
-        if (bubble) {
-            bubble.style.border = '1px solid red'; bubble.style.cursor = 'pointer';
-            bubble.setAttribute('onclick', `DM.retryMessage('${tempId}')`);
-            const timeDiv = bubble.querySelector('div:first-child');
-            if(timeDiv && !timeDiv.innerHTML.includes('Lỗi')) timeDiv.innerHTML += '<span style="color:red; margin-left:5px;">(Lỗi - Gửi lại)</span>';
-        }
-        tempEl.style.opacity = '1';
+      const bubble = tempEl.querySelector('div[style*="background"]');
+      if (bubble) {
+        bubble.style.border = '1px solid red'; bubble.style.cursor = 'pointer';
+        bubble.setAttribute('onclick', `DM.retryMessage('${tempId}')`);
+        const timeDiv = bubble.querySelector('div:first-child');
+        if (timeDiv && !timeDiv.innerHTML.includes('Lỗi')) timeDiv.innerHTML += '<span style="color:red; margin-left:5px;">(Lỗi - Gửi lại)</span>';
+      }
+      tempEl.style.opacity = '1';
     }
+  }
+
+  // ===== Friends Dashboard =====
+  function setActiveTab(tab) {
+    const { dmTabAll, dmTabPending, dmTabAddFriend, dmAllView, dmPendingView, dmAddFriendView, dmSearchContainer } = els();
+    dmTabAll?.classList.toggle('active', tab === 'all');
+    dmTabPending?.classList.toggle('active', tab === 'pending');
+    dmTabAddFriend?.classList.toggle('active', tab === 'add');
+
+    if (dmAllView) dmAllView.style.display = tab === 'all' ? 'block' : 'none';
+    if (dmPendingView) dmPendingView.style.display = tab === 'pending' ? 'block' : 'none';
+    if (dmAddFriendView) dmAddFriendView.style.display = tab === 'add' ? 'block' : 'none';
+
+    // Ẩn thanh tìm kiếm khi ở tab "Thêm bạn"
+    if (dmSearchContainer) dmSearchContainer.style.display = tab === 'add' ? 'none' : 'flex';
+  }
+
+  function pendingInboundItem(r) {
+    const name = r.senderUsername || ('User ' + r.senderId);
+    return `
+      <div class="dm-pending-item" style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:8px; background:#2b2d31; color:#fff; margin-bottom:8px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:#5865F2;"></div>
+          <div style="display:flex; flex-direction:column;">
+            <span>${name}</span>
+            <small style="color:#b5bac1;">Đã gửi lúc ${new Date(r.createdAt).toLocaleString()}</small>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="add-friend-btn" data-action="accept" data-request-id="${r.id}">Chấp nhận</button>
+          <button class="tab-item" data-action="decline" data-request-id="${r.id}">Từ chối</button>
+        </div>
+      </div>`;
+  }
+  function pendingOutboundItem(r) {
+    const name = r.recipientUsername || ('User ' + r.recipientId);
+    return `
+      <div class="dm-pending-item" style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:8px; background:#2b2d31; color:#fff; margin-bottom:8px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:#5865F2;"></div>
+          <div style="display:flex; flex-direction:column;">
+            <span>${name}</span>
+            <small style="color:#b5bac1;">Đã gửi lúc ${new Date(r.createdAt).toLocaleString()}</small>
+          </div>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="tab-item" data-action="cancel" data-request-id="${r.id}">Huỷ</button>
+        </div>
+      </div>`;
+  }
+  function renderPending(inbound, outbound) {
+    const { dmPendingInList, dmPendingOutList } = els();
+    if (dmPendingInList) dmPendingInList.innerHTML = inbound.map(pendingInboundItem).join('');
+    if (dmPendingOutList) dmPendingOutList.innerHTML = outbound.map(pendingOutboundItem).join('');
+  }
+
+  // NEW: reload friends (sidebar + center) sau accept/decline/cancel
+  async function reloadFriends() {
+    try {
+      const friends = await DMApi.fetchFriends();
+      renderFriendsSidebar(friends, onSelectFriendRef);
+      renderFriendsCenter(friends, onSelectFriendRef);
+    } catch (e) {
+      console.error('Reload friends failed', e);
+    }
+  }
+
+  function initFriendsDashboard({ friends, onSelectFriend }) {
+    onSelectFriendRef = onSelectFriend;
+    setActiveTab('all');
+    renderFriendsCenter(friends, onSelectFriend);
+
+    // Search tại tab “Tất cả”
+    const { dmSearch } = els();
+    dmSearch?.addEventListener('input', (e) => {
+      const q = e.target.value || '';
+      if (document.getElementById('dm-all-view')?.style.display !== 'none') {
+        const list = q
+          ? friends.filter(f => (f.displayName || f.friendUsername || '').toLowerCase().includes(q.toLowerCase()))
+          : friends;
+        renderFriendsCenter(list, onSelectFriend);
+      }
+    });
+
+    // Add friend
+    const { dmAddFriendInput, dmAddFriendSend, dmAddFriendResult } = els();
+    dmAddFriendSend?.addEventListener('click', async () => {
+      const username = dmAddFriendInput?.value?.trim();
+      if (!username) return;
+      dmAddFriendSend.disabled = true;
+      dmAddFriendResult.textContent = 'Đang gửi yêu cầu...';
+      try {
+        const created = await DMApi.sendFriendRequestByUsername(username);
+        dmAddFriendResult.textContent = `Đã gửi lời mời tới ${created.recipientUsername}`;
+        // Chuyển sang Pending và hiển thị ngay
+        setActiveTab('pending');
+        const inbound = await DMApi.listInboundRequests();
+        const outbound = await DMApi.listOutboundRequests();
+        renderPending(inbound, outbound);
+      } catch (e) {
+        dmAddFriendResult.textContent = (''+e).includes('Không tìm thấy') ? 'Không tìm thấy người dùng' : 'Gửi yêu cầu thất bại: ' + e;
+      } finally {
+        dmAddFriendSend.disabled = false;
+      }
+    });
+
+    // Tabs
+    const { dmTabAll, dmTabPending, dmTabAddFriend } = els();
+    dmTabAll?.addEventListener('click', () => { setActiveTab('all'); reloadFriends(); });
+    dmTabPending?.addEventListener('click', async () => {
+      setActiveTab('pending');
+      const inbound = await DMApi.listInboundRequests();
+      const outbound = await DMApi.listOutboundRequests();
+      renderPending(inbound, outbound);
+
+      // Bind hành động và reload friends sau thao tác
+      document.querySelectorAll('#dm-pending-in-list [data-action="accept"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try { await DMApi.acceptRequest(btn.getAttribute('data-request-id')); const i=await DMApi.listInboundRequests(); const o=await DMApi.listOutboundRequests(); renderPending(i,o); await reloadFriends(); }
+          catch(e){ alert('Không thể chấp nhận: '+e); }
+        });
+      });
+      document.querySelectorAll('#dm-pending-in-list [data-action="decline"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try { await DMApi.declineRequest(btn.getAttribute('data-request-id')); const i=await DMApi.listInboundRequests(); const o=await DMApi.listOutboundRequests(); renderPending(i,o); await reloadFriends(); }
+          catch(e){ alert('Không thể từ chối: '+e); }
+        });
+      });
+      document.querySelectorAll('#dm-pending-out-list [data-action="cancel"]').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          try { await DMApi.cancelRequest(btn.getAttribute('data-request-id')); const i=await DMApi.listInboundRequests(); const o=await DMApi.listOutboundRequests(); renderPending(i,o); await reloadFriends(); }
+          catch(e){ alert('Không thể huỷ: '+e); }
+        });
+      });
+    });
+    dmTabAddFriend?.addEventListener('click', () => { setActiveTab('add'); });
   }
 
   return {
@@ -239,6 +367,10 @@ const DMUI = (() => {
     markMessageError,
     scrollToBottom,
     resetActiveItems,
-    highlightFriendsButton
+    highlightFriendsButton,
+    initFriendsDashboard,
+    setActiveTab,
+    renderPending,
+    reloadFriends
   };
 })();
