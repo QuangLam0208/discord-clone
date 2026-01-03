@@ -2,13 +2,11 @@ package hcmute.edu.vn.discord.config;
 
 import hcmute.edu.vn.discord.security.jwt.JwtChannelInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.ChannelRegistration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
-import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
-import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.web.socket.config.annotation.*;
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -19,19 +17,18 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Endpoint cho client connect: ws://localhost:8081/ws
+        // Endpoint cho client connect: ws://<host>/ws
         var endpointRegistration = registry.addEndpoint("/ws");
 
         // Cấu hình origin cho phép thông qua property app.websocket.allowed-origins
-        // Ví dụ:
-        // app.websocket.allowed-origins=http://localhost:3000,https://example.com
+        // Ví dụ: app.websocket.allowed-origins=http://localhost:3000,https://example.com
         if (allowedOriginPatterns != null
                 && allowedOriginPatterns.length > 0
                 && !(allowedOriginPatterns.length == 1 && allowedOriginPatterns[0].isEmpty())) {
             endpointRegistration.setAllowedOriginPatterns(allowedOriginPatterns);
         }
 
-        endpointRegistration.withSockJS(); // Nếu không có hỗ trợ WebSocket, tự động chuyển sang Http Polling
+        endpointRegistration.withSockJS(); // fallback nếu WS bị chặn
     }
 
     @Autowired
@@ -39,18 +36,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // Prefix cho các message từ server gửi về client
-        registry.enableSimpleBroker("/topic", "/queue", "/user"); // Added /user for user-specific destinations
-
-        // Prefix cho các message từ client gửi lên server
-        // Ví dụ: @MessageMapping("/chat.sendMessage") -> client gửi
-        // "/app/chat.sendMessage"
+        // Broker đơn giản: /topic, /queue; bật user destinations với prefix /user
+        registry.enableSimpleBroker("/topic", "/queue", "/user");
         registry.setApplicationDestinationPrefixes("/app");
-        registry.setUserDestinationPrefix("/user"); // Enable user destinations
+        registry.setUserDestinationPrefix("/user"); // user-specific destinations: /user/queue/...
     }
 
     @Override
     public void configureClientInboundChannel(ChannelRegistration registration) {
+        // Interceptor đọc JWT từ header 'Authorization' trong STOMP CONNECT/SUBSCRIBE
         registration.interceptors(jwtChannelInterceptor);
     }
 }
