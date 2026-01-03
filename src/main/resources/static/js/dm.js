@@ -1,82 +1,179 @@
-// dm.js
 const DM = (() => {
-  let state = {
+  const st = {
     currentUserId: null,
     friends: [],
-    active: { friendId: null, friendName: '', conversationId: null }
+    activeFriendId: null,
+    activeFriendName: '',
+    conversationId: null,
+    displayedMsgIds: new Set(),
+    unreadCounts: new Map(),
+    pendingRetries: new Map()
   };
 
-  async function init() {
-    state.currentUserId = readUserIdFromToken(DMApi.getToken());
-
-    state.friends = await DMApi.fetchFriends();
-    DMUI.renderFriends(state.friends, onSelectFriend);
-
-    DMWS.connect(
-      () => console.log('WS connected'),
-      onIncomingMessage
-    );
-
-    if (state.friends.length > 0) {
-      await onSelectFriend(state.friends[0].friendUserId);
-    }
-
-    document.getElementById('dm-send-btn')?.addEventListener('click', onSend);
-    document.getElementById('dm-input')?.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') onSend();
-    });
+  function highlightServerLogo() {
+      // Tìm Logo Home (Server item đầu tiên hoặc nút có switchToDM)
+      document.querySelectorAll('.sidebar .sidebar-item').forEach(e => e.classList.remove('active'));
+      const homeLogo = document.querySelector('.sidebar .sidebar-item[onclick*="switchToDM"]');
+      if (homeLogo) homeLogo.classList.add('active');
   }
 
-  async function onSelectFriend(friendId) {
-    const friend = state.friends.find(f => f.friendUserId === friendId);
-    state.active.friendId = friendId;
-    state.active.friendName = friend?.displayName || friend?.friendUsername || ('User ' + friendId);
-    DMUI.setActiveFriendName(state.active.friendName);
+  // Logic: Quay về trang chủ
+  function goHome() {
+      st.activeFriendId = null;
+      st.activeFriendName = '';
+      st.conversationId = null;
 
-    const conv = await DMApi.getOrCreateConversation(friendId);
-    state.active.conversationId = conv.id;
+      // 1. Hiện Dashboard, ẩn chat
+      DMUI.showDashboard();
 
-    const messages = await DMApi.fetchMessages(state.active.conversationId, 0, 50);
-    DMUI.renderMessages(messages, state.currentUserId);
+      // 2. Highlight nút Bạn bè (Hàm này sẽ tự reset highlight các user)
+      DMUI.highlightFriendsButton();
+
+      // 3. Highlight Logo Server bên trái
+      highlightServerLogo();
+
+      console.log('[DM] Go Home -> Dashboard Active');
+  }
+
+  async function onSelectFriend(friendId, friendName) {
+    st.activeFriendId = friendId;
+    st.activeFriendName = friendName || ('User ' + friendId);
+
+    st.unreadCounts.set(friendId, 0);
+    DMUI.updateSidebarItem(friendId, false);
+
+    DMUI.setActiveFriendName(st.activeFriendName);
+    DMUI.showConversation();
+
+    // Vẫn giữ sáng Logo Server khi chat DM
+    highlightServerLogo();
+
+    try {
+        const conv = await DMApi.getOrCreateConversation(friendId);
+        st.conversationId = String(conv.id);
+        const msgs = await DMApi.fetchMessages(st.conversationId, 0, 50);
+        DMUI.renderMessages(msgs, st.currentUserId, st.displayedMsgIds);
+    } catch (e) {
+        console.error('Error loading conversation:', e);
+    }
   }
 
   async function onSend() {
-    if (!state.active.friendId) return;
-    const content = DMUI.getInput();
+    const { dmInput } = DMUI.els();
+    if (!dmInput || !st.activeFriendId) return;
+    const content = dmInput.value.trim();
     if (!content) return;
-    try {
-      const sent = await DMApi.sendMessage(state.active.friendId, content);
-      DMUI.appendMessage(sent, state.currentUserId);
-      DMUI.clearInput();
-      if (!state.active.conversationId && sent.conversationId) {
-        state.active.conversationId = sent.conversationId;
+    dmInput.value = '';
+    await executeSendMessage(st.activeFriendId, content);
+  }
+
+  async function executeSendMessage(receiverId, content, existingTempId = null) {
+      const tempId = existingTempId || ('temp-' + Date.now() + Math.random().toString(36).substr(2, 9));
+      const tempMsg = { id: null, tempId: tempId, senderId: st.currentUserId, receiverId: receiverId, content: content, createdAt: new Date().toISOString(), status: 'pending' };
+      if (!existingTempId) DMUI.appendMessage(tempMsg, st.currentUserId, null);
+
+      try {
+          const sent = await DMApi.sendMessage(receiverId, content);
+          DMUI.replaceTempMessage(tempId, sent, st.currentUserId);
+          if (sent.id) st.displayedMsgIds.add(String(sent.id));
+          if (!st.conversationId && sent.conversationId) st.conversationId = String(sent.conversationId);
+          st.pendingRetries.delete(tempId);
+      } catch (e) {
+          console.error('[Send Fail]', e);
+          DMUI.markMessageError(tempId);
+          st.pendingRetries.set(tempId, { receiverId, content });
       }
-    } catch (e) {
-      console.error(e);
-      alert('Gửi tin nhắn lỗi');
-    }
+  }
+
+  function retryMessage(tempId) {
+      const data = st.pendingRetries.get(tempId);
+      if (data) {
+          const tempEl = document.getElementById(`msg-${tempId}`);
+          if(tempEl) tempEl.style.opacity = '0.5';
+          executeSendMessage(data.receiverId, data.content, tempId);
+      }
   }
 
   function onIncomingMessage(msg) {
-    if (state.active.conversationId && msg.conversationId === state.active.conversationId) {
-      DMUI.appendMessage(msg, state.currentUserId);
-    }
+      if (String(msg.senderId) === String(st.currentUserId)) return;
+      const msgConvId = String(msg.conversationId || '');
+      const currentConvId = String(st.conversationId || '');
+
+      if (st.activeFriendId && msgConvId === currentConvId) {
+          DMUI.appendMessage(msg, st.currentUserId, st.displayedMsgIds);
+      } else {
+          const friendId = msg.senderId;
+          st.unreadCounts.set(friendId, (st.unreadCounts.get(friendId) || 0) + 1);
+          DMUI.updateSidebarItem(friendId, true);
+      }
   }
 
-  function readUserIdFromToken(token) {
+  function parseJwt (token) {
+    try { return JSON.parse(atob(token.split('.')[1])); } catch (e) { return null; }
+  }
+
+  function reset() {
+      DMWS.disconnect();
+      st.currentUserId = null;
+      st.friends = [];
+      st.activeFriendId = null;
+      st.conversationId = null;
+      st.displayedMsgIds.clear();
+      st.unreadCounts.clear();
+      st.pendingRetries.clear();
+  }
+
+  async function init() {
     try {
-      if (!token) return null;
-      const payload = JSON.parse(atob(token.split('.')[1] || ''));
-      return payload?.id || payload?.userId || null;
-    } catch {
-      return null;
+      st.currentUserId = window.state.currentUser?.id || parseJwt(DMApi.getToken())?.id;
+
+      const { dmSendBtn, dmInput } = DMUI.els();
+      const newBtn = dmSendBtn?.cloneNode(true);
+      if(dmSendBtn && newBtn) {
+          dmSendBtn.parentNode.replaceChild(newBtn, dmSendBtn);
+          newBtn.addEventListener('click', onSend);
+      }
+      const newInput = dmInput?.cloneNode(true);
+      if(dmInput && newInput) {
+          dmInput.parentNode.replaceChild(newInput, dmInput);
+          newInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') onSend(); });
+      }
+
+      // === SỰ KIỆN NÚT HOME VÀ FRIENDS ===
+
+      // 1. Logo Home (Sidebar trái cùng)
+      const homeLogo = document.querySelector('.sidebar .sidebar-item[onclick*="switchToDM"]');
+      if (homeLogo) {
+          homeLogo.addEventListener('click', goHome);
+      }
+
+      // 2. Nút "Bạn bè" (Sidebar DM) - Lấy từ DMUI.els() cho chắc ăn
+      const { btnFriends } = DMUI.els();
+      if (btnFriends) {
+          btnFriends.addEventListener('click', goHome);
+          // Gán ID nếu chưa có để debug dễ hơn
+          if (!btnFriends.id) btnFriends.id = 'btn-friends-auto-found';
+      } else {
+          console.warn('[DM] Vẫn chưa tìm thấy nút Bạn bè. Kiểm tra lại HTML class="fa-user-group"');
+      }
+
+      st.friends = await DMApi.fetchFriends();
+      DMUI.renderFriendsSidebar(st.friends, onSelectFriend);
+      DMUI.renderFriendsCenter(st.friends, onSelectFriend);
+
+      goHome();
+
+      DMWS.connectWS(onIncomingMessage);
+
+      window.DM = window.DM || {};
+      window.DM.retryMessage = retryMessage;
+      window.DM.reset = reset;
+      window.DM.goHome = goHome;
+
+    } catch (err) {
+      console.error('[DM.init Error]', err);
     }
   }
 
-  return { init };
+  return { init, reset, retryMessage, goHome };
 })();
-
-document.addEventListener('DOMContentLoaded', () => {
-  const root = document.getElementById('dm-root');
-  if (root) DM.init();
-});
