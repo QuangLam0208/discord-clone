@@ -40,8 +40,8 @@
                 </td>
                 <td th:attr="data-server-status=${sv.id}">
                     <span th:switch="${sv.status}">
-                        <span th:case="'ACTIVE'" class="badge-status active">Active</span>
-                        <span th:case="'FREEZE'" class="badge-status freeze">Freeze</span>
+                        <span th:case="${T(hcmute.edu.vn.discord.entity.enums.ServerStatus).ACTIVE}" class="badge-status active">Active</span>
+                        <span th:case="${T(hcmute.edu.vn.discord.entity.enums.ServerStatus).FREEZE}" class="badge-status freeze">Freeze</span>
                         <span th:case="*" class="badge-status active">Active</span>
                     </span>
                 </td>

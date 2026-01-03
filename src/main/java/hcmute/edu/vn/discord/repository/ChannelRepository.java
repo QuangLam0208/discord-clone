@@ -28,7 +28,7 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
     // Đếm channel theo server để map DTO không đụng LAZY
     int countByServerId(Long serverId);
 
-    // Các hàm phục vụ xóa server có category (nếu bạn đã thêm trước đó)
+    // Các hàm phục vụ xóa server có category
     @Modifying
     @Transactional
     @Query("update Channel c set c.category = null where c.server.id = :serverId")
@@ -38,4 +38,7 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
     @Transactional
     @Query("delete from Channel c where c.server.id = :serverId")
     int deleteByServerId(Long serverId);
+
+    @EntityGraph(attributePaths = {"server", "allowedMembers", "allowedRoles"})
+    Optional<Channel> findWithAccessListsById(Long id);
 }

@@ -109,7 +109,7 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
 .discord-search button:hover { color:#fff; }
 
 /* Bảng danh sách */
-.discord-table-wrapper { background-color:var(--sidebar);border-radius:8px;overflow:hidden;box-shadow:0 4px 6px rgba(0,0,0,0.1); }
+.discord-table-wrapper { background-color:var(--sidebar);border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1); }
 .discord-table { width:100%; border-collapse:collapse; }
 .discord-table thead { background-color:var(--panel); border-bottom:1px solid #1f2023; }
 .discord-table th {
@@ -199,7 +199,7 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     padding:8px;
     min-width:180px;
     display:none;
-    z-index:1000;
+    z-index:3000;
 }
 .status-menu.open { display:block; }
 .status-menu-header {

@@ -8,15 +8,30 @@ function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;'
 // Đóng modal khi click overlay / ESC
 window.addEventListener('click', e=>{
     if(e.target.classList && e.target.classList.contains('modal-overlay')) e.target.classList.remove('active');
-    // Đóng mọi status-menu khi click ngoài
+
+    // Đóng mọi status-menu khi click ngoài và RESET inline styles
     if (!e.target.closest('.status-menu') && !e.target.closest('.btn-mini.warn')) {
-        document.querySelectorAll('.status-menu.open').forEach(el => el.classList.remove('open'));
+        document.querySelectorAll('.status-menu.open').forEach(el => {
+            el.classList.remove('open', 'drop-up');
+            el.style.position = '';
+            el.style.top = '';
+            el.style.left = '';
+            el.style.right = '';
+            el.style.minWidth = '';
+        });
     }
 });
 window.addEventListener('keydown', e=>{
     if(e.key==='Escape'){
         document.querySelectorAll('.modal-overlay.active').forEach(el=>el.classList.remove('active'));
-        document.querySelectorAll('.status-menu.open').forEach(el => el.classList.remove('open'));
+        document.querySelectorAll('.status-menu.open').forEach(el => {
+            el.classList.remove('open', 'drop-up');
+            el.style.position = '';
+            el.style.top = '';
+            el.style.left = '';
+            el.style.right = '';
+            el.style.minWidth = '';
+        });
     }
 });
 
@@ -34,32 +49,31 @@ async function loadSection(section, params={}) {
     const title = document.getElementById('admin-page-title');
     if (!content) return;
 
-    // Active sidebar
     document.querySelectorAll('#admin-nav .nav-item').forEach(a=>{
         a.classList.toggle('active', a.dataset.section===section);
     });
 
-    // Cập nhật icon + title
     const labelMap = {dashboard:'Dashboard', users:'Users', servers:'Servers', messages:'Messages', audit:'Audit'};
     const iconMap = {dashboard:'fa-gauge', users:'fa-user-shield', servers:'fa-server', messages:'fa-envelope', audit:'fa-clipboard-list'};
     if (title) {
         title.innerHTML = `<i class="fa-solid ${iconMap[section]||'fa-gauge'}"></i><span>${labelMap[section]||'Dashboard'}</span>`;
     }
 
-    // Build query
     const url = new URL(routes[section], window.location.origin);
     Object.entries(params).forEach(([k,v]) => { if (v!==undefined && v!==null) url.searchParams.set(k, v); });
+    // Bust cache để luôn lấy fragment mới
+    url.searchParams.set('_', Date.now());
 
-    // Loading
     content.innerHTML = `<div class="muted" style="padding:20px;">Đang tải ${labelMap[section]||section}...</div>`;
 
     try {
-        const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const res = await fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Cache-Control': 'no-cache' },
+            cache: 'no-store'
+        });
         if (!res.ok) throw new Error(`Load thất bại: ${res.status}`);
         const html = await res.text();
         content.innerHTML = html;
-
-        // Gắn handlers sau khi inject fragment
         attachAdminHandlers();
     } catch (e) {
         console.error('Load section error', e);
@@ -209,32 +223,105 @@ function escapeJsAttr(s){
 function toggleStatusMenu(btn, serverId) {
     const menu = document.getElementById(`status-menu-${serverId}`);
     if (!menu) return;
-    // Close other menus
-    document.querySelectorAll('.status-menu.open').forEach(el => { if (el !== menu) el.classList.remove('open'); });
-    // Toggle
-    menu.classList.toggle('open');
-    // Position under the button (basic)
+
+    // Đóng các menu khác và reset style
+    document.querySelectorAll('.status-menu.open').forEach(el => {
+        if (el !== menu) {
+            el.classList.remove('open', 'drop-up');
+            el.style.position = '';
+            el.style.top = '';
+            el.style.left = '';
+            el.style.right = '';
+            el.style.minWidth = '';
+        }
+    });
+
+    // Toggle open/close
+    const willOpen = !menu.classList.contains('open');
+    if (!willOpen) {
+        menu.classList.remove('open', 'drop-up');
+        menu.style.position = '';
+        menu.style.top = '';
+        menu.style.left = '';
+        menu.style.right = '';
+        menu.style.minWidth = '';
+        return;
+    }
+    menu.classList.add('open');
+
+    // Định vị bằng fixed để thoát clipping
     const rect = btn.getBoundingClientRect();
-    menu.style.minWidth = `${Math.max(rect.width, 160)}px`;
+    const gap = 6;
+
+    menu.style.position = 'fixed';
+    menu.style.minWidth = `${Math.max(rect.width, 180)}px`;
+
+    // Mặc định hiển thị dưới nút
+    let top = rect.bottom + gap;
+    let left = rect.left;
+
+    // Tạm set để đo kích thước
+    menu.style.top = `${top}px`;
+    menu.style.left = `${left}px`;
+    menu.style.right = 'auto';
+
+    // Nếu tràn đáy viewport → drop-up
+    const bottom = top + menu.offsetHeight;
+    if (bottom > window.innerHeight) {
+        const upTop = rect.top - menu.offsetHeight - gap;
+        menu.style.top = `${Math.max(8, upTop)}px`;
+        menu.classList.add('drop-up');
+    } else {
+        menu.classList.remove('drop-up');
+    }
+
+    // Nếu tràn bên phải → nẹp vào lề phải
+    const overflowRight = left + menu.offsetWidth > window.innerWidth - 12;
+    if (overflowRight) {
+        const safeLeft = Math.max(12, window.innerWidth - menu.offsetWidth - 12);
+        menu.style.left = `${safeLeft}px`;
+    }
+
+    // Auto-close khi scroll/resize/click ngoài
+    const closeOnOutside = (e) => {
+        if (!e.target.closest('.status-menu') && !e.target.closest('.btn-mini.warn')) {
+            menu.classList.remove('open', 'drop-up');
+            menu.style.position = '';
+            menu.style.top = '';
+            menu.style.left = '';
+            menu.style.right = '';
+            menu.style.minWidth = '';
+            window.removeEventListener('scroll', closeOnOutside, true);
+            window.removeEventListener('resize', closeOnOutside, true);
+            document.removeEventListener('click', closeOnOutside, true);
+        }
+    };
+    window.addEventListener('scroll', closeOnOutside, true);
+    window.addEventListener('resize', closeOnOutside, true);
+    document.addEventListener('click', closeOnOutside, true);
 }
 
 async function updateServerStatus(serverId, status) {
     try {
-        // Chỉ ACTIVE hoặc FREEZE
         if (status !== 'ACTIVE' && status !== 'FREEZE') return;
 
         await Api.patch(`/api/admin/servers/${serverId}/status`, { status });
 
-        // Update badge cell
         const cell = document.querySelector(`[data-server-status="${serverId}"]`);
         if (cell) {
             if (status === 'ACTIVE') cell.innerHTML = '<span class="badge-status active">Active</span>';
             else if (status === 'FREEZE') cell.innerHTML = '<span class="badge-status freeze">Freeze</span>';
         }
 
-        // Close menu
         const menu = document.getElementById(`status-menu-${serverId}`);
-        menu?.classList.remove('open');
+        if (menu) {
+            menu.classList.remove('open', 'drop-up');
+            menu.style.position = '';
+            menu.style.top = '';
+            menu.style.left = '';
+            menu.style.right = '';
+            menu.style.minWidth = '';
+        }
 
         toastOk('Đã cập nhật trạng thái server');
     } catch (e) {
