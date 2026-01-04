@@ -99,6 +99,14 @@ public class ServerAuth {
                 EPermission.BAN_MEMBERS.getCode()));
     }
 
+    public boolean canBanMembers(Long serverId, String username) {
+        if (isOwner(serverId, username))
+            return true;
+        return has(serverId, username, Set.of(
+                EPermission.ADMIN.getCode(),
+                EPermission.BAN_MEMBERS.getCode()));
+    }
+
     // Xem kênh: Owner luôn được xem. Public cần VIEW_CHANNELS; Private cần Admin
     // hoặc nằm trong allowedMembers/allowedRoles
     public boolean canViewChannel(Long channelId, String username) {

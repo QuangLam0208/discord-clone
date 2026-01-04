@@ -2,6 +2,7 @@ package hcmute.edu.vn.discord.service.impl;
 
 import hcmute.edu.vn.discord.entity.jpa.*;
 import hcmute.edu.vn.discord.repository.InviteRepository;
+import hcmute.edu.vn.discord.repository.ServerBanRepository;
 import hcmute.edu.vn.discord.entity.jpa.ServerRole;
 import hcmute.edu.vn.discord.repository.ServerRoleRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -31,6 +32,7 @@ public class InviteServiceImpl implements InviteService {
     private final ServerMemberRepository serverMemberRepository;
     private final UserRepository userRepository;
     private final ServerRoleRepository serverRoleRepository;
+    private final ServerBanRepository serverBanRepository;
 
     @Override
     public Invite createInvite(Long serverId, Integer maxUses, Long expireSeconds) {
@@ -78,6 +80,11 @@ public class InviteServiceImpl implements InviteService {
         // 3. [FIX] Throw lỗi thay vì return im lặng
         if (serverMemberRepository.existsByServerIdAndUserId(invite.getServer().getId(), user.getId())) {
             throw new IllegalStateException("Bạn đã là thành viên của máy chủ này rồi!");
+        }
+
+        // 3.1 [SECURITY] Check Ban
+        if (serverBanRepository.existsByServerIdAndUserId(invite.getServer().getId(), user.getId())) {
+            throw new IllegalStateException("Bạn đã bị cấm tham gia máy chủ này.");
         }
 
         // 4. Kiểm tra và trừ lượt dùng
