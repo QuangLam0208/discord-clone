@@ -4,19 +4,12 @@
     <meta charset="UTF-8" />
     <title>Admin Dashboard · Discord Clone</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
-
-    <!-- SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- Admin CSS -->
     <link rel="stylesheet" href="/css/admin.css" />
 </head>
 <body>
 <div class="admin-root">
-    <!-- Sidebar trái -->
     <aside class="admin-sidebar">
         <div class="brand">
             <i class="fa-brands fa-discord"></i>
@@ -36,10 +29,26 @@
                 <i class="fa-solid fa-server"></i>
                 <span>Servers</span>
             </a>
-            <a class="nav-item" href="#" data-section="messages">
-                <i class="fa-solid fa-envelope"></i>
-                <span>Messages</span>
-            </a>
+
+            <!-- Nhóm Messages với submenu Channel/Direct -->
+            <div class="nav-group" id="nav-group-messages">
+                <a href="#" class="nav-item nav-group-toggle">
+                    <i class="fa-solid fa-envelope"></i>
+                    <span>Messages</span>
+                    <i class="fa-solid fa-chevron-down caret" style="margin-left:auto;"></i>
+                </a>
+                <div class="nav-sub">
+                    <a class="nav-item" href="#" data-section="messages-channel">
+                        <i class="fa-solid fa-hashtag"></i>
+                        <span>Channel</span>
+                    </a>
+                    <a class="nav-item" href="#" data-section="messages-direct">
+                        <i class="fa-solid fa-user"></i>
+                        <span>Direct</span>
+                    </a>
+                </div>
+            </div>
+
             <a class="nav-item" href="#" data-section="audit">
                 <i class="fa-solid fa-clipboard-list"></i>
                 <span>Audit</span>
@@ -65,7 +74,6 @@
         </div>
     </aside>
 
-    <!-- Nội dung chính -->
     <main class="admin-main">
         <header class="topbar">
             <div class="page-title" id="admin-page-title">
@@ -75,7 +83,6 @@
             <div class="ws-indicator" id="ws-indicator" title="WebSocket status"></div>
         </header>
 
-        <!-- Khu vực nội dung được tải động -->
         <section class="content">
             <div id="admin-content">
                 <div class="muted" style="padding: 20px;">Đang tải nội dung...</div>
@@ -91,5 +98,6 @@
 <script src="/js/admin/navigation.js" defer></script>
 <script src="/js/admin/boot.js" defer></script>
 <script src="/js/admin/messages.js" defer></script>
+<script src="/js/admin/dms.js" defer></script>
 </body>
 </html>

@@ -402,6 +402,23 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     margin-left: 6px;
 }
 
+/* Submenu trong Sidebar cho nhóm Messages */
+.nav-group .nav-group-toggle {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px; color: #dbdee1; text-decoration: none; border-radius: 6px;
+}
+.nav-group .nav-group-toggle:hover { background: #2b2d31; }
+.nav-group .caret { transition: transform .2s ease; }
+.nav-group.open .caret { transform: rotate(180deg); }
+.nav-group .nav-sub { display: none; padding-left: 16px; }
+.nav-group.open .nav-sub { display: block; }
+.nav-sub .nav-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 12px; color: #b5bac1; text-decoration: none; border-radius: 6px;
+}
+.nav-sub .nav-item:hover { background: #2b2d31; color: #fff; }
+.nav-sub .nav-item.active { background: #404249; color: #fff; }
+
 /* =========================================================
    4) Responsive
    ========================================================= */

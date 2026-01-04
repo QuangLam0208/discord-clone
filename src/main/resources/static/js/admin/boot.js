@@ -10,7 +10,10 @@
             window.attachAdminUserHandlers();
         }
         if (typeof window.attachAdminMessageHandlers === 'function') {
-            window.attachAdminMessageHandlers(); // thêm init cho Messages
+            window.attachAdminMessageHandlers();
+        }
+        if (typeof window.attachAdminDMHandlers === 'function') {
+            window.attachAdminDMHandlers();
         }
     }
 

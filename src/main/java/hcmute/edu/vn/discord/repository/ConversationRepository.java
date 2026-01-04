@@ -13,4 +13,6 @@ public interface ConversationRepository extends MongoRepository<Conversation, St
     Optional<Conversation> findByUser1IdAndUser2Id(Long user1Id, Long user2Id);
 
     List<Conversation> findByUser1IdOrUser2Id(Long user1Id, Long user2Id);
+
+    Optional<Conversation> findByUser1IdAndUser2IdOrUser1IdAndUser2Id(Long u1a, Long u2a, Long u1b, Long u2b);
 }

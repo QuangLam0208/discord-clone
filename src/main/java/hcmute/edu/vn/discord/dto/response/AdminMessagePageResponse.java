@@ -8,7 +8,7 @@ import java.util.List;
 @Data
 @Builder
 public class AdminMessagePageResponse {
-    private List<AdminMessageItemResponse> items;
+    private List<?> items;
     private int page;
     private int size;
     private long totalElements;
