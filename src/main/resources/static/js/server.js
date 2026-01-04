@@ -302,6 +302,72 @@ window.openServerSettings = async function (serverId) {
         const header = document.getElementById('server-settings-header');
         if (header) header.querySelector('span').innerText = server.name.toUpperCase();
 
+        // --- MANAGE TABS VISIBILITY BASED ON PERMISSIONS ---
+        // Fetch specific permissions for current user in this server
+        let myPerms = new Set();
+        try {
+            const permsList = await Api.get(`/api/servers/${serverId}/members/me/permissions`);
+            if (permsList && Array.isArray(permsList)) {
+                // Assuming PermissionResponse has 'code' field
+                permsList.forEach(p => myPerms.add(p.code));
+            }
+        } catch (e) {
+            console.error("Failed to fetch my permissions", e);
+        }
+
+        const isOwner = (state.currentUser && state.currentUser.id === server.ownerId);
+        const isAdmin = myPerms.has('ADMIN') || myPerms.has('ADMINISTRATOR'); // Check definition
+
+        const tabs = {
+            overview: document.getElementById('nav-server-overview'),
+            members: document.getElementById('nav-server-members'),
+            roles: document.getElementById('nav-server-roles'),
+            audit: document.getElementById('nav-server-audit'),
+            bans: document.getElementById('nav-server-bans'),
+            delete: document.getElementById('nav-server-delete')
+        };
+        const separators = document.querySelectorAll('#serverSettingsModal .settings-nav-separator');
+
+        // Logic Helper
+        const canViewOverview = isOwner || isAdmin || myPerms.has('MANAGE_SERVER');
+        const canViewRoles = isOwner || isAdmin || myPerms.has('MANAGE_ROLES');
+        const canViewAudit = isOwner || isAdmin || myPerms.has('VIEW_AUDIT_LOG');
+        const canViewBans = isOwner || isAdmin || myPerms.has('BAN_MEMBERS');
+        const canDelete = isOwner; // Usually only owner can delete server
+
+        // 1. Overview
+        if (tabs.overview) tabs.overview.style.display = canViewOverview ? 'block' : 'none';
+
+        // 2. Members (Always show as requested, or maybe restrict?)
+        // User said: "to see members". So always show.
+        if (tabs.members) tabs.members.style.display = 'block';
+
+        // 3. Roles
+        if (tabs.roles) tabs.roles.style.display = canViewRoles ? 'block' : 'none';
+
+        // 4. Audit
+        if (tabs.audit) tabs.audit.style.display = canViewAudit ? 'block' : 'none';
+
+        // 5. Bans
+        if (tabs.bans) tabs.bans.style.display = canViewBans ? 'block' : 'none';
+
+        // 6. Delete
+        if (tabs.delete) tabs.delete.style.display = canDelete ? 'block' : 'none';
+
+        // Separators: Hide if only Members is visible? 
+        // Simplification: Hide if NOT owner/admin/manager? 
+        // Let's just show separators if at least one Admin tab is visible (Overview, Roles, Audit, Bans)
+        const showSeparators = canViewOverview || canViewRoles || canViewAudit || canViewBans || canDelete;
+        separators.forEach(el => el.style.display = showSeparators ? 'block' : 'none');
+
+        // Initial Tab Selection
+        if (canViewOverview) {
+            switchServerSettingsTab('overview');
+        } else {
+            // If can't view overview, default to members
+            switchServerSettingsTab('members');
+        }
+
         // Populate Counts in Preview
         const onlineCountEl = document.getElementById('preview-online-count');
         const memberCountEl = document.getElementById('preview-member-count');
@@ -326,8 +392,8 @@ window.openServerSettings = async function (serverId) {
         document.getElementById('editServerIconInput').value = '';
         state.tempServerIcon = null; // Ensure this is definitely null
 
-        // Reset Tab
-        switchServerSettingsTab('overview');
+        // Reset Tab logic handled above based on permissions
+        // switchServerSettingsTab('overview'); // REMOVED
 
         // Open Modal
         document.getElementById('serverSettingsModal').classList.add('active');
