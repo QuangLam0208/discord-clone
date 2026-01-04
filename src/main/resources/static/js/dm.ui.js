@@ -73,6 +73,16 @@ const DMUI = (() => {
     btnFriends?.classList.add('active');
   }
 
+  function removeMessageElement(messageId) {
+    const el = document.getElementById(`msg-${messageId}`);
+    if (el) {
+      el.style.transition = 'opacity 0.3s ease, height 0.3s ease';
+      el.style.opacity = '0';
+      // Đợi hiệu ứng mờ dần rồi xóa hẳn
+      setTimeout(() => el.remove(), 300);
+    }
+  }
+
   // --- RENDER SIDEBAR ---
   function renderFriendsSidebar(conversations, onSelectConversationCallback) {
     const { dmList } = els();
@@ -86,8 +96,8 @@ const DMUI = (() => {
         // UI: Mark as read
         const nameText = item.querySelector('.dm-name-text');
         if (nameText) {
-            nameText.style.color = '#96989d';
-            nameText.style.fontWeight = '500';
+          nameText.style.color = '#96989d';
+          nameText.style.fontWeight = '500';
         }
         item.classList.add('active');
 
@@ -95,7 +105,7 @@ const DMUI = (() => {
         const name = item.getAttribute('data-friend-name') || '';
 
         if (onSelectConversationCallback) {
-            onSelectConversationCallback(friendId, name);
+          onSelectConversationCallback(friendId, name);
         }
       });
     });
@@ -172,54 +182,54 @@ const DMUI = (() => {
 
   // --- HTML CHO PHẦN INTRO ---
   function getDMIntroHtml(friend, relationshipStatus) {
-      if (!friend) return '';
-      const displayName = friend.displayName || friend.friendUsername || ('User ' + friend.friendUserId);
-      const username = friend.friendUsername || ('user' + friend.friendUserId);
-      const friendId = friend.friendUserId;
-      const avatarUrl = friend.avatarUrl ? friend.avatarUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&size=128`;
+    if (!friend) return '';
+    const displayName = friend.displayName || friend.friendUsername || ('User ' + friend.friendUserId);
+    const username = friend.friendUsername || ('user' + friend.friendUserId);
+    const friendId = friend.friendUserId;
+    const avatarUrl = friend.avatarUrl ? friend.avatarUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&size=128`;
 
-      let actionsHtml = '';
-      const btnStyle = 'padding: 6px 16px; border-radius: 3px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; margin-right: 8px; color: #fff; transition: background-color 0.2s;';
-      const btnGray = 'background-color: #4f545c;';
-      const btnRed = 'background-color: #ed4245;';
-      const btnGreen = 'background-color: #248046;';
-      const btnBlue = 'background-color: #5865F2;';
+    let actionsHtml = '';
+    const btnStyle = 'padding: 6px 16px; border-radius: 3px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; margin-right: 8px; color: #fff; transition: background-color 0.2s;';
+    const btnGray = 'background-color: #4f545c;';
+    const btnRed = 'background-color: #ed4245;';
+    const btnGreen = 'background-color: #248046;';
+    const btnBlue = 'background-color: #5865F2;';
 
-      if (relationshipStatus === 'FRIEND') {
-          actionsHtml = `
+    if (relationshipStatus === 'FRIEND') {
+      actionsHtml = `
               <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-unfriend" data-id="${friendId}" data-name="${displayName}">Xóa bạn</button>
               <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
           `;
-      } else if (relationshipStatus === 'BLOCKED') {
-          actionsHtml = `
+    } else if (relationshipStatus === 'BLOCKED') {
+      actionsHtml = `
               <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-unblock" data-id="${friendId}" data-name="${displayName}">Bỏ chặn</button>
               <button class="btn-dm-action" style="${btnStyle} ${btnRed}" id="btn-dm-spam" data-id="${friendId}" data-name="${displayName}" data-blocked="true">Báo cáo Spam</button>
           `;
-      } else if (relationshipStatus === 'SENT_REQUEST') {
-          // Mình gửi đi
-          actionsHtml = `
+    } else if (relationshipStatus === 'SENT_REQUEST') {
+      // Mình gửi đi
+      actionsHtml = `
               <button class="btn-dm-action" style="${btnStyle} ${btnBlue} opacity: 0.6; cursor: not-allowed;" disabled>Đã gửi yêu cầu kết bạn</button>
               <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
           `;
-      } else if (relationshipStatus === 'RECEIVED_REQUEST') {
-          // Người ta gửi đến mình ---
-          actionsHtml = `
+    } else if (relationshipStatus === 'RECEIVED_REQUEST') {
+      // Người ta gửi đến mình ---
+      actionsHtml = `
               <button class="btn-dm-action" style="${btnStyle} ${btnBlue}" id="btn-dm-accept" data-id="${friendId}" data-name="${displayName}">Chấp nhận yêu cầu</button>
               <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-decline" data-id="${friendId}" data-name="${displayName}">Bỏ qua</button>
               <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
               <button class="btn-dm-action" style="${btnStyle} ${btnRed}" id="btn-dm-spam" data-id="${friendId}" data-name="${displayName}" data-blocked="false">Báo cáo Spam</button>
           `;
-      } else {
-          // Người lạ
-          actionsHtml = `
+    } else {
+      // Người lạ
+      actionsHtml = `
               <button class="btn-dm-action" style="${btnStyle} ${btnBlue}" id="btn-dm-addfriend" data-id="${friendId}" data-name="${displayName}">Thêm bạn</button>
               <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
               <button class="btn-dm-action" style="${btnStyle} ${btnRed}" id="btn-dm-spam" data-id="${friendId}" data-name="${displayName}" data-blocked="false">Báo cáo Spam</button>
           `;
-      }
+    }
 
-      // Phần return HTML intro-wrapper
-      return `
+    // Phần return HTML intro-wrapper
+    return `
         <div class="dm-intro-wrapper" style="margin: 16px; display: flex; flex-direction: column; gap: 8px;">
           <div class="dm-intro-avatar-large" style="width: 80px; height: 80px; margin-bottom: 12px;">
               <img src="${avatarUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
@@ -246,8 +256,8 @@ const DMUI = (() => {
     let blockNoticeHtml = '';
 
     if (relationshipStatus === 'BLOCKED') {
-        messagesToRender = [];
-        blockNoticeHtml = `
+      messagesToRender = [];
+      blockNoticeHtml = `
             <div style="display: flex; justify-content: center; margin: 20px 0;">
                 <span style="background-color: #36393f; padding: 8px 12px; border-radius: 4px; color: #dcddde; font-size: 14px; border: 1px solid #202225;">
                     Tin nhắn đã bị ẩn vì bạn đang chặn người dùng này.
@@ -358,9 +368,9 @@ const DMUI = (() => {
   function renderPending(inbound, outbound) {
     const { dmPendingInList, dmPendingOutList } = els();
     if (dmPendingInList) {
-        dmPendingInList.innerHTML = inbound.map(r => {
-            const name = r.senderUsername || ('User ' + r.senderId);
-            return `
+      dmPendingInList.innerHTML = inbound.map(r => {
+        const name = r.senderUsername || ('User ' + r.senderId);
+        return `
               <div class="dm-pending-item" style="display:flex; align-items:center; justify-content:space-between; padding:10px; border-radius:8px; background:#2b2d31; color:#fff; margin-bottom:8px; border: 1px solid #3f4147;">
                 <div style="display:flex; align-items:center; gap:12px;">
                   <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:#5865F2;"></div>
@@ -374,12 +384,12 @@ const DMUI = (() => {
                   <button class="add-friend-btn" style="background-color: #ed4245;" data-action="decline" data-request-id="${r.id}">Từ chối</button>
                 </div>
               </div>`;
-        }).join('');
+      }).join('');
     }
     if (dmPendingOutList) {
-        dmPendingOutList.innerHTML = outbound.map(r => {
-            const name = r.recipientUsername || ('User ' + r.recipientId);
-            return `
+      dmPendingOutList.innerHTML = outbound.map(r => {
+        const name = r.recipientUsername || ('User ' + r.recipientId);
+        return `
               <div class="dm-pending-item" style="display:flex; align-items:center; justify-content:space-between; padding:10px; border-radius:8px; background:#2b2d31; color:#fff; margin-bottom:8px; border: 1px solid #3f4147;">
                 <div style="display:flex; align-items:center; gap:12px;">
                   <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:#5865F2;"></div>
@@ -392,7 +402,7 @@ const DMUI = (() => {
                   <button class="add-friend-btn" style="background-color: #4f545c;" data-action="cancel" data-request-id="${r.id}">Huỷ</button>
                 </div>
               </div>`;
-        }).join('');
+      }).join('');
     }
   }
 
@@ -449,15 +459,15 @@ const DMUI = (() => {
       const outbound = await DMApi.listOutboundRequests();
       renderPending(inbound, outbound);
       setTimeout(() => {
-          document.querySelectorAll('#dm-pending-in-list [data-action="accept"]').forEach(btn => {
-            btn.addEventListener('click', async () => { try { await DMApi.acceptRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); await reloadFriends(); } catch (e) { alert('Lỗi: ' + e); } });
-          });
-          document.querySelectorAll('#dm-pending-in-list [data-action="decline"]').forEach(btn => {
-            btn.addEventListener('click', async () => { try { await DMApi.declineRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); } catch (e) { alert('Lỗi: ' + e); } });
-          });
-          document.querySelectorAll('#dm-pending-out-list [data-action="cancel"]').forEach(btn => {
-            btn.addEventListener('click', async () => { try { await DMApi.cancelRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); } catch (e) { alert('Lỗi: ' + e); } });
-          });
+        document.querySelectorAll('#dm-pending-in-list [data-action="accept"]').forEach(btn => {
+          btn.addEventListener('click', async () => { try { await DMApi.acceptRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); await reloadFriends(); } catch (e) { alert('Lỗi: ' + e); } });
+        });
+        document.querySelectorAll('#dm-pending-in-list [data-action="decline"]').forEach(btn => {
+          btn.addEventListener('click', async () => { try { await DMApi.declineRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); } catch (e) { alert('Lỗi: ' + e); } });
+        });
+        document.querySelectorAll('#dm-pending-out-list [data-action="cancel"]').forEach(btn => {
+          btn.addEventListener('click', async () => { try { await DMApi.cancelRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); } catch (e) { alert('Lỗi: ' + e); } });
+        });
       }, 100);
     });
     dmTabAddFriend?.addEventListener('click', () => { setActiveTab('add'); });
@@ -467,6 +477,7 @@ const DMUI = (() => {
     els, showDashboard, showConversation, setActiveFriendName, renderFriendsSidebar, updateSidebarItem,
     renderFriendsCenter, renderMessages, appendMessage, replaceTempMessage, markMessageError,
     scrollToBottom, resetActiveItems, highlightFriendsButton, initFriendsDashboard, setActiveTab,
-    renderPending, reloadFriends
+    renderPending, reloadFriends,
+    removeMessageElement
   };
 })();

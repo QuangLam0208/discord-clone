@@ -3,6 +3,7 @@ const DMWS = (() => {
   let retryCount = 0;
   let subscriptionDM = null;
   let subscriptionFriends = null;
+  let subscriptionCurrentConv = null;
   let onDmMessageHandler = null;
   let onFriendEventHandler = null;
   let stompClient = null;
@@ -71,6 +72,27 @@ const DMWS = (() => {
     setTimeout(() => connectWS(onDmMessageHandler, onFriendEventHandler), delay);
   }
 
+  function subscribeToConversation(conversationId, callback) {
+    if (!stompClient || !stompClient.connected || !conversationId) return;
+
+    // Hủy đăng ký hội thoại cũ nếu có (để tránh nghe lộn xộn)
+    if (subscriptionCurrentConv) {
+      subscriptionCurrentConv.unsubscribe();
+      subscriptionCurrentConv = null;
+    }
+
+    // Đăng ký topic: /topic/dm/{conversationId} (Khớp với Backend AdminService)
+    subscriptionCurrentConv = stompClient.subscribe(`/topic/dm/${conversationId}`, (frame) => {
+      try {
+        const payload = JSON.parse(frame.body);
+        callback(payload);
+      } catch (e) {
+        console.error('WS parse conversation event error', e);
+      }
+    });
+    console.log(`[WS] Subscribed to /topic/dm/${conversationId}`);
+  }
+
   function disconnect() {
     try {
       if (subscriptionDM) subscriptionDM.unsubscribe();
@@ -91,5 +113,5 @@ const DMWS = (() => {
     }
   });
 
-  return { connectWS, disconnect };
+  return { connectWS, disconnect, subscribeToConversation };
 })();

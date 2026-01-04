@@ -3,6 +3,7 @@ package hcmute.edu.vn.discord.service.impl;
 import hcmute.edu.vn.discord.dto.request.AdminDirectMessageSearchRequest;
 import hcmute.edu.vn.discord.dto.response.AdminDirectMessageItemResponse;
 import hcmute.edu.vn.discord.dto.response.AdminMessagePageResponse;
+import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
 import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.entity.mongo.Conversation;
 import hcmute.edu.vn.discord.entity.mongo.DirectMessage;
@@ -17,6 +18,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -34,6 +36,8 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
     private final DirectMessageRepository dmRepo;
     private final ConversationRepository convRepo;
     private final UserRepository userRepo;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional(readOnly = true)
     @Override
@@ -170,6 +174,14 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
         if (Boolean.TRUE.equals(m.isDeleted())) return;
         m.setDeleted(true);
         dmRepo.save(m);
+
+        // 1. Update Admin UI (Change Badge & Button)
+        messagingTemplate.convertAndSend("/topic/admin/dms/update",
+                Map.of("id", messageId, "status", "DELETED"));
+
+        // 2. Update User UI (Remove message)
+        messagingTemplate.convertAndSend("/topic/dm/" + m.getConversationId(),
+                Map.of("type", "DELETE_MESSAGE", "messageId", messageId));
     }
 
     @Transactional
@@ -180,5 +192,43 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
         if (!Boolean.TRUE.equals(m.isDeleted())) return;
         m.setDeleted(false);
         dmRepo.save(m);
+
+        // 1. Update Admin UI
+        messagingTemplate.convertAndSend("/topic/admin/dms/update",
+                Map.of("id", messageId, "status", "ACTIVE"));
+
+        // 2. Update User UI (Send FULL message data to re-render)
+        DirectMessageResponse response = mapToUserDirectMessageResponse(m);
+
+        // Wrap trong map để thêm field 'type' cho frontend dễ xử lý
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("type", "RESTORE_MESSAGE");
+        payload.put("id", response.getId());
+        payload.put("conversationId", response.getConversationId());
+        payload.put("senderId", response.getSenderId());
+        payload.put("receiverId", response.getReceiverId());
+        payload.put("content", response.getContent());
+        payload.put("createdAt", response.getCreatedAt());
+        payload.put("updatedAt", response.getUpdatedAt());
+        payload.put("reactions", response.getReactions());
+        payload.put("deleted", false);
+        payload.put("edited", response.isEdited());
+
+        messagingTemplate.convertAndSend("/topic/dm/" + m.getConversationId(), payload);
+    }
+
+    private DirectMessageResponse mapToUserDirectMessageResponse(DirectMessage m) {
+        return DirectMessageResponse.builder()
+                .id(m.getId())
+                .conversationId(m.getConversationId())
+                .senderId(m.getSenderId())
+                .receiverId(m.getReceiverId())
+                .content(m.getContent())
+                .createdAt(m.getCreatedAt())
+                .updatedAt(m.getUpdatedAt())
+                .edited(m.isEdited())
+                .deleted(m.isDeleted())
+                .reactions(m.getReactions())
+                .build();
     }
 }

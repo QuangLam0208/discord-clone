@@ -2,6 +2,7 @@ package hcmute.edu.vn.discord.service.impl;
 
 import hcmute.edu.vn.discord.dto.request.DirectMessageRequest;
 import hcmute.edu.vn.discord.dto.request.EditMessageRequest;
+import hcmute.edu.vn.discord.dto.response.AdminDirectMessageItemResponse;
 import hcmute.edu.vn.discord.dto.response.ConversationResponse;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
 import hcmute.edu.vn.discord.entity.enums.FriendStatus;
@@ -19,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +37,8 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     private final DirectMessageRepository messageRepo;
     private final UserRepository userRepo;
     private final FriendRepository friendRepository;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
@@ -80,6 +84,13 @@ public class DirectMessageServiceImpl implements DirectMessageService {
                         .createdAt(new Date())
                         .updatedAt(new Date())
                         .build());
+
+        try {
+            AdminDirectMessageItemResponse adminDto = convertToAdminDto(message, sender, receiver, conversation);
+            messagingTemplate.convertAndSend("/topic/admin/dms/create", adminDto);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 
         return toResponse(message);
     }
@@ -238,5 +249,37 @@ public class DirectMessageServiceImpl implements DirectMessageService {
                                 .createdAt(new Date())
                                 .updatedAt(new Date())
                                 .build()));
+    }
+
+    private AdminDirectMessageItemResponse convertToAdminDto(DirectMessage m, User sender, User receiver, Conversation c) {
+        // Tìm User A/B trong conversation để hiển thị cột Participants
+        Long userAId = c.getUser1Id();
+        Long userBId = c.getUser2Id();
+        String userAUsername = (userAId.equals(sender.getId())) ? sender.getUsername() : (userAId.equals(receiver.getId()) ? receiver.getUsername() : null);
+        String userBUsername = (userBId.equals(sender.getId())) ? sender.getUsername() : (userBId.equals(receiver.getId()) ? receiver.getUsername() : null);
+
+        // Nếu A/B chưa có username (trường hợp user thứ 3 lạ lẫm nào đó - ít xảy ra), query thêm nếu cần.
+        // Ở đây context sendMessage chắc chắn có 2 user này.
+
+        return AdminDirectMessageItemResponse.builder()
+                .id(m.getId())
+                .conversationId(m.getConversationId())
+                .senderId(sender.getId())
+                .senderUsername(sender.getUsername())
+                .senderDisplayName(sender.getDisplayName())
+                .senderAvatarUrl(sender.getAvatarUrl())
+                .receiverId(receiver.getId())
+                .receiverUsername(receiver.getUsername())
+                .content(m.getContent())
+                .deleted(false)
+                .edited(false)
+                .reactionsCount(0)
+                .attachmentsCount(0)
+                .createdAt(m.getCreatedAt().toInstant())
+                .userAId(userAId)
+                .userBId(userBId)
+                .userAUsername(userAUsername)
+                .userBUsername(userBUsername)
+                .build();
     }
 }

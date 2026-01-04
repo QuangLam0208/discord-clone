@@ -50,10 +50,20 @@ function createDateDivider(dateString) {
     return div;
 }
 
+function removeMessageElement(messageId) {
+    const el = document.getElementById('message-' + messageId);
+    if (el) {
+        el.style.transition = 'opacity 0.3s ease';
+        el.style.opacity = '0';
+        setTimeout(() => el.remove(), 300);
+    }
+}
+
 // 1. Create Message Element
 function createMessageElement(msg) {
     const div = document.createElement('div');
     div.className = 'message';
+    div.id = 'message-' + msg.id;
     div.dataset.timestamp = new Date(msg.createdAt).getTime(); // Add timestamp for Divider logic
     // Format time: Discord style (HH:mm) uses new helper
     const time = formatMessageTime(msg.createdAt);
@@ -195,6 +205,17 @@ function subscribeToChannel(channelId) {
         // Render tin nhắn mới nhận được
         const chatArea = document.querySelector('.chat-area');
         if (!chatArea) return;
+
+        if (receivedMsg.type === 'DELETE_MESSAGE') {
+            removeMessageElement(receivedMsg.messageId);
+            return; // Dừng xử lý, không render gì thêm
+        }
+
+        if (receivedMsg.type === 'RESTORE_MESSAGE') {
+            // Xóa cũ nếu tồn tại (tránh trùng lặp) rồi render lại như tin mới
+            removeMessageElement(receivedMsg.id);
+            // Sau đó để code chạy tiếp xuống dưới để render lại tin nhắn này
+        }
 
         // Nếu đây là tin nhắn đầu tiên (đang hiện text "Chưa có tin nhắn...") -> clear đi
         if (chatArea.innerText.includes("Chưa có tin nhắn")) chatArea.innerHTML = '';

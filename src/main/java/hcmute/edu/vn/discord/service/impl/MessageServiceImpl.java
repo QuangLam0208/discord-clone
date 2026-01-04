@@ -1,6 +1,7 @@
 package hcmute.edu.vn.discord.service.impl;
 
 import hcmute.edu.vn.discord.dto.request.MessageRequest;
+import hcmute.edu.vn.discord.dto.response.AdminMessageItemResponse;
 import hcmute.edu.vn.discord.dto.response.MessageResponse;
 import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.jpa.Channel;
@@ -14,12 +15,14 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +35,8 @@ public class MessageServiceImpl implements MessageService {
     private final ChannelRepository channelRepository;
     private final ServerRepository serverRepository;
     private final ServerMemberRepository serverMemberRepository;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     public Message sendMessage(Message message) {
@@ -70,6 +75,15 @@ public class MessageServiceImpl implements MessageService {
         message.setIsEdited(false);
 
         Message saved = messageRepository.save(message);
+
+        try {
+            AdminMessageItemResponse adminResponse = convertToAdminDto(saved, sender, channel);
+            // Gửi đến topic mà trang Admin đang lắng nghe
+            messagingTemplate.convertAndSend("/topic/admin/messages/create", adminResponse);
+        } catch (Exception e) {
+            log.error("Lỗi gửi WebSocket cho Admin: ", e);
+        }
+
         return mapToResponse(saved, sender);
     }
 
@@ -160,6 +174,9 @@ public class MessageServiceImpl implements MessageService {
         message.setContent(null);
         message.setAttachments(null);
         messageRepository.save(message);
+
+        messagingTemplate.convertAndSend("/topic/channel/" + message.getChannelId(),
+                Map.of("type", "DELETE_MESSAGE", "messageId", messageId));
     }
 
     @Override
@@ -303,6 +320,26 @@ public class MessageServiceImpl implements MessageService {
                 .reactions(msg.getReactions())
                 .attachments(msg.getAttachments())
                 .replyTo(replyToResponse)
+                .build();
+    }
+
+    private AdminMessageItemResponse convertToAdminDto(Message msg, User sender, Channel channel) {
+        return AdminMessageItemResponse.builder()
+                .id(msg.getId())
+                .serverId(channel.getServer().getId())
+                .serverName(channel.getServer().getName())
+                .channelId(channel.getId())
+                .channelName(channel.getName())
+                .senderId(sender.getId())
+                .senderUsername(sender.getUsername())
+                .senderDisplayName(sender.getDisplayName())
+                .senderAvatarUrl(sender.getAvatarUrl())
+                .content(msg.getContent())
+                .deleted(Boolean.TRUE.equals(msg.getDeleted()))
+                .edited(Boolean.TRUE.equals(msg.getIsEdited()))
+                .attachmentsCount(msg.getAttachments() != null ? msg.getAttachments().size() : 0)
+                .reactionsCount(msg.getReactions() != null ? msg.getReactions().size() : 0)
+                .createdAt(msg.getCreatedAt().toInstant()) // Convert Date -> Instant
                 .build();
     }
 }

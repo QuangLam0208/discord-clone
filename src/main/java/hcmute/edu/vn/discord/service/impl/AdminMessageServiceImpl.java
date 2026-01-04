@@ -3,6 +3,7 @@ package hcmute.edu.vn.discord.service.impl;
 import hcmute.edu.vn.discord.dto.request.AdminMessageSearchRequest;
 import hcmute.edu.vn.discord.dto.response.AdminMessageItemResponse;
 import hcmute.edu.vn.discord.dto.response.AdminMessagePageResponse;
+import hcmute.edu.vn.discord.dto.response.MessageResponse;
 import hcmute.edu.vn.discord.entity.jpa.Channel;
 import hcmute.edu.vn.discord.entity.jpa.Server;
 import hcmute.edu.vn.discord.entity.jpa.User;
@@ -20,6 +21,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -38,6 +40,8 @@ public class AdminMessageServiceImpl implements AdminMessageService {
     private final ChannelRepository channelRepository;
     private final ServerRepository serverRepository;
     private final UserRepository userRepository;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional(readOnly = true)
@@ -113,6 +117,16 @@ public class AdminMessageServiceImpl implements AdminMessageService {
         if (Boolean.TRUE.equals(m.getDeleted())) return;
         m.setDeleted(true);
         messageRepository.save(m);
+
+        Map<String, Object> adminPayload = new HashMap<>();
+        adminPayload.put("id", messageId);
+        adminPayload.put("status", "DELETED");
+        messagingTemplate.convertAndSend("/topic/admin/messages/update", adminPayload);
+
+        Map<String, Object> userPayload = new HashMap<>();
+        userPayload.put("type", "DELETE_MESSAGE");
+        userPayload.put("messageId", messageId);
+        messagingTemplate.convertAndSend("/topic/channel/" + m.getChannelId(), userPayload);
     }
 
     @Override
@@ -123,6 +137,31 @@ public class AdminMessageServiceImpl implements AdminMessageService {
         if (!Boolean.TRUE.equals(m.getDeleted())) return;
         m.setDeleted(false);
         messageRepository.save(m);
+
+        Map<String, Object> adminPayload = new HashMap<>();
+        adminPayload.put("id", messageId);
+        adminPayload.put("status", "ACTIVE");
+        messagingTemplate.convertAndSend("/topic/admin/messages/update", adminPayload);
+
+        User sender = userRepository.findById(m.getSenderId()).orElse(null);
+        MessageResponse msgResponse = mapToUserMessageResponse(m, sender);
+
+        Map<String, Object> userPayload = new HashMap<>();
+        userPayload.put("type", "RESTORE_MESSAGE");
+
+        userPayload.put("id", msgResponse.getId());
+        userPayload.put("channelId", msgResponse.getChannelId());
+        userPayload.put("content", msgResponse.getContent());
+        userPayload.put("senderId", msgResponse.getSenderId());
+        userPayload.put("senderName", msgResponse.getSenderName());
+        userPayload.put("senderAvatar", msgResponse.getSenderAvatar());
+        userPayload.put("createdAt", msgResponse.getCreatedAt());
+        userPayload.put("attachments", msgResponse.getAttachments());
+        userPayload.put("reactions", msgResponse.getReactions());
+        userPayload.put("isEdited", msgResponse.isEdited());
+        userPayload.put("deleted", false);
+
+        messagingTemplate.convertAndSend("/topic/channel/" + m.getChannelId(), userPayload);
     }
 
     private AdminMessagePageResponse emptyPage(AdminMessageSearchRequest req) {
@@ -179,6 +218,22 @@ public class AdminMessageServiceImpl implements AdminMessageService {
                 .size(pr.getPageSize())
                 .totalElements(total)
                 .totalPages(totalPages)
+                .build();
+    }
+
+    private MessageResponse mapToUserMessageResponse(Message msg, User sender) {
+        return MessageResponse.builder()
+                .id(msg.getId())
+                .channelId(msg.getChannelId())
+                .content(msg.getContent()) // Khi restore thì lấy content gốc
+                .createdAt(msg.getCreatedAt())
+                .senderId(msg.getSenderId())
+                .senderName(sender != null ? sender.getDisplayName() : "Unknown User")
+                .senderAvatar(sender != null ? sender.getAvatarUrl() : null)
+                .attachments(msg.getAttachments())
+                .reactions(msg.getReactions())
+                .deleted(false)
+                .isEdited(Boolean.TRUE.equals(msg.getIsEdited()))
                 .build();
     }
 }
