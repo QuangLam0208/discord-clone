@@ -2553,3 +2553,34 @@ input:checked+.slider:before {
 .btn-save:hover {
    background-color: #1a6334;
 }
+
+/* DATE DIVIDERS */
+.date-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 24px 0 8px 0;
+    position: relative;
+    width: 100%;
+    cursor: default;
+}
+
+.date-divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background-color: #3f4147;
+    z-index: 1;
+}
+
+.date-divider span {
+    background-color: #313338;
+    padding: 0 10px;
+    z-index: 2;
+    color: #96989d;
+    font-size: 12px;
+    font-weight: 600;
+}

@@ -3,12 +3,60 @@
 // Global variables for Chat module
 let channelSubscription = null;
 
+// Helper: Format Date like Discord (Vietnamese)
+function formatMessageTime(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    // Return only time in HH:mm format (or 12h if preferred, user screenshot shows 12h with SA/CH)
+    // 8:57 SA -> 8:57 AM
+    // Using default locale but forcing Vietnam might help, or just simple logic
+    return date.toLocaleTimeString('vi-VN', { hour: 'numeric', minute: '2-digit' });
+}
+
+// Helper: Create Date Divider
+function createDateDivider(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const isToday = date.getDate() === now.getDate() &&
+        date.getMonth() === now.getMonth() &&
+        date.getFullYear() === now.getFullYear();
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = date.getDate() === yesterday.getDate() &&
+        date.getMonth() === yesterday.getMonth() &&
+        date.getFullYear() === yesterday.getFullYear();
+
+    let label = '';
+    if (isToday) {
+        label = "Hôm nay";
+    } else if (isYesterday) {
+        label = "Hôm qua";
+    } else {
+        // DD Tháng MM YYYY
+        // Vietnamese locale full date often looks like "Thứ Sáu, 20 tháng 7, 2025"
+        // User screenshot: "20 Tháng Bảy 2025"
+        const day = date.getDate();
+        const monthNames = ["Tháng Một", "Tháng Hai", "Tháng Ba", "Tháng Tư", "Tháng Năm", "Tháng Sáu",
+            "Tháng Bảy", "Tháng Tám", "Tháng Chín", "Tháng Mười", "Tháng Mười Một", "Tháng Mười Hai"];
+        // Format: 22 Tháng Bảy 2025
+        const year = date.getFullYear();
+        label = `${day} ${monthNames[date.getMonth()]} ${year}`;
+    }
+
+    const div = document.createElement('div');
+    div.className = 'date-divider';
+    div.innerHTML = `<span>${label}</span>`;
+    return div;
+}
+
 // 1. Create Message Element
 function createMessageElement(msg) {
     const div = document.createElement('div');
     div.className = 'message';
-    // Format time: HH:mm
-    const time = new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    div.dataset.timestamp = new Date(msg.createdAt).getTime(); // Add timestamp for Divider logic
+    // Format time: Discord style (HH:mm) uses new helper
+    const time = formatMessageTime(msg.createdAt);
 
     const senderName = msg.senderName || msg.senderId;
     // Avatar giả lập
@@ -57,7 +105,13 @@ async function loadMessages(channelId) {
         if (messages && Array.isArray(messages)) {
             const sortedMsgs = messages.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
 
+            let lastDate = null;
             sortedMsgs.forEach(msg => {
+                const msgDate = new Date(msg.createdAt).setHours(0, 0, 0, 0);
+                if (lastDate === null || msgDate !== lastDate) {
+                    chatArea.appendChild(createDateDivider(msg.createdAt));
+                    lastDate = msgDate;
+                }
                 const msgEl = createMessageElement(msg);
                 chatArea.appendChild(msgEl);
             });
@@ -144,6 +198,67 @@ function subscribeToChannel(channelId) {
 
         // Nếu đây là tin nhắn đầu tiên (đang hiện text "Chưa có tin nhắn...") -> clear đi
         if (chatArea.innerText.includes("Chưa có tin nhắn")) chatArea.innerHTML = '';
+
+        // Check if we need a divider
+        const msgDate = new Date(receivedMsg.createdAt).setHours(0, 0, 0, 0);
+
+        // Find last message date from DOM ?? simpler: compare with "today" if real-time
+        // Or check last divider? 
+        // Best approach: Check the timestamp of the last .message element
+        const lastMsgEl = chatArea.querySelector('.message:last-child');
+        let lastDate = null;
+        if (lastMsgEl) {
+            // We don't store raw date on DOM, but we can infer or store it.
+            // actually, easier: if it's a new day vs "now", append divider.
+            // But if user scrolls up? this is only for new incoming messages essentially "now".
+            // So if now is different day than the last received message.
+            // Let's assume real-time messages are "now". But wait, `receivedMsg` has `createdAt`.
+            // Let's compare `receivedMsg.createdAt` with the last message's time. 
+            // We can't easily get last message time from DOM unless we store it.
+            // Hack: look at the last divider? No.
+            // Correct way: The incoming message IS sorted by time (usually).
+            // Let's just assume we need to check against the previous element in DOM.
+        }
+
+        // Logic: Always check if the date differs from the previous visible message.
+        // Implementation:
+        // Get all dividers. Get last divider. Parse text? Too hard.
+        // Simplified: Store lastRenderedDate in a global/state? Vulnerable to channel switch.
+        // Better: When appending, check if the last element in chatArea is from same day.
+        // We can attach data-date to .message elements?
+        /* 
+           We will modify createMessageElement to add data-timestamp to the div.
+        */
+
+        let shouldAddDivider = true;
+
+        // Try to find the last message element
+        const messages = chatArea.querySelectorAll('.message');
+        if (messages.length > 0) {
+            const lastMsg = messages[messages.length - 1];
+            // We need to add data-timestamp to message elements to make this robust
+            // BUT, since we can't easily modify createMessageElement in this same tool call safely without complex referencing,
+            // we will rely on creating the message element temporarily or just state.
+            // Actually, I should update createMessageElement to include data-timestamp.
+        }
+
+        // Wait, I can update createMessageElement in this tool call too! I will do that.
+
+        // Revised Subscribe Logic assuming createMessageElement adds data-timestamp
+        const lastMessage = chatArea.lastElementChild; // Could be message or divider
+        if (lastMessage && lastMessage.classList.contains('message')) {
+            const lastTs = parseInt(lastMessage.dataset.timestamp);
+            if (lastTs) {
+                const lastDateObj = new Date(lastTs);
+                if (lastDateObj.setHours(0, 0, 0, 0) === msgDate) {
+                    shouldAddDivider = false;
+                }
+            }
+        }
+
+        if (shouldAddDivider) {
+            chatArea.appendChild(createDateDivider(receivedMsg.createdAt));
+        }
 
         const msgEl = createMessageElement(receivedMsg);
         chatArea.appendChild(msgEl);
