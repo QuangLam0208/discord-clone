@@ -20,11 +20,12 @@ public class ChannelServiceImpl implements ChannelService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final ServerMemberRepository serverMemberRepository;
+    private final hcmute.edu.vn.discord.service.AuditLogService auditLogService;
 
     @Override
     @Transactional
     public Channel createChannel(Long serverId, String name, ChannelType type, Long categoryId,
-            Boolean isPrivate, String createdByUsername) {
+                                 Boolean isPrivate, String createdByUsername) {
         Server server = serverRepository.findById(serverId)
                 .orElseThrow(() -> new EntityNotFoundException("Server not found"));
 
@@ -45,18 +46,29 @@ public class ChannelServiceImpl implements ChannelService {
         }
 
         // Auto-add creator to allowedMembers for private channels
-        if (Boolean.TRUE.equals(channel.getIsPrivate())) {
-            if (createdByUsername == null || createdByUsername.isBlank()) {
-                throw new IllegalArgumentException("createdByUsername is required for private channel creation");
-            }
-            User creator = userRepository.findByUsername(createdByUsername)
-                    .orElseThrow(() -> new EntityNotFoundException("User not found: " + createdByUsername));
+        User creator = null;
+        if (createdByUsername != null && !createdByUsername.isBlank()) {
+            creator = userRepository.findByUsername(createdByUsername).orElse(null);
+        }
+
+        if (Boolean.TRUE.equals(channel.getIsPrivate()) && creator != null) {
             ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, creator.getId())
                     .orElseThrow(() -> new EntityNotFoundException("Creator is not a member of this server"));
             channel.getAllowedMembers().add(member);
         }
 
-        return channelRepository.save(channel);
+        Channel saved = channelRepository.save(channel);
+
+        // Audit Log
+        if (creator == null) {
+            String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                    .getAuthentication().getName();
+            creator = userRepository.findByUsername(username).orElse(null);
+        }
+        auditLogService.logAction(server, creator, hcmute.edu.vn.discord.common.AuditLogAction.CHANNEL_CREATE,
+                saved.getId().toString(), "CHANNEL", "Tạo kênh: " + saved.getName());
+
+        return saved;
     }
 
     @Override
@@ -65,10 +77,14 @@ public class ChannelServiceImpl implements ChannelService {
         Channel channel = channelRepository.findById(channelId)
                 .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
 
+        String oldName = channel.getName();
+        String oldDesc = channel.getDescription();
+        Boolean oldPrivate = channel.getIsPrivate();
+
         if (name != null && !name.isBlank())
             channel.setName(name);
         if (description != null)
-            channel.setDescription(description); // Allow empty string to clear
+            channel.setDescription(description);
         if (isPrivate != null)
             channel.setIsPrivate(isPrivate);
 
@@ -84,16 +100,57 @@ public class ChannelServiceImpl implements ChannelService {
                 channel.setCategory(category);
             }
         }
-        return channelRepository.save(channel);
+        Channel updated = channelRepository.save(channel);
+
+        // Audit Log
+        try {
+            String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                    .getAuthentication().getName();
+            User actor = userRepository.findByUsername(username).orElse(null);
+
+            StringBuilder changes = new StringBuilder();
+            if (!java.util.Objects.equals(oldName, updated.getName())) {
+                changes.append("Tên: ").append(oldName).append(" -> ").append(updated.getName()).append("; ");
+            }
+            if (!java.util.Objects.equals(oldDesc, updated.getDescription())) {
+                changes.append("Mô tả: thay đổi; ");
+            }
+            if (!java.util.Objects.equals(oldPrivate, updated.getIsPrivate())) {
+                changes.append("Riêng tư: ").append(oldPrivate).append(" -> ").append(updated.getIsPrivate())
+                        .append("; ");
+            }
+
+            if (changes.length() > 0) {
+                auditLogService.logAction(updated.getServer(), actor,
+                        hcmute.edu.vn.discord.common.AuditLogAction.CHANNEL_UPDATE,
+                        updated.getId().toString(), "CHANNEL", changes.toString());
+            }
+        } catch (Exception e) {
+        }
+
+        return updated;
     }
 
     @Override
     @Transactional
     public void deleteChannel(Long channelId) {
-        if (!channelRepository.existsById(channelId)) {
-            throw new EntityNotFoundException("Channel not found");
-        }
+        Channel channel = channelRepository.findById(channelId)
+                .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
+        Server server = channel.getServer();
+        String channelName = channel.getName();
+        String channelIdStr = channel.getId().toString();
+
         channelRepository.deleteById(channelId);
+
+        try {
+            String username = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                    .getAuthentication().getName();
+            User actor = userRepository.findByUsername(username).orElse(null);
+
+            auditLogService.logAction(server, actor, hcmute.edu.vn.discord.common.AuditLogAction.CHANNEL_DELETE,
+                    channelIdStr, "CHANNEL", "Xóa kênh: " + channelName);
+        } catch (Exception e) {
+        }
     }
 
     @Override

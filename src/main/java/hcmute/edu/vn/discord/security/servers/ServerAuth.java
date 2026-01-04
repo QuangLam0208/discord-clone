@@ -70,6 +70,14 @@ public class ServerAuth {
         return has(serverId, username, Set.of(EPermission.ADMIN.getCode()));
     }
 
+    public boolean canBanMembers(Long serverId, String username) {
+        if (isOwner(serverId, username))
+            return true;
+        return has(serverId, username, Set.of(
+                EPermission.ADMIN.getCode(),
+                EPermission.BAN_MEMBERS.getCode()));
+    }
+
     // Xem kênh: FREEZE không chặn xem
     public boolean canViewChannel(Long channelId, String username) {
         User user = requireUser(username);

@@ -15,7 +15,6 @@ import hcmute.edu.vn.discord.service.ServerService;
 import hcmute.edu.vn.discord.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +35,7 @@ public class ServerRoleServiceImpl implements ServerRoleService {
     private final ServerRoleRepository serverRoleRepository;
     private final PermissionRepository permissionRepository;
     private final ServerMemberRepository serverMemberRepository;
+    private final hcmute.edu.vn.discord.service.AuditLogService auditLogService;
 
     private Server requireOwner(Long serverId, String actorUsername) {
         Server server = serverService.getServerById(serverId);
@@ -48,15 +48,10 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         return server;
     }
 
-    private void ensureRoleNameUnique(Long serverId, String name) {
-        if (serverRoleRepository.existsByServerIdAndNameIgnoreCase(serverId, name)) {
-            throw new DataIntegrityViolationException("Role name đã tồn tại trong server");
-        }
-    }
-
     private Set<Permission> mapPermissionCodes(Set<String> codes) {
         Set<Permission> perms = new HashSet<>();
-        if (codes == null || codes.isEmpty()) return perms;
+        if (codes == null || codes.isEmpty())
+            return perms;
         for (String code : codes) {
             Permission p = permissionRepository.findByCode(code)
                     .orElseThrow(() -> new EntityNotFoundException("Permission not found: " + code));
@@ -69,10 +64,7 @@ public class ServerRoleServiceImpl implements ServerRoleService {
     @Override
     public ServerRole createRole(Long serverId, ServerRoleRequest request, String actorUsername) {
         Server server = requireOwner(serverId, actorUsername);
-        // Không cho tạo trùng tên trong server
-        ensureRoleNameUnique(serverId, request.getName());
 
-        // Không cho tạo role hệ thống với cách copy tên
         if (ROLE_ADMIN.equalsIgnoreCase(request.getName()) || ROLE_EVERYONE.equalsIgnoreCase(request.getName())) {
             throw new IllegalArgumentException("Không thể tạo role hệ thống với tên này");
         }
@@ -80,10 +72,21 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         ServerRole role = new ServerRole();
         role.setServer(server);
         role.setName(request.getName());
+        role.setColor(request.getColor());
         role.setPriority(request.getPriority());
         role.setPermissions(mapPermissionCodes(request.getPermissionCodes()));
 
-        return serverRoleRepository.save(role);
+        ServerRole saved = serverRoleRepository.save(role);
+
+        // Audit Log
+        try {
+            User actor = userService.findByUsername(actorUsername).orElse(null);
+            auditLogService.logAction(server, actor, hcmute.edu.vn.discord.common.AuditLogAction.ROLE_CREATE,
+                    saved.getId().toString(), "ROLE", "Tạo vai trò: " + saved.getName());
+        } catch (Exception e) {
+        }
+
+        return saved;
     }
 
     @Transactional
@@ -94,24 +97,64 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         ServerRole role = serverRoleRepository.findByIdAndServerId(roleId, serverId)
                 .orElseThrow(() -> new EntityNotFoundException("Role not found"));
 
+        String oldName = role.getName();
+        String oldColor = role.getColor();
+        int oldPriority = role.getPriority();
+
         // Không cho đổi tên/xử lý role hệ thống
         if (ROLE_ADMIN.equalsIgnoreCase(role.getName()) || ROLE_EVERYONE.equalsIgnoreCase(role.getName())) {
-            // Ở đây chỉ cho đổi priority/permissions, cấm đổi tên
             role.setPriority(request.getPriority());
             role.setPermissions(mapPermissionCodes(request.getPermissionCodes()));
-            return serverRoleRepository.save(role);
-        }
+            ServerRole updated = serverRoleRepository.save(role);
 
-        // Nếu đổi tên, kiểm tra trùng
-        if (!role.getName().equalsIgnoreCase(request.getName())) {
-            ensureRoleNameUnique(serverId, request.getName());
+            // Audit Log (System role update)
+            try {
+                User actor = userService.findByUsername(actorUsername).orElse(null);
+                auditLogService.logAction(role.getServer(), actor,
+                        hcmute.edu.vn.discord.common.AuditLogAction.ROLE_UPDATE,
+                        updated.getId().toString(), "ROLE", "Cập nhật vai trò hệ thống: " + role.getName());
+            } catch (Exception e) {
+            }
+
+            return updated;
         }
 
         role.setName(request.getName());
+        role.setColor(request.getColor());
         role.setPriority(request.getPriority());
         role.setPermissions(mapPermissionCodes(request.getPermissionCodes()));
 
-        return serverRoleRepository.save(role);
+        ServerRole updated = serverRoleRepository.save(role);
+
+        // Audit Log
+        try {
+            User actor = userService.findByUsername(actorUsername).orElse(null);
+            StringBuilder changes = new StringBuilder();
+            if (!java.util.Objects.equals(oldName, updated.getName())) {
+                changes.append("Tên: ").append(oldName).append(" -> ").append(updated.getName()).append("; ");
+            }
+            if (!java.util.Objects.equals(oldColor, updated.getColor())) {
+                changes.append("Màu: ").append(oldColor).append(" -> ").append(updated.getColor()).append("; ");
+            }
+            if (oldPriority != updated.getPriority()) {
+                changes.append("Ưu tiên: ").append(oldPriority).append(" -> ").append(updated.getPriority())
+                        .append("; ");
+            }
+
+            if (changes.length() > 0) {
+                auditLogService.logAction(updated.getServer(), actor,
+                        hcmute.edu.vn.discord.common.AuditLogAction.ROLE_UPDATE,
+                        updated.getId().toString(), "ROLE", changes.toString());
+            } else {
+                // Permissions update assumed if no property change recorded but method called
+                auditLogService.logAction(updated.getServer(), actor,
+                        hcmute.edu.vn.discord.common.AuditLogAction.ROLE_UPDATE,
+                        updated.getId().toString(), "ROLE", "Cập nhật quyền hạn");
+            }
+        } catch (Exception e) {
+        }
+
+        return updated;
     }
 
     @Transactional
@@ -126,7 +169,19 @@ public class ServerRoleServiceImpl implements ServerRoleService {
             throw new IllegalStateException("Không thể xóa role hệ thống: " + role.getName());
         }
 
+        String roleName = role.getName();
+        Server server = role.getServer();
+        String roleIdStr = role.getId().toString();
+
         serverRoleRepository.delete(role);
+
+        // Audit Log
+        try {
+            User actor = userService.findByUsername(actorUsername).orElse(null);
+            auditLogService.logAction(server, actor, hcmute.edu.vn.discord.common.AuditLogAction.ROLE_DELETE,
+                    roleIdStr, "ROLE", "Xóa vai trò: " + roleName);
+        } catch (Exception e) {
+        }
     }
 
     @Transactional(readOnly = true)
@@ -138,13 +193,17 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         serverMemberRepository.findByServerIdAndUserId(serverId, user.getId())
                 .orElseThrow(() -> new AccessDeniedException("Bạn không phải thành viên server này"));
 
-        return serverRoleRepository.findByServerId(serverId);
+        List<ServerRole> roles = serverRoleRepository.findByServerId(serverId);
+        // Initialize members collection to avoid lazy load exception when mapping to
+        // DTO
+        roles.forEach(role -> role.getMembers().size());
+        return roles;
     }
 
     @Transactional
     @Override
     public ServerMember assignRoles(Long serverId, AssignRolesRequest request, String actorUsername) {
-        Server server = requireOwner(serverId, actorUsername);
+        requireOwner(serverId, actorUsername);
 
         ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, request.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("Member not found"));
@@ -162,6 +221,35 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         newRoles.add(everyone);
 
         member.setRoles(newRoles);
-        return serverMemberRepository.save(member);
+        ServerMember saved = serverMemberRepository.save(member); // Fixed: was saving 'member', return value used for
+        // consistency generally, though member is mutable
+
+        // Audit Log
+        try {
+            User actor = userService.findByUsername(actorUsername).orElse(null);
+            auditLogService.logAction(member.getServer(), actor,
+                    hcmute.edu.vn.discord.common.AuditLogAction.MEMBER_ROLE_UPDATE,
+                    member.getId().toString(), "MEMBER", "Cập nhật vai trò cho thành viên: "
+                            + (member.getNickname() != null ? member.getNickname() : member.getUser().getUsername()));
+        } catch (Exception e) {
+        }
+
+        return saved;
+    }
+
+    @Transactional(readOnly = true)
+    @Override
+    public List<ServerMember> getMembersByRole(Long serverId, Long roleId, String actorUsername) {
+        User user = userService.findByUsername(actorUsername)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        // Check member
+        serverMemberRepository.findByServerIdAndUserId(serverId, user.getId())
+                .orElseThrow(() -> new AccessDeniedException("Bạn không phải thành viên server này"));
+
+        // Verify role belongs to server
+        serverRoleRepository.findByIdAndServerId(roleId, serverId)
+                .orElseThrow(() -> new EntityNotFoundException("Role not found in this server"));
+
+        return serverMemberRepository.findByRoleId(roleId);
     }
 }

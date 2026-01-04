@@ -1,7 +1,7 @@
 package hcmute.edu.vn.discord.controller.api.admin;
 
 import hcmute.edu.vn.discord.entity.mongo.AuditLog;
-import hcmute.edu.vn.discord.repository.AuditLogRepository;
+import hcmute.edu.vn.discord.repository.AuditLogMongoRepository;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasAnyAuthority('ADMIN')")
 public class AdminAuditController {
 
-    private final AuditLogRepository repo;
+    private final AuditLogMongoRepository repo;
 
     // GET /api/admin/auditlogs?page=&size=&keyword=&action=&adminId=
     @GetMapping

@@ -1,17 +1,12 @@
 package hcmute.edu.vn.discord.repository;
 
-import hcmute.edu.vn.discord.entity.mongo.AuditLog;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import hcmute.edu.vn.discord.entity.jpa.AuditLog;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-public interface AuditLogRepository extends MongoRepository<AuditLog, String> {
+import java.util.List;
 
-    Page<AuditLog> findByActionContainingIgnoreCaseAndDetailContainingIgnoreCase(
-            String action, String keyword, Pageable pageable
-    );
-
-    Page<AuditLog> findByAdminIdAndActionContainingIgnoreCaseAndDetailContainingIgnoreCase(
-            Long adminId, String action, String keyword, Pageable pageable
-    );
+@Repository
+public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
+    List<AuditLog> findByServerIdOrderByCreatedAtDesc(Long serverId);
 }

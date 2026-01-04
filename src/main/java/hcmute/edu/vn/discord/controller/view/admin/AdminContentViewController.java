@@ -3,7 +3,7 @@ package hcmute.edu.vn.discord.controller.view.admin;
 import hcmute.edu.vn.discord.entity.jpa.Server;
 import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.entity.mongo.AuditLog;
-import hcmute.edu.vn.discord.repository.AuditLogRepository;
+import hcmute.edu.vn.discord.repository.AuditLogMongoRepository;
 import hcmute.edu.vn.discord.repository.ServerRepository;
 import hcmute.edu.vn.discord.repository.RoleRepository;
 import hcmute.edu.vn.discord.repository.UserRepository;
@@ -23,7 +23,7 @@ public class AdminContentViewController {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final ServerRepository serverRepository;
-    private final AuditLogRepository auditLogRepository;
+    private final AuditLogMongoRepository auditLogMongoRepository;
 
     @GetMapping("/_dashboard")
     public String dashboard(Model model) {
@@ -87,8 +87,8 @@ public class AdminContentViewController {
         String act = action == null ? "" : action;
 
         Page<AuditLog> result = (adminId != null)
-                ? auditLogRepository.findByAdminIdAndActionContainingIgnoreCaseAndDetailContainingIgnoreCase(adminId, act, kw, pageable)
-                : auditLogRepository.findByActionContainingIgnoreCaseAndDetailContainingIgnoreCase(act, kw, pageable);
+                ? auditLogMongoRepository.findByAdminIdAndActionContainingIgnoreCaseAndDetailContainingIgnoreCase(adminId, act, kw, pageable)
+                : auditLogMongoRepository.findByActionContainingIgnoreCaseAndDetailContainingIgnoreCase(act, kw, pageable);
 
         model.addAttribute("logs", result.getContent());
         model.addAttribute("currentPage", page);

@@ -163,9 +163,9 @@ public class DatabaseSeeder implements CommandLineRunner {
 
         everyoneRole = serverRoleRepository.save(everyoneRole);
 
-        Channel ch1 = createChannel(server, "general", ChannelType.TEXT);
-        Channel ch2 = createChannel(server, "chat-dev", ChannelType.TEXT);
-        Channel ch3 = createChannel(server, "Lobby Voice", ChannelType.VOICE);
+        createChannel(server, "general", ChannelType.TEXT);
+        createChannel(server, "chat-dev", ChannelType.TEXT);
+        createChannel(server, "Lobby Voice", ChannelType.VOICE);
 
         addMemberToServer(server, owner, everyoneRole);
         for (User member : membersToAdd) {

@@ -44,4 +44,6 @@ public interface ServerMemberRepository extends JpaRepository<ServerMember, Long
     """)
     Set<String> findPermissionCodesByServerIdAndUsername(Long serverId, String username);
 
+    @Query("SELECT m FROM ServerMember m JOIN m.roles r WHERE r.id = :roleId")
+    List<ServerMember> findByRoleId(Long roleId);
 }

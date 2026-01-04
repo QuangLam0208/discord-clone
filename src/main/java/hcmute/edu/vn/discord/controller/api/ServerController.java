@@ -6,6 +6,7 @@ import hcmute.edu.vn.discord.entity.jpa.Server;
 import hcmute.edu.vn.discord.repository.CategoryRepository;
 import hcmute.edu.vn.discord.repository.ServerMemberRepository;
 import hcmute.edu.vn.discord.security.servers.ServerAuth;
+import hcmute.edu.vn.discord.service.AuditLogService;
 import hcmute.edu.vn.discord.service.ChannelService;
 import hcmute.edu.vn.discord.service.ServerService;
 import jakarta.validation.Valid;
@@ -29,6 +30,7 @@ public class ServerController {
     private final ChannelService channelService;
     private final ServerMemberRepository serverMemberRepository;
     private final ServerAuth serverAuth;
+    private final AuditLogService auditLogService;
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
@@ -79,7 +81,11 @@ public class ServerController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ServerResponse> getServerById(@PathVariable Long id) {
-        return ResponseEntity.ok(ServerResponse.from(serverService.getServerById(id)));
+        ServerResponse response = ServerResponse.from(serverService.getServerById(id));
+        if (response != null) {
+            response.setOnlineCount(serverService.countOnlineMembers(id));
+        }
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")
@@ -94,5 +100,12 @@ public class ServerController {
     public ResponseEntity<Void> deleteServer(@PathVariable Long id) {
         serverService.deleteServer(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}/audit-logs")
+    @PreAuthorize("@serverAuth.isOwner(#id, authentication.name) or @serverAuth.hasPermission(#id, authentication.name, 'VIEW_AUDIT_LOG')")
+    public ResponseEntity<List<AuditLogResponse>> getAuditLogs(@PathVariable Long id) {
+        return ResponseEntity.ok(auditLogService.getAuditLogs(id).stream()
+                .map(AuditLogResponse::from).toList());
     }
 }

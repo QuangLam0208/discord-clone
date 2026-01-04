@@ -8,9 +8,12 @@ import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.enums.ServerStatus;
 import hcmute.edu.vn.discord.entity.jpa.*;
 import hcmute.edu.vn.discord.repository.*;
+import hcmute.edu.vn.discord.service.AuditLogService;
 import hcmute.edu.vn.discord.service.ServerService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.user.SimpUser;
+import org.springframework.messaging.simp.user.SimpUserRegistry;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -30,6 +33,8 @@ public class ServerServiceImpl implements ServerService {
     private final ChannelRepository channelRepository;
     private final PermissionRepository permissionRepository;
     private final CategoryRepository categoryRepository;
+    private final AuditLogService auditLogService;
+    private final SimpUserRegistry simpUserRegistry;
 
     @Override
     @Transactional
@@ -118,12 +123,42 @@ public class ServerServiceImpl implements ServerService {
     @Transactional
     public Server updateServer(Long serverId, ServerRequest request) {
         Server server = getServerById(serverId);
+
+        // Capture old values for audit log
+        String oldName = server.getName();
+        String oldDesc = server.getDescription();
+        String oldIcon = server.getIconUrl();
+
         server.setName(request.getName());
         server.setDescription(request.getDescription());
-        if (request.getIconUrl() != null) {
-            server.setIconUrl(request.getIconUrl());
+        server.setIconUrl(request.getIconUrl());
+        Server updated = serverRepository.save(server);
+
+        // Audit Log
+        try {
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            User actor = userRepository.findByUsername(username).orElse(null);
+
+            StringBuilder changes = new StringBuilder();
+            if (!Objects.equals(oldName, updated.getName())) {
+                changes.append("Tên: ").append(oldName).append(" -> ").append(updated.getName()).append("; ");
+            }
+            if (!Objects.equals(oldDesc, updated.getDescription())) {
+                changes.append("Mô tả: thay đổi; ");
+            }
+            if (!Objects.equals(oldIcon, updated.getIconUrl())) {
+                changes.append("Icon: thay đổi; ");
+            }
+
+            if (changes.length() > 0) {
+                auditLogService.logAction(updated, actor, hcmute.edu.vn.discord.common.AuditLogAction.SERVER_UPDATE,
+                        serverId.toString(), "SERVER", changes.toString());
+            }
+        } catch (Exception e) {
+            System.err.println("Error logging server update: " + e.getMessage());
         }
-        return serverRepository.save(server);
+
+        return updated;
     }
 
     @Override
@@ -179,6 +214,41 @@ public class ServerServiceImpl implements ServerService {
                 u.getUsername(),
                 Set.of(ServerStatus.ACTIVE, ServerStatus.FREEZE)
         );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AuditLog> getAuditLogs(Long serverId) {
+        return auditLogService.getAuditLogs(serverId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int countOnlineMembers(Long serverId) {
+        // 1. Get all members of the server
+        List<ServerMember> members = serverMemberRepository.findByServerId(serverId);
+        if (members.isEmpty()) {
+            return 0;
+        }
+
+        // 2. Get list of usernames
+        Set<String> memberUsernames = new HashSet<>();
+        for (ServerMember member : members) {
+            if (member.getUser() != null) {
+                memberUsernames.add(member.getUser().getUsername());
+            }
+        }
+
+        // 3. Count matching online users
+        int onlineCount = 0;
+        for (String username : memberUsernames) {
+            SimpUser user = simpUserRegistry.getUser(username);
+            if (user != null && user.hasSessions()) {
+                onlineCount++;
+            }
+        }
+
+        return onlineCount;
     }
 
     @Override
