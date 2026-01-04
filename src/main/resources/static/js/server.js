@@ -1947,14 +1947,6 @@ window.showRoleActionMenu = function (e, roleId) {
     });
 
     menu.innerHTML = `
-        <div class="dynamic-menu-item" onclick="handleViewAsRole()" 
-             onmouseover="this.style.backgroundColor='#404249'; this.style.color='white'" 
-             onmouseout="this.style.backgroundColor='transparent'; this.style.color='#b5bac1'"
-             style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-radius: 2px; cursor: pointer; color: #b5bac1; font-weight: 500; font-size: 14px; transition: all 0.1s;">
-            <span>Xem Máy Chủ Theo Vai Trò</span>
-            <i class="fas fa-arrow-right"></i>
-        </div>
-        <div style="height: 1px; background-color: #2b2d31; margin: 4px 0;"></div>
         <div class="dynamic-menu-item" onclick="confirmDeleteRoleFromActionMenu()"
              onmouseover="this.style.backgroundColor='#da373c'; this.style.color='white'" 
              onmouseout="this.style.backgroundColor='transparent'; this.style.color='#da373c'"
@@ -1985,16 +1977,7 @@ window.closeRoleActionMenu = function () {
     if (menu) menu.remove();
 }
 
-window.handleViewAsRole = function () {
-    closeRoleActionMenu();
-    Swal.fire({
-        title: 'Tính năng đang phát triển',
-        text: 'Chức năng "Xem máy chủ theo vai trò" sẽ sớm ra mắt!',
-        icon: 'info',
-        background: '#313338',
-        color: '#dbdee1'
-    });
-}
+
 
 window.confirmDeleteRoleFromActionMenu = function () {
     if (actionMenuTargetRoleId) {
