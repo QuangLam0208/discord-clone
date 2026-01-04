@@ -6,9 +6,16 @@ import java.util.List;
 
 public interface ServerService {
     Server createServer(ServerRequest request);
+
     Server updateServer(Long id, ServerRequest request);
+
     Server getServerById(Long id);
+
     List<Server> getAllServers();
+
     List<Server> getServersByCurrentUsername();
+
     void deleteServer(Long serverId);
+
+    int countOnlineMembers(Long serverId);
 }

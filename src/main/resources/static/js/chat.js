@@ -73,35 +73,48 @@ async function loadMessages(channelId) {
 }
 
 // 4. WebSocket Logic
+// Flag to prevent race conditions
+state.isConnecting = false;
+
 function connectChannelSocket(channelId) {
-    // Nếu chưa kết nối Socket tổng -> connect
-    if (!state.stompClient || !state.stompClient.connected) {
-        const socket = new SockJS('/ws');
-        state.stompClient = Stomp.over(socket);
-        state.stompClient.debug = null; // Tắt log debug cho gọn
-
-        const token = localStorage.getItem('accessToken');
-        if (!token) {
-            console.warn("No token found, redirecting to login.");
-            window.location.href = '/login';
-            return;
-        }
-
-        state.stompClient.connect({ 'Authorization': `Bearer ${token}` }, function (frame) {
-            console.log('Connected to WebSocket');
-            subscribeToChannel(channelId);
-        }, function (error) {
-            console.error('WebSocket Error:', error);
-            // Auto reconnect sau 5s nếu mất kết nối
-            setTimeout(() => {
-                console.log("Reconnecting WebSocket...");
-                connectChannelSocket(channelId);
-            }, 5000);
-        });
-    } else {
-        // Đã connect -> chỉ cần subscribe channel mới
+    if (state.stompClient && state.stompClient.connected) {
         subscribeToChannel(channelId);
+        return;
     }
+
+    if (state.isConnecting) {
+        // Queue the subscription or just wait?
+        // Simple retry logic: wait 500ms and try again
+        console.log("Socket is connecting... waiting to subscribe", channelId);
+        setTimeout(() => connectChannelSocket(channelId), 500);
+        return;
+    }
+
+    state.isConnecting = true;
+    const socket = new SockJS('/ws');
+    state.stompClient = Stomp.over(socket);
+    state.stompClient.debug = null;
+
+    const token = localStorage.getItem('accessToken');
+    if (!token) {
+        console.warn("No token found, redirecting to login.");
+        window.location.href = '/login';
+        return;
+    }
+
+    state.stompClient.connect({ 'Authorization': `Bearer ${token}` }, function (frame) {
+        console.log('Connected to WebSocket');
+        state.isConnecting = false;
+        subscribeToChannel(channelId);
+    }, function (error) {
+        console.error('WebSocket Error:', error);
+        state.isConnecting = false;
+        // Auto reconnect sau 5s nếu mất kết nối
+        setTimeout(() => {
+            console.log("Reconnecting WebSocket...");
+            connectChannelSocket(channelId);
+        }, 5000);
+    });
 }
 
 // 1. Export connect function if needed, or ensuring subscribe handles connection

@@ -38,12 +38,12 @@ function createServerIcon(server) {
     div.title = server.name;
     let contentHtml = '';
     if (server.iconUrl) {
-        contentHtml = `<img src="${server.iconUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">`;
+        contentHtml = `<img src="${server.iconUrl}">`;
     } else {
         const acronym = server.name.substring(0, 2).toUpperCase();
-        contentHtml = `<div class="sidebar-icon">${acronym}</div>`;
+        contentHtml = acronym;
     }
-    div.innerHTML = `<div class="pill"></div>${contentHtml}<span class="tooltip">${server.name}</span>`;
+    div.innerHTML = `<div class="pill"></div><div class="sidebar-icon">${contentHtml}</div><span class="tooltip">${server.name}</span>`;
     div.onclick = function () {
         document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
         div.classList.add('active');
@@ -301,6 +301,18 @@ window.openServerSettings = async function (serverId) {
         // Populate Header
         const header = document.getElementById('server-settings-header');
         if (header) header.querySelector('span').innerText = server.name.toUpperCase();
+
+        // Populate Counts in Preview
+        const onlineCountEl = document.getElementById('preview-online-count');
+        const memberCountEl = document.getElementById('preview-member-count');
+
+        // Logic: Online count must be at least 1 (the current user)
+        let safeOnlineCount = server.onlineCount || 0;
+        if (safeOnlineCount === 0) safeOnlineCount = 1;
+
+        if (onlineCountEl) onlineCountEl.innerText = safeOnlineCount;
+        if (memberCountEl) memberCountEl.innerText = server.memberCount || 0;
+        if (memberCountEl) memberCountEl.innerText = server.memberCount || 0;
 
         // Populate Form
         document.getElementById('edit-server-name').value = server.name;
@@ -843,13 +855,18 @@ function renderRoleEditorSidebar(roles, activeRoleId) {
 
         const nameSpan = document.createElement('span');
         nameSpan.innerText = role.name;
-        nameSpan.style.cssText = "white-space: nowrap; overflow: hidden; text-overflow: ellipsis;";
+        nameSpan.style.cssText = "white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1;";
+
+        const countSpan = document.createElement('span');
+        countSpan.innerText = role.memberCount !== undefined ? role.memberCount : 0;
+        countSpan.style.cssText = "color: #b5bac1; font-size: 12px; margin-left: 8px;";
 
         item.style.display = 'flex';
         item.style.alignItems = 'center';
 
         item.appendChild(colorCircle);
         item.appendChild(nameSpan);
+        item.appendChild(countSpan);
 
         item.onclick = () => selectRoleInEditor(role);
 
@@ -1934,3 +1951,48 @@ document.addEventListener('click', (e) => {
 });
 
 
+
+window.updateServerPreviews = function (name, iconUrl) {
+    // 1. Update Name on Preview Card
+    const nameEl = document.getElementById('preview-card-name');
+    if (nameEl) nameEl.innerText = name || 'Server Name';
+
+    // 2. Update Icon on Preview Card
+    const imgEl = document.getElementById('preview-card-icon-img');
+    const textEl = document.getElementById('preview-card-icon-text');
+
+    if (imgEl && textEl) {
+        if (iconUrl) {
+            imgEl.src = iconUrl;
+            imgEl.style.display = 'block';
+            textEl.style.display = 'none';
+        } else {
+            imgEl.style.display = 'none';
+            textEl.style.display = 'block';
+            textEl.innerText = (name || '').substring(0, 2).toUpperCase();
+        }
+    }
+
+    // 3. Update Icon in Settings Panel (Left side)
+    const settingsImgEl = document.getElementById('edit-server-icon-preview');
+    const settingsPlaceholderEl = document.getElementById('edit-server-icon-placeholder');
+
+    if (settingsImgEl && settingsPlaceholderEl) {
+        if (iconUrl) {
+            settingsImgEl.src = iconUrl;
+            settingsImgEl.style.display = 'block';
+            settingsPlaceholderEl.style.display = 'none';
+        } else {
+            settingsImgEl.style.display = 'none';
+            settingsPlaceholderEl.style.display = 'block';
+            settingsPlaceholderEl.innerText = (name || '').substring(0, 2).toUpperCase();
+        }
+    }
+
+    // 4. Update "Remove Icon" Button Visibility
+    const removeBtn = document.querySelector('.remove-icon-btn');
+    if (removeBtn) {
+        // Show if there is an iconUrl
+        removeBtn.style.display = iconUrl ? 'block' : 'none';
+    }
+}

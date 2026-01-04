@@ -12,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.messaging.simp.user.SimpUser;
+import org.springframework.messaging.simp.user.SimpUserRegistry;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -26,6 +28,7 @@ public class ServerServiceImpl implements ServerService {
     private final ServerRoleRepository serverRoleRepository;
     private final ChannelRepository channelRepository;
     private final PermissionRepository permissionRepository;
+    private final SimpUserRegistry simpUserRegistry;
 
     @Override
     @Transactional
@@ -149,5 +152,34 @@ public class ServerServiceImpl implements ServerService {
         return serverMemberRepository.findByUserUsername(username).stream()
                 .map(ServerMember::getServer)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int countOnlineMembers(Long serverId) {
+        // 1. Get all members of the server
+        List<ServerMember> members = serverMemberRepository.findByServerId(serverId);
+        if (members.isEmpty()) {
+            return 0;
+        }
+
+        // 2. Get list of usernames
+        Set<String> memberUsernames = new HashSet<>();
+        for (ServerMember member : members) {
+            if (member.getUser() != null) {
+                memberUsernames.add(member.getUser().getUsername());
+            }
+        }
+
+        // 3. Count matching online users
+        int onlineCount = 0;
+        for (String username : memberUsernames) {
+            SimpUser user = simpUserRegistry.getUser(username);
+            if (user != null && user.hasSessions()) {
+                onlineCount++;
+            }
+        }
+
+        return onlineCount;
     }
 }

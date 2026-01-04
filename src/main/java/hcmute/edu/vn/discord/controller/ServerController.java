@@ -35,16 +35,20 @@ public class ServerController {
     public ResponseEntity<ServerResponse> createServer(@Valid @RequestBody ServerRequest request) {
         request.normalize();
         Server saved = serverService.createServer(request);
-        URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(saved.getId()).toUri();
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(saved.getId())
+                .toUri();
         return ResponseEntity.created(location).body(ServerResponse.from(saved));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("@serverAuth.isOwner(#id, authentication.name)")
-    public ResponseEntity<ServerResponse> updateServer(@PathVariable Long id, @Valid @RequestBody ServerRequest request) {
+    public ResponseEntity<ServerResponse> updateServer(@PathVariable Long id,
+            @Valid @RequestBody ServerRequest request) {
         request.normalize();
         Server updated = serverService.updateServer(id, request);
-        return ResponseEntity.ok(ServerResponse.from(updated));
+        ServerResponse response = ServerResponse.from(updated);
+        response.setOnlineCount(serverService.countOnlineMembers(id));
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}/detail")
@@ -79,7 +83,11 @@ public class ServerController {
 
     @GetMapping("/{id}")
     public ResponseEntity<ServerResponse> getServerById(@PathVariable Long id) {
-        return ResponseEntity.ok(ServerResponse.from(serverService.getServerById(id)));
+        ServerResponse response = ServerResponse.from(serverService.getServerById(id));
+        if (response != null) {
+            response.setOnlineCount(serverService.countOnlineMembers(id));
+        }
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")

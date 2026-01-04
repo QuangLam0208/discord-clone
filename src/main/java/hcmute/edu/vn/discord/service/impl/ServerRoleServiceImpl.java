@@ -136,7 +136,11 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         serverMemberRepository.findByServerIdAndUserId(serverId, user.getId())
                 .orElseThrow(() -> new AccessDeniedException("Bạn không phải thành viên server này"));
 
-        return serverRoleRepository.findByServerId(serverId);
+        List<ServerRole> roles = serverRoleRepository.findByServerId(serverId);
+        // Initialize members collection to avoid lazy load exception when mapping to
+        // DTO
+        roles.forEach(role -> role.getMembers().size());
+        return roles;
     }
 
     @Transactional

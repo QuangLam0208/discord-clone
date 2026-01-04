@@ -25,9 +25,11 @@ public class ServerResponse {
 
     private int channelCount;
     private int memberCount;
+    private int onlineCount;
 
     public static ServerResponse from(Server server) {
-        if (server == null) return null;
+        if (server == null)
+            return null;
         return ServerResponse.builder()
                 .id(server.getId())
                 .name(server.getName())
@@ -38,7 +40,9 @@ public class ServerResponse {
                 .ownerUsername(server.getOwner() != null ? server.getOwner().getUsername() : null)
                 .channelCount(server.getChannels() != null ? server.getChannels().size() : 0)
                 .memberCount(server.getMembers() != null ? server.getMembers().size() : 0)
+                // onlineCount will be set explicitly by controller/service as it requires
+                // dynamic calculation
+                .onlineCount(0)
                 .build();
     }
 }
-

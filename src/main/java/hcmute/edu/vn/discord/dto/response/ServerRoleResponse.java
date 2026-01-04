@@ -16,6 +16,7 @@ public class ServerRoleResponse {
     String color;
     Integer priority;
     Set<String> permissionCodes;
+    Integer memberCount;
 
     public static ServerRoleResponse from(ServerRole role) {
         return ServerRoleResponse.builder()
@@ -26,6 +27,7 @@ public class ServerRoleResponse {
                 .permissionCodes(role.getPermissions() != null
                         ? role.getPermissions().stream().map(Permission::getCode).collect(Collectors.toSet())
                         : Set.of())
+                .memberCount(role.getMembers() != null ? role.getMembers().size() : 0)
                 .build();
     }
 }

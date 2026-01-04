@@ -12,6 +12,11 @@ window.loadCategoriesAndChannels = async function (serverId) {
             Api.get(`/api/servers/${serverId}/channels`)
         ]);
 
+        // Ensure WebSocket is connected even if no channel is selected yet
+        if (window.connectChannelSocket) {
+            window.connectChannelSocket(null);
+        }
+
         const categoryMap = {};
         const nullCategoryChannels = [];
 
