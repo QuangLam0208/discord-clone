@@ -1627,9 +1627,24 @@ window.filterRoleMembers = function () {
 window.removeRoleFromMember = async function (userId) {
     if (!currentEditingRole) return;
 
-    // Find member to get current roles
     const member = currentRoleMembers.find(m => m.user.id === userId);
     if (!member) return;
+
+    const result = await Swal.fire({
+        title: 'Xóa thành viên khỏi vai trò?',
+        text: `Bạn có chắc chắn muốn xóa ${member.nickname || member.user.displayName || member.user.username} khỏi vai trò này?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy',
+        background: '#313338',
+        color: '#dbdee1',
+        zIndex: 10005 // Ensure it's on top of role editor (usually 10001)
+    });
+
+    if (!result.isConfirmed) return;
 
     const remainingRoleIds = member.roles
         .filter(r => r.id !== currentEditingRole.id)
@@ -1647,6 +1662,15 @@ window.removeRoleFromMember = async function (userId) {
 
         // Also update main cache if needed
         loadServerMembers(state.editingServerId);
+
+        Swal.fire({
+            title: 'Đã xóa!',
+            icon: 'success',
+            timer: 1000,
+            showConfirmButton: false,
+            background: '#313338',
+            color: '#dbdee1'
+        });
     } catch (e) {
         Swal.fire('Lỗi', 'Không thể gỡ vai trò: ' + e.message, 'error');
     }
