@@ -34,6 +34,7 @@ const DM = (() => {
         st.activeFriendName = friendName || ('User ' + friendId);
         st.unreadCounts.set(friendId, 0);
 
+        // Tìm info
         let friendInfo = st.conversations.find(c => c.friendUserId == friendId);
         if(!friendInfo) {
             friendInfo = st.friends.find(f => f.friendUserId == friendId) || {
@@ -49,8 +50,8 @@ const DM = (() => {
             const conv = await DMApi.getOrCreateConversation(friendId);
             st.conversationId = String(conv.id);
 
+            // Update Sidebar
             const exists = st.conversations.some(c => String(c.conversationId) === st.conversationId);
-
             if (!exists) {
                 const newConvoItem = {
                     conversationId: conv.id,
@@ -61,10 +62,8 @@ const DM = (() => {
                     unreadCount: 0,
                     updatedAt: conv.updatedAt || new Date().toISOString()
                 };
-
                 st.conversations.unshift(newConvoItem);
                 DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
-
                 setTimeout(() => {
                     const newItemDom = document.getElementById(`dm-item-${friendId}`);
                     if (newItemDom) {
@@ -76,11 +75,31 @@ const DM = (() => {
                 DMUI.updateSidebarItem(friendId, false);
             }
 
-            const msgs = await DMApi.fetchMessages(st.conversationId, 0, 50);
+            // --- LOGIC CHECK STATUS ---
             const isFriend = st.friends.some(f => f.friendUserId == friendId);
             let status = isFriend ? 'FRIEND' : 'NOT_FRIEND';
+            let msgs = [];
+            if (status === 'NOT_FRIEND') {
+                const [messages, outboundRequests, inboundRequests] = await Promise.all([
+                    DMApi.fetchMessages(st.conversationId, 0, 50),
+                    DMApi.listOutboundRequests().catch(() => []),
+                    DMApi.listInboundRequests().catch(() => [])
+                ]);
+                msgs = messages;
+                const hasSent = outboundRequests.some(r => String(r.recipientId) === String(friendId));
+                const hasReceived = inboundRequests.some(r => String(r.senderId) === String(friendId));
+
+                if (hasReceived) {
+                    status = 'RECEIVED_REQUEST';
+                } else if (hasSent) {
+                    status = 'SENT_REQUEST';
+                }
+            } else {
+                msgs = await DMApi.fetchMessages(st.conversationId, 0, 50);
+            }
 
             DMUI.renderMessages(msgs, st.currentUserId, st.displayedMsgIds, friendInfo, status);
+
         } catch (e) {
             console.error('Error loading conversation:', e);
         }
@@ -215,11 +234,26 @@ const DM = (() => {
     }
 
   async function handleAddFriend(uid) {
-      try {
-          await DMApi.sendFriendRequestById(uid);
-          alert('Đã gửi lời mời kết bạn.');
-      } catch(e) { alert(e.message); }
-  }
+        try {
+            await DMApi.sendFriendRequestById(uid);
+            const btnAdd = document.getElementById('btn-dm-addfriend');
+            if (btnAdd) {
+                btnAdd.textContent = 'Đã gửi yêu cầu kết bạn';
+                btnAdd.disabled = true;
+
+                btnAdd.style.backgroundColor = '#5865F2';
+                btnAdd.style.color = '#ffffff';
+                btnAdd.style.cursor = 'not-allowed';
+                btnAdd.style.opacity = '0.5';
+            }
+            const btnSpam = document.getElementById('btn-dm-spam');
+            if (btnSpam) {
+                btnSpam.style.display = 'none';
+            }
+        } catch(e) {
+            alert(e.message);
+        }
+    }
 
   function handleSpam(uid, isBlocked) {
       Swal.fire({
@@ -299,6 +333,73 @@ const DM = (() => {
       });
   }
 
+  async function handleAcceptRequest(uid) {
+        try {
+            const inbound = await DMApi.listInboundRequests();
+            const req = inbound.find(r => String(r.senderId) === String(uid));
+
+            if (req) {
+                await DMApi.acceptRequest(req.id);
+                onSelectFriend(uid);
+                st.friends = await DMApi.fetchFriends();
+            } else {
+                alert('Không tìm thấy yêu cầu kết bạn (có thể đã bị hủy).');
+            }
+        } catch (e) { alert(e.message); }
+    }
+
+    async function handleDeclineRequest(uid) {
+        try {
+            const inbound = await DMApi.listInboundRequests();
+            const req = inbound.find(r => String(r.senderId) === String(uid));
+
+            if (req) {
+                await DMApi.declineRequest(req.id);
+                onSelectFriend(uid);
+            }
+        } catch (e) { alert(e.message); }
+    }
+
+    async function onFriendEvent(evt) {
+        try {
+          console.log('[Friend Event]', evt);
+
+          const type = evt?.type;
+          const data = evt?.data;
+
+          // 1. Luôn reload danh sách bạn bè & Pending list
+          st.friends = await DMApi.fetchFriends();
+          st.conversations = await DMApi.fetchAllConversations();
+          DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
+
+          const pendingVisible = document.getElementById('dm-pending-view')?.style.display !== 'none';
+          if (pendingVisible) {
+            const inbound = await DMApi.listInboundRequests();
+            const outbound = await DMApi.listOutboundRequests();
+            DMUI.renderPending(inbound, outbound);
+          }
+
+          // 2. Tự động cập nhật giao diện chat (4 nút) nếu đang mở hội thoại với người liên quan
+          if (st.activeFriendId && data) {
+              const currentActiveId = Number(st.activeFriendId);
+              const eventSenderId = Number(data.senderId);
+              const eventRecipientId = Number(data.recipientId);
+
+              // Nếu người đang chat là Người gửi HOẶC Người nhận trong sự kiện này
+              if (currentActiveId === eventSenderId || currentActiveId === eventRecipientId) {
+                  console.log('Cập nhật giao diện chat do thay đổi trạng thái bạn bè...');
+                  await onSelectFriend(st.activeFriendId);
+              }
+          }
+          else if (st.activeFriendId && (type === 'UNFRIEND' || type === 'BLOCKED' || type === 'UNBLOCKED')) {
+               await onSelectFriend(st.activeFriendId);
+          }
+
+        } catch (e) {
+          console.error('onFriendEvent error', e);
+        }
+      }
+
   // ----- Init -----
   async function init() {
     try {
@@ -344,11 +445,7 @@ const DM = (() => {
 
       goHome();
 
-      DMWS.connectWS(onIncomingMessage, async () => {
-          st.friends = await DMApi.fetchFriends();
-          st.conversations = await DMApi.fetchAllConversations();
-          DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
-      });
+      DMWS.connectWS(onIncomingMessage, onFriendEvent);
 
       window.DM = window.DM || {};
       window.DM.retryMessage = retryMessage;
@@ -359,6 +456,8 @@ const DM = (() => {
       window.DM.handleUnfriend = handleUnfriend;
       window.DM.handleAddFriend = handleAddFriend;
       window.DM.handleSpam = handleSpam;
+      window.DM.handleAcceptRequest = handleAcceptRequest;
+      window.DM.handleDeclineRequest = handleDeclineRequest;
       } catch (err) {
         console.error('[DM.init Error]', err);
       }

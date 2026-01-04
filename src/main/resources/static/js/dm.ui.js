@@ -172,54 +172,68 @@ const DMUI = (() => {
 
   // --- HTML CHO PHẦN INTRO (FIX: Avatar -> Tên hiển thị -> Tên hệ thống) ---
   function getDMIntroHtml(friend, relationshipStatus) {
-    if (!friend) return '';
-    const displayName = friend.displayName || friend.friendUsername || ('User ' + friend.friendUserId);
-    const username = friend.friendUsername || ('user' + friend.friendUserId);
-    const friendId = friend.friendUserId;
-    const avatarUrl = friend.avatarUrl ? friend.avatarUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&size=128`;
+      if (!friend) return '';
+      const displayName = friend.displayName || friend.friendUsername || ('User ' + friend.friendUserId);
+      const username = friend.friendUsername || ('user' + friend.friendUserId);
+      const friendId = friend.friendUserId;
+      const avatarUrl = friend.avatarUrl ? friend.avatarUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&size=128`;
 
-    let actionsHtml = '';
-    const btnStyle = 'padding: 6px 16px; border-radius: 3px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; margin-right: 8px; color: #fff; transition: background-color 0.2s;';
-    const btnGray = 'background-color: #4f545c;';
-    const btnRed = 'background-color: #ed4245;';
-    const btnGreen = 'background-color: #248046;';
+      let actionsHtml = '';
+      const btnStyle = 'padding: 6px 16px; border-radius: 3px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; margin-right: 8px; color: #fff; transition: background-color 0.2s;';
+      const btnGray = 'background-color: #4f545c;';
+      const btnRed = 'background-color: #ed4245;';
+      const btnGreen = 'background-color: #248046;';
+      const btnBlue = 'background-color: #5865F2;';
 
-    if (relationshipStatus === 'FRIEND') {
-        actionsHtml = `
-            <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-unfriend" data-id="${friendId}" data-name="${displayName}">Xóa bạn</button>
-            <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
-        `;
-    } else if (relationshipStatus === 'BLOCKED') {
-        actionsHtml = `
-            <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-unblock" data-id="${friendId}" data-name="${displayName}">Bỏ chặn</button>
-            <button class="btn-dm-action" style="${btnStyle} ${btnRed}" id="btn-dm-spam" data-id="${friendId}" data-name="${displayName}" data-blocked="true">Báo cáo Spam</button>
-        `;
-    } else {
-        actionsHtml = `
-            <button class="btn-dm-action" style="${btnStyle} ${btnGreen}" id="btn-dm-addfriend" data-id="${friendId}" data-name="${displayName}">Thêm bạn</button>
-            <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
-            <button class="btn-dm-action" style="${btnStyle} ${btnRed}" id="btn-dm-spam" data-id="${friendId}" data-name="${displayName}" data-blocked="false">Báo cáo Spam</button>
-        `;
-    }
+      if (relationshipStatus === 'FRIEND') {
+          actionsHtml = `
+              <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-unfriend" data-id="${friendId}" data-name="${displayName}">Xóa bạn</button>
+              <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
+          `;
+      } else if (relationshipStatus === 'BLOCKED') {
+          actionsHtml = `
+              <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-unblock" data-id="${friendId}" data-name="${displayName}">Bỏ chặn</button>
+              <button class="btn-dm-action" style="${btnStyle} ${btnRed}" id="btn-dm-spam" data-id="${friendId}" data-name="${displayName}" data-blocked="true">Báo cáo Spam</button>
+          `;
+      } else if (relationshipStatus === 'SENT_REQUEST') {
+          // Mình gửi đi
+          actionsHtml = `
+              <button class="btn-dm-action" style="${btnStyle} ${btnBlue} opacity: 0.6; cursor: not-allowed;" disabled>Đã gửi yêu cầu kết bạn</button>
+              <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
+          `;
+      } else if (relationshipStatus === 'RECEIVED_REQUEST') {
+          // --- LOGIC MỚI: Người ta gửi đến mình (4 NÚT) ---
+          actionsHtml = `
+              <button class="btn-dm-action" style="${btnStyle} ${btnBlue}" id="btn-dm-accept" data-id="${friendId}" data-name="${displayName}">Chấp nhận yêu cầu</button>
+              <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-decline" data-id="${friendId}" data-name="${displayName}">Bỏ qua</button>
+              <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
+              <button class="btn-dm-action" style="${btnStyle} ${btnRed}" id="btn-dm-spam" data-id="${friendId}" data-name="${displayName}" data-blocked="false">Báo cáo Spam</button>
+          `;
+      } else {
+          // Người lạ
+          actionsHtml = `
+              <button class="btn-dm-action" style="${btnStyle} ${btnBlue}" id="btn-dm-addfriend" data-id="${friendId}" data-name="${displayName}">Thêm bạn</button>
+              <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
+              <button class="btn-dm-action" style="${btnStyle} ${btnRed}" id="btn-dm-spam" data-id="${friendId}" data-name="${displayName}" data-blocked="false">Báo cáo Spam</button>
+          `;
+      }
 
-    return `
-      <div class="dm-intro-wrapper" style="margin: 16px; display: flex; flex-direction: column; gap: 8px;">
-        <div class="dm-intro-avatar-large" style="width: 80px; height: 80px; margin-bottom: 12px;">
-            <img src="${avatarUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+      // ... (Phần return HTML intro-wrapper)
+      return `
+        <div class="dm-intro-wrapper" style="margin: 16px; display: flex; flex-direction: column; gap: 8px;">
+          <div class="dm-intro-avatar-large" style="width: 80px; height: 80px; margin-bottom: 12px;">
+              <img src="${avatarUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+          </div>
+          <h1 class="dm-intro-displayname" style="font-size: 28px; font-weight: 700; color: #fff; margin: 0;">${displayName}</h1>
+          <h3 class="dm-intro-username" style="font-size: 18px; font-weight: 500; color: #b9bbbe; margin: 0;">${username}</h3>
+          <div class="dm-intro-text" style="color: #b9bbbe; font-size: 14px; margin-top: 8px;">
+              Đây là phần mở đầu lịch sử tin nhắn trực tiếp của bạn với <strong>${displayName}</strong>.
+          </div>
+          <div class="dm-intro-actions" style="margin-top: 16px;">
+              ${actionsHtml}
+          </div>
         </div>
-
-        <h1 class="dm-intro-displayname" style="font-size: 28px; font-weight: 700; color: #fff; margin: 0;">${displayName}</h1>
-
-        <h3 class="dm-intro-username" style="font-size: 18px; font-weight: 500; color: #b9bbbe; margin: 0;">${username}</h3>
-
-        <div class="dm-intro-text" style="color: #b9bbbe; font-size: 14px; margin-top: 8px;">
-            Đây là phần mở đầu lịch sử tin nhắn trực tiếp của bạn với <strong>${displayName}</strong>.
-        </div>
-        <div class="dm-intro-actions" style="margin-top: 16px;">
-            ${actionsHtml}
-        </div>
-      </div>
-      <div style="height: 1px; background-color: #3f4147; margin: 0 16px 16px 16px;"></div>`;
+        <div style="height: 1px; background-color: #3f4147; margin: 0 16px 16px 16px;"></div>`;
   }
 
   function renderMessages(list, currentUserId, displayedMsgIdsSet, friendInfo, relationshipStatus) {
@@ -258,12 +272,16 @@ const DMUI = (() => {
     const btnSpam = document.getElementById('btn-dm-spam');
     const btnAddFriend = document.getElementById('btn-dm-addfriend');
     const btnUnfriend = document.getElementById('btn-dm-unfriend');
+    const btnAccept = document.getElementById('btn-dm-accept');
+    const btnDecline = document.getElementById('btn-dm-decline');
 
     if (btnBlock) btnBlock.onclick = () => window.DM && window.DM.handleBlock(btnBlock.getAttribute('data-id'));
     if (btnUnblock) btnUnblock.onclick = () => window.DM && window.DM.handleUnblock(btnUnblock.getAttribute('data-id'));
     if (btnSpam) btnSpam.onclick = () => window.DM && window.DM.handleSpam(btnSpam.getAttribute('data-id'), btnSpam.getAttribute('data-blocked') === 'true');
     if (btnAddFriend) btnAddFriend.onclick = () => window.DM && window.DM.handleAddFriend(btnAddFriend.getAttribute('data-id'));
     if (btnUnfriend) btnUnfriend.onclick = () => window.DM && window.DM.handleUnfriend(btnUnfriend.getAttribute('data-id'));
+    if (btnAccept) btnAccept.onclick = () => window.DM && window.DM.handleAcceptRequest(btnAccept.getAttribute('data-id'));
+    if (btnDecline) btnDecline.onclick = () => window.DM && window.DM.handleDeclineRequest(btnDecline.getAttribute('data-id'));
   }
 
   function appendMessage(m, currentUserId, displayedMsgIdsSet) {
