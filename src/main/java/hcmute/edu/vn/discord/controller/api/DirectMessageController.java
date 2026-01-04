@@ -36,7 +36,14 @@ public class DirectMessageController {
     private final SimpMessagingTemplate messagingTemplate;
     private final UserService userService;
 
-    // --- API MỚI: Lấy danh sách hội thoại cho sidebar ---
+    private void sendSocketToUser(Long userId, Object payload) {
+        userService.findById(userId).ifPresent(user -> {
+            if (user.getUsername() != null) {
+                messagingTemplate.convertAndSendToUser(user.getUsername(), "/queue/dm", payload);
+            }
+        });
+    }
+
     @GetMapping("/conversations")
     public ResponseEntity<List<Map<String, Object>>> getConversations(@AuthenticationPrincipal UserDetailsImpl user) {
         if (user == null || user.getId() == null) {
@@ -55,22 +62,8 @@ public class DirectMessageController {
         }
         Long senderId = user.getId();
         DirectMessageResponse response = directMessageService.sendMessage(senderId, request);
-        userService.findById(request.getReceiverId()).ifPresentOrElse(receiver -> {
-            if (receiver.getUsername() != null) {
-                messagingTemplate.convertAndSendToUser(
-                        receiver.getUsername(),
-                        "/queue/dm",
-                        response
-                );
-            }
-        }, () -> log.error("REST: Không tìm thấy người nhận ID: {}", request.getReceiverId()));
-        if (user.getUsername() != null) {
-            messagingTemplate.convertAndSendToUser(
-                    user.getUsername(),
-                    "/queue/dm",
-                    response
-            );
-        }
+        sendSocketToUser(request.getReceiverId(), response);
+        sendSocketToUser(senderId, response);
         return ResponseEntity.ok(response);
     }
 
@@ -87,19 +80,6 @@ public class DirectMessageController {
         Pageable pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         return ResponseEntity.ok(
                 directMessageService.getMessages(conversationId, user.getId(), pageable));
-    }
-
-    @Operation(summary = "Edit Direct Message")
-    @PatchMapping("/messages/{id}")
-    public ResponseEntity<DirectMessageResponse> editMessage(
-            @PathVariable String id,
-            @Valid @RequestBody EditMessageRequest request,
-            @AuthenticationPrincipal UserDetailsImpl user) {
-        if (user == null || user.getId() == null) {
-            throw new IllegalArgumentException("User is null or unauthenticated");
-        }
-        return ResponseEntity.ok(
-                directMessageService.editMessage(id, user.getId(), request));
     }
 
     @Operation(summary = "Init Conversation")
@@ -124,5 +104,37 @@ public class DirectMessageController {
         }
         ConversationResponse conv = directMessageService.getOrCreateConversation(user.getId(), friendId);
         return ResponseEntity.ok(conv);
+    }
+
+    @Operation(summary = "Edit Direct Message")
+    @PutMapping("/{messageId}")
+    public ResponseEntity<DirectMessageResponse> editMessage(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable String messageId, @Valid @RequestBody EditMessageRequest request) {
+
+        DirectMessageResponse response = directMessageService.editMessage(messageId, userDetails.getId(), request);
+        sendSocketToUser(response.getReceiverId(), response);
+        sendSocketToUser(userDetails.getId(), response);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Delete Direct Message")
+    @DeleteMapping("/{messageId}")
+    public ResponseEntity<Void> deleteMessage(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable String messageId) {
+
+        DirectMessageResponse response = directMessageService.deleteMessage(messageId, userDetails.getId());
+        sendSocketToUser(response.getReceiverId(), response);
+        sendSocketToUser(userDetails.getId(), response);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{messageId}/reactions")
+    public ResponseEntity<Void> addReaction(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable String messageId, @RequestParam String emoji) {
+        directMessageService.addReaction(messageId, userDetails.getId(), emoji);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/{messageId}/reactions")
+    public ResponseEntity<Void> removeReaction(@AuthenticationPrincipal UserDetailsImpl userDetails, @PathVariable String messageId) {
+        directMessageService.removeReaction(messageId, userDetails.getId());
+        return ResponseEntity.ok().build();
     }
 }

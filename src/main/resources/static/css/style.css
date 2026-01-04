@@ -2672,3 +2672,69 @@ input:checked+.slider:before {
     font-size: 12px;
     font-weight: 600;
 }
+
+/* --- Message Hover & Toolbar Styles --- */
+.message-wrapper {
+    position: relative; /* Để thanh toolbar định vị theo tin nhắn */
+    padding-right: 10px;
+}
+
+.message-wrapper:hover {
+    background-color: rgba(4, 4, 5, 0.07); /* Highlight nhẹ khi hover */
+}
+
+/* Ẩn thanh hành động mặc định */
+.message-actions-toolbar {
+    display: none;
+    position: absolute;
+    right: 16px;
+    top: -10px; /* Nổi lên trên một chút */
+    background-color: #36393f;
+    border: 1px solid #26272d;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 10;
+    padding: 2px;
+}
+
+/* Hiện thanh hành động khi hover vào tin nhắn */
+.message-wrapper:hover .message-actions-toolbar {
+    display: flex;
+    align-items: center;
+}
+
+.action-btn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #b9bbbe;
+    transition: background-color 0.2s, color 0.2s;
+    border-radius: 4px;
+}
+
+.action-btn:hover {
+    background-color: #40444b;
+    color: #dcddde;
+}
+
+.action-btn.delete:hover {
+    color: #ed4245;
+}
+
+/* Style cho nội dung tin nhắn */
+.msg-content-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.375rem;
+    color: #dcddde;
+}
+
+.msg-timestamp {
+    font-size: 0.75rem;
+    color: #72767d;
+    margin-left: 0.25rem;
+    font-weight: 400;
+}
