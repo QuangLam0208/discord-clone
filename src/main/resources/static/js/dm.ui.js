@@ -13,17 +13,31 @@ const DMUI = (() => {
       dmMessages: document.getElementById('dm-messages'),
       dmInput: document.getElementById('dm-input'),
       dmSendBtn: document.getElementById('dm-send-btn'),
+
+      // Tabs Dashboard
       dmTabAll: document.getElementById('dmTabAll'),
       dmTabPending: document.getElementById('dmTabPending'),
       dmTabAddFriend: document.getElementById('dmTabAddFriend'),
+
+      // Views Dashboard
       dmAllView: document.getElementById('dm-all-view'),
       dmPendingView: document.getElementById('dm-pending-view'),
       dmAddFriendView: document.getElementById('dm-addfriend-view'),
+
+      // Lists in Dashboard
       dmPendingInList: document.getElementById('dm-pending-in-list'),
       dmPendingOutList: document.getElementById('dm-pending-out-list'),
+
+      // Add Friend Input
       dmAddFriendInput: document.getElementById('dm-addfriend-username'),
       dmAddFriendSend: document.getElementById('dm-addfriend-send'),
       dmAddFriendResult: document.getElementById('dm-addfriend-result'),
+
+      // Sidebar Search
+      dmSidebarSearch: document.getElementById('dm-sidebar-search'),
+      dmSearchResults: document.getElementById('dm-search-results'),
+
+      // Center Search
       dmSearch: document.getElementById('dm-center-search'),
       dmSearchContainer: document.getElementById('dm-search-container'),
     };
@@ -59,18 +73,30 @@ const DMUI = (() => {
     btnFriends?.classList.add('active');
   }
 
-  function renderFriendsSidebar(friends, onSelectFriendCallback) {
+  // --- RENDER SIDEBAR ---
+  function renderFriendsSidebar(conversations, onSelectConversationCallback) {
     const { dmList } = els();
     if (!dmList) return;
-    dmList.innerHTML = friends.map(friendSidebarItem).join('');
+
+    dmList.innerHTML = conversations.map(c => friendSidebarItem(c)).join('');
+
     dmList.querySelectorAll('.channel-item.dm-item').forEach(item => {
       item.addEventListener('click', () => {
         resetActiveItems();
-        updateSidebarItem(Number(item.getAttribute('data-friend-id')), false);
+        // UI: Mark as read
+        const nameText = item.querySelector('.dm-name-text');
+        if (nameText) {
+            nameText.style.color = '#96989d';
+            nameText.style.fontWeight = '500';
+        }
         item.classList.add('active');
+
         const friendId = Number(item.getAttribute('data-friend-id'));
         const name = item.getAttribute('data-friend-name') || '';
-        onSelectFriendCallback && onSelectFriendCallback(friendId, name);
+
+        if (onSelectConversationCallback) {
+            onSelectConversationCallback(friendId, name);
+        }
       });
     });
   }
@@ -78,14 +104,22 @@ const DMUI = (() => {
   function friendSidebarItem(f) {
     const name = f.displayName || f.friendUsername || ('User ' + f.friendUserId);
     const initials = (name || 'U').split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
+    const avatar = f.avatarUrl
+        ? `<img src="${f.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+        : initials;
+
+    const isUnread = f.unreadCount > 0;
+    const color = isUnread ? '#ffffff' : '#96989d';
+    const weight = isUnread ? '700' : '500';
+
     return `
       <div class="channel-item dm-item" id="dm-item-${f.friendUserId}" data-friend-id="${f.friendUserId}" data-friend-name="${name}">
         <div style="display:flex; align-items:center; gap:12px; flex:1; overflow:hidden;">
           <div style="width:32px; height:32px; border-radius:50%; background:#3f4147; color:#cfd1d5; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0;">
-            ${initials}
+            ${avatar}
           </div>
           <div class="dm-name-container" style="display:flex; flex-direction:column; overflow:hidden;">
-            <span class="dm-name-text" style="color:#96989d; font-weight:500; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; font-size:15px;">
+            <span class="dm-name-text" style="color:${color}; font-weight:${weight}; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; font-size:15px;">
                 ${name}
             </span>
           </div>
@@ -111,8 +145,8 @@ const DMUI = (() => {
     dmCenterList.querySelectorAll('.dm-center-item').forEach(item => {
       item.addEventListener('click', () => {
         const friendId = Number(item.getAttribute('data-friend-id'));
-        const sidebarItem = document.getElementById(`dm-item-${friendId}`);
-        if (sidebarItem) sidebarItem.click();
+        const name = item.getAttribute('data-friend-name');
+        onSelectFriendCallback(friendId, name);
       });
     });
   }
@@ -136,83 +170,100 @@ const DMUI = (() => {
     return (dmMessages.scrollTop + dmMessages.clientHeight) >= (dmMessages.scrollHeight - threshold);
   }
 
-  // --- HTML CHO PHẦN INTRO (CHẶN & SPAM) ---
-  function getDMIntroHtml(friend) {
+  // --- HTML CHO PHẦN INTRO (FIX: Avatar -> Tên hiển thị -> Tên hệ thống) ---
+  function getDMIntroHtml(friend, relationshipStatus) {
     if (!friend) return '';
     const displayName = friend.displayName || friend.friendUsername || ('User ' + friend.friendUserId);
     const username = friend.friendUsername || ('user' + friend.friendUserId);
     const friendId = friend.friendUserId;
     const avatarUrl = friend.avatarUrl ? friend.avatarUrl : `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=random&size=128`;
 
+    let actionsHtml = '';
+    const btnStyle = 'padding: 6px 16px; border-radius: 3px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; margin-right: 8px; color: #fff; transition: background-color 0.2s;';
+    const btnGray = 'background-color: #4f545c;';
+    const btnRed = 'background-color: #ed4245;';
+    const btnGreen = 'background-color: #248046;';
+
+    if (relationshipStatus === 'FRIEND') {
+        actionsHtml = `
+            <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-unfriend" data-id="${friendId}" data-name="${displayName}">Xóa bạn</button>
+            <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
+        `;
+    } else if (relationshipStatus === 'BLOCKED') {
+        actionsHtml = `
+            <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-unblock" data-id="${friendId}" data-name="${displayName}">Bỏ chặn</button>
+            <button class="btn-dm-action" style="${btnStyle} ${btnRed}" id="btn-dm-spam" data-id="${friendId}" data-name="${displayName}" data-blocked="true">Báo cáo Spam</button>
+        `;
+    } else {
+        actionsHtml = `
+            <button class="btn-dm-action" style="${btnStyle} ${btnGreen}" id="btn-dm-addfriend" data-id="${friendId}" data-name="${displayName}">Thêm bạn</button>
+            <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
+            <button class="btn-dm-action" style="${btnStyle} ${btnRed}" id="btn-dm-spam" data-id="${friendId}" data-name="${displayName}" data-blocked="false">Báo cáo Spam</button>
+        `;
+    }
+
     return `
-      <div class="dm-intro-wrapper">
-        <div class="dm-intro-avatar-large"><img src="${avatarUrl}"></div>
-        <h1 class="dm-intro-displayname">${displayName}</h1>
-        <h3 class="dm-intro-username">${username}</h3>
-        <div class="dm-intro-text">
-            Đây là phần mở đầu lịch sử tin nhắn trực tiếp của bạn với <strong>${displayName}</strong>.<br>Hai bạn có 1 máy chủ chung.
+      <div class="dm-intro-wrapper" style="margin: 16px; display: flex; flex-direction: column; gap: 8px;">
+        <div class="dm-intro-avatar-large" style="width: 80px; height: 80px; margin-bottom: 12px;">
+            <img src="${avatarUrl}" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
         </div>
-        <div class="dm-intro-actions">
-            <button class="btn-dm-action" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
-            <button class="btn-dm-action" id="btn-dm-spam" data-id="${friendId}" data-name="${displayName}">Spam</button>
+
+        <h1 class="dm-intro-displayname" style="font-size: 28px; font-weight: 700; color: #fff; margin: 0;">${displayName}</h1>
+
+        <h3 class="dm-intro-username" style="font-size: 18px; font-weight: 500; color: #b9bbbe; margin: 0;">${username}</h3>
+
+        <div class="dm-intro-text" style="color: #b9bbbe; font-size: 14px; margin-top: 8px;">
+            Đây là phần mở đầu lịch sử tin nhắn trực tiếp của bạn với <strong>${displayName}</strong>.
         </div>
-      </div>`;
+        <div class="dm-intro-actions" style="margin-top: 16px;">
+            ${actionsHtml}
+        </div>
+      </div>
+      <div style="height: 1px; background-color: #3f4147; margin: 0 16px 16px 16px;"></div>`;
   }
 
-  // --- RENDER MESSAGES VÀ GẮN SỰ KIỆN CLICK ---
-  function renderMessages(list, currentUserId, displayedMsgIdsSet, friendInfo) {
+  function renderMessages(list, currentUserId, displayedMsgIdsSet, friendInfo, relationshipStatus) {
     const { dmMessages } = els();
     if (!dmMessages) return;
 
     displayedMsgIdsSet?.clear();
 
-    const messagesHtml = list.slice().reverse().map(m => {
+    let messagesToRender = list;
+    let blockNoticeHtml = '';
+
+    if (relationshipStatus === 'BLOCKED') {
+        messagesToRender = [];
+        blockNoticeHtml = `
+            <div style="display: flex; justify-content: center; margin: 20px 0;">
+                <span style="background-color: #36393f; padding: 8px 12px; border-radius: 4px; color: #dcddde; font-size: 14px; border: 1px solid #202225;">
+                    Tin nhắn đã bị ẩn vì bạn đang chặn người dùng này.
+                </span>
+            </div>
+        `;
+    }
+
+    const messagesHtml = messagesToRender.slice().reverse().map(m => {
       if (m.id != null && displayedMsgIdsSet) displayedMsgIdsSet.add(String(m.id));
       return msgBubble(m, currentUserId);
     }).join('');
 
-    const introHtml = getDMIntroHtml(friendInfo);
-    dmMessages.innerHTML = introHtml + messagesHtml;
+    const introHtml = getDMIntroHtml(friendInfo, relationshipStatus);
+    dmMessages.innerHTML = introHtml + blockNoticeHtml + messagesHtml;
+
     scrollToBottom(true);
 
-    // --- XỬ LÝ CLICK NÚT ---
+    // Bind Buttons
     const btnBlock = document.getElementById('btn-dm-block');
+    const btnUnblock = document.getElementById('btn-dm-unblock');
     const btnSpam = document.getElementById('btn-dm-spam');
+    const btnAddFriend = document.getElementById('btn-dm-addfriend');
+    const btnUnfriend = document.getElementById('btn-dm-unfriend');
 
-    if (btnBlock) {
-      btnBlock.onclick = async () => {
-        const uid = btnBlock.getAttribute('data-id');
-        const name = btnBlock.getAttribute('data-name');
-        console.log('Bấm nút Chặn:', uid, name); // Debug
-        if (confirm(`Bạn có chắc muốn chặn ${name}? Họ sẽ không thể nhắn tin cho bạn nữa.`)) {
-          try {
-            await DMApi.blockUser(uid);
-            alert('Đã chặn thành công.');
-            window.location.reload();
-          } catch (e) {
-            alert('Lỗi khi chặn: ' + e.message);
-          }
-        }
-      };
-    }
-
-    if (btnSpam) {
-      btnSpam.onclick = async () => {
-        const uid = btnSpam.getAttribute('data-id');
-        const name = btnSpam.getAttribute('data-name');
-        console.log('Bấm nút Spam:', uid, name); // Debug
-        if (confirm(`Báo cáo ${name} là Spam và chặn người này?`)) {
-          try {
-            await DMApi.reportUser(uid, 'SPAM');
-            await DMApi.blockUser(uid);
-            alert('Đã báo cáo và chặn thành công.');
-            window.location.reload();
-          } catch (e) {
-            alert('Lỗi khi xử lý spam: ' + e.message);
-          }
-        }
-      };
-    }
+    if (btnBlock) btnBlock.onclick = () => window.DM && window.DM.handleBlock(btnBlock.getAttribute('data-id'));
+    if (btnUnblock) btnUnblock.onclick = () => window.DM && window.DM.handleUnblock(btnUnblock.getAttribute('data-id'));
+    if (btnSpam) btnSpam.onclick = () => window.DM && window.DM.handleSpam(btnSpam.getAttribute('data-id'), btnSpam.getAttribute('data-blocked') === 'true');
+    if (btnAddFriend) btnAddFriend.onclick = () => window.DM && window.DM.handleAddFriend(btnAddFriend.getAttribute('data-id'));
+    if (btnUnfriend) btnUnfriend.onclick = () => window.DM && window.DM.handleUnfriend(btnUnfriend.getAttribute('data-id'));
   }
 
   function appendMessage(m, currentUserId, displayedMsgIdsSet) {
@@ -244,12 +295,13 @@ const DMUI = (() => {
     const retryAttr = isError ? `onclick="DM.retryMessage('${m.tempId}')" title="Nhấn để gửi lại"` : '';
 
     return `
-      <div class="message" id="msg-${m.id || m.tempId}" data-msg-id="${m.id || ''}" style="display:flex; ${mine ? 'justify-content:flex-end;' : ''}; opacity: ${m.status==='pending'?0.5:1};">
-        <div style="max-width:70%; background:${mine ? '#4752c4' : '#2b2d31'}; color:#fff; padding:8px 12px; border-radius:8px; ${errorStyle} ${cursor}" ${retryAttr}>
-          <div style="font-size:12px;color:#c7c7c7; margin-bottom:4px;">
-            ${time} ${isError ? '<span style="color:red; margin-left:5px;">(Lỗi - Gửi lại)</span>' : ''}
+      <div class="message" id="msg-${m.id || m.tempId}" data-msg-id="${m.id || ''}" style="display:flex; ${mine ? 'justify-content:flex-end;' : ''}; opacity: ${m.status==='pending'?0.5:1}; margin-top: 10px;">
+        <div style="max-width:70%; background:${mine ? '#5865f2' : '#2b2d31'}; color:#fff; padding:8px 12px; border-radius:8px; ${errorStyle} ${cursor}" ${retryAttr}>
+          <div style="font-size:12px;color:#e0e0e0; margin-bottom:4px; font-weight: 500;">
+             ${mine ? 'Bạn' : ''} <span style="font-weight: 400; opacity: 0.7; font-size: 11px; margin-left: 4px;">${time}</span>
+             ${isError ? '<span style="color:red; margin-left:5px;">(Lỗi - Gửi lại)</span>' : ''}
           </div>
-          <div>${safe}</div>
+          <div style="white-space: pre-wrap; word-break: break-word; line-height: 1.4;">${safe}</div>
         </div>
       </div>`;
   }
@@ -285,61 +337,59 @@ const DMUI = (() => {
     if (dmSearchContainer) dmSearchContainer.style.display = tab === 'add' ? 'none' : 'flex';
   }
 
-  function pendingInboundItem(r) {
-    const name = r.senderUsername || ('User ' + r.senderId);
-    return `
-      <div class="dm-pending-item" style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:8px; background:#2b2d31; color:#fff; margin-bottom:8px;">
-        <div style="display:flex; align-items:center; gap:12px;">
-          <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:#5865F2;"></div>
-          <div style="display:flex; flex-direction:column;">
-            <span>${name}</span>
-            <small style="color:#b5bac1;">Đã gửi lúc ${new Date(r.createdAt).toLocaleString()}</small>
-          </div>
-        </div>
-        <div style="display:flex; gap:8px;">
-          <button class="add-friend-btn" data-action="accept" data-request-id="${r.id}">Chấp nhận</button>
-          <button class="tab-item" data-action="decline" data-request-id="${r.id}">Từ chối</button>
-        </div>
-      </div>`;
-  }
-
-  function pendingOutboundItem(r) {
-    const name = r.recipientUsername || ('User ' + r.recipientId);
-    return `
-      <div class="dm-pending-item" style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:8px; background:#2b2d31; color:#fff; margin-bottom:8px;">
-        <div style="display:flex; align-items:center; gap:12px;">
-          <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:#5865F2;"></div>
-          <div style="display:flex; flex-direction:column;">
-            <span>${name}</span>
-            <small style="color:#b5bac1;">Đã gửi lúc ${new Date(r.createdAt).toLocaleString()}</small>
-          </div>
-        </div>
-        <div style="display:flex; gap:8px;">
-          <button class="tab-item" data-action="cancel" data-request-id="${r.id}">Huỷ</button>
-        </div>
-      </div>`;
-  }
-
   function renderPending(inbound, outbound) {
     const { dmPendingInList, dmPendingOutList } = els();
-    if (dmPendingInList) dmPendingInList.innerHTML = inbound.map(pendingInboundItem).join('');
-    if (dmPendingOutList) dmPendingOutList.innerHTML = outbound.map(pendingOutboundItem).join('');
+    if (dmPendingInList) {
+        dmPendingInList.innerHTML = inbound.map(r => {
+            const name = r.senderUsername || ('User ' + r.senderId);
+            return `
+              <div class="dm-pending-item" style="display:flex; align-items:center; justify-content:space-between; padding:10px; border-radius:8px; background:#2b2d31; color:#fff; margin-bottom:8px; border: 1px solid #3f4147;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:#5865F2;"></div>
+                  <div style="display:flex; flex-direction:column;">
+                    <span style="font-weight: 600;">${name}</span>
+                    <small style="color:#b5bac1;">Yêu cầu kết bạn đến</small>
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                  <button class="add-friend-btn" style="background-color: #248046;" data-action="accept" data-request-id="${r.id}">Chấp nhận</button>
+                  <button class="add-friend-btn" style="background-color: #ed4245;" data-action="decline" data-request-id="${r.id}">Từ chối</button>
+                </div>
+              </div>`;
+        }).join('');
+    }
+    if (dmPendingOutList) {
+        dmPendingOutList.innerHTML = outbound.map(r => {
+            const name = r.recipientUsername || ('User ' + r.recipientId);
+            return `
+              <div class="dm-pending-item" style="display:flex; align-items:center; justify-content:space-between; padding:10px; border-radius:8px; background:#2b2d31; color:#fff; margin-bottom:8px; border: 1px solid #3f4147;">
+                <div style="display:flex; align-items:center; gap:12px;">
+                  <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:#5865F2;"></div>
+                  <div style="display:flex; flex-direction:column;">
+                    <span style="font-weight: 600;">${name}</span>
+                    <small style="color:#b5bac1;">Yêu cầu kết bạn đi</small>
+                  </div>
+                </div>
+                <div style="display:flex; gap:8px;">
+                  <button class="add-friend-btn" style="background-color: #4f545c;" data-action="cancel" data-request-id="${r.id}">Huỷ</button>
+                </div>
+              </div>`;
+        }).join('');
+    }
   }
 
   async function reloadFriends() {
     try {
       const friends = await DMApi.fetchFriends();
-      renderFriendsSidebar(friends, onSelectFriendRef);
       renderFriendsCenter(friends, onSelectFriendRef);
-    } catch (e) {
-      console.error('Reload friends failed', e);
-    }
+    } catch (e) { console.error('Reload friends failed', e); }
   }
 
   function initFriendsDashboard({ friends, onSelectFriend }) {
     onSelectFriendRef = onSelectFriend;
     setActiveTab('all');
     renderFriendsCenter(friends, onSelectFriend);
+
     const { dmSearch } = els();
     dmSearch?.addEventListener('input', (e) => {
       const q = e.target.value || '';
@@ -348,6 +398,7 @@ const DMUI = (() => {
         renderFriendsCenter(list, onSelectFriend);
       }
     });
+
     const { dmAddFriendInput, dmAddFriendSend, dmAddFriendResult } = els();
     dmAddFriendSend?.addEventListener('click', async () => {
       const username = dmAddFriendInput?.value?.trim();
@@ -365,16 +416,13 @@ const DMUI = (() => {
         renderPending(inbound, outbound);
       } catch (e) {
         const msg = e.message.replace('Error: ', '');
-        if (msg.includes('Không tìm thấy')) {
-            dmAddFriendResult.textContent = 'Không tìm thấy người dùng này.';
-        } else {
-            dmAddFriendResult.textContent = msg;
-        }
+        dmAddFriendResult.textContent = msg.includes('Không tìm thấy') ? 'Không tìm thấy người dùng này.' : msg;
         dmAddFriendResult.style.color = '#ed4245';
       } finally {
         dmAddFriendSend.disabled = false;
       }
     });
+
     const { dmTabAll, dmTabPending, dmTabAddFriend } = els();
     dmTabAll?.addEventListener('click', () => { setActiveTab('all'); reloadFriends(); });
     dmTabPending?.addEventListener('click', async () => {
@@ -382,15 +430,17 @@ const DMUI = (() => {
       const inbound = await DMApi.listInboundRequests();
       const outbound = await DMApi.listOutboundRequests();
       renderPending(inbound, outbound);
-      document.querySelectorAll('#dm-pending-in-list [data-action="accept"]').forEach(btn => {
-        btn.addEventListener('click', async () => { try { await DMApi.acceptRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); await reloadFriends(); } catch (e) { alert('Không thể chấp nhận: ' + e); } });
-      });
-      document.querySelectorAll('#dm-pending-in-list [data-action="decline"]').forEach(btn => {
-        btn.addEventListener('click', async () => { try { await DMApi.declineRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); await reloadFriends(); } catch (e) { alert('Không thể từ chối: ' + e); } });
-      });
-      document.querySelectorAll('#dm-pending-out-list [data-action="cancel"]').forEach(btn => {
-        btn.addEventListener('click', async () => { try { await DMApi.cancelRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); await reloadFriends(); } catch (e) { alert('Không thể huỷ: ' + e); } });
-      });
+      setTimeout(() => {
+          document.querySelectorAll('#dm-pending-in-list [data-action="accept"]').forEach(btn => {
+            btn.addEventListener('click', async () => { try { await DMApi.acceptRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); await reloadFriends(); } catch (e) { alert('Lỗi: ' + e); } });
+          });
+          document.querySelectorAll('#dm-pending-in-list [data-action="decline"]').forEach(btn => {
+            btn.addEventListener('click', async () => { try { await DMApi.declineRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); } catch (e) { alert('Lỗi: ' + e); } });
+          });
+          document.querySelectorAll('#dm-pending-out-list [data-action="cancel"]').forEach(btn => {
+            btn.addEventListener('click', async () => { try { await DMApi.cancelRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); } catch (e) { alert('Lỗi: ' + e); } });
+          });
+      }, 100);
     });
     dmTabAddFriend?.addEventListener('click', () => { setActiveTab('add'); });
   }

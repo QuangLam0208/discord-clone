@@ -22,6 +22,9 @@ import org.springframework.web.bind.annotation.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/direct-messages")
 @Tag(name = "Direct Messages", description = "Operations for private 1-on-1 messaging")
@@ -33,7 +36,16 @@ public class DirectMessageController {
     private final SimpMessagingTemplate messagingTemplate;
     private final UserService userService;
 
-    @Operation(summary = "Send Direct Message", description = "Send a private message to another user.")
+    // --- API MỚI: Lấy danh sách hội thoại cho sidebar ---
+    @GetMapping("/conversations")
+    public ResponseEntity<List<Map<String, Object>>> getConversations(@AuthenticationPrincipal UserDetailsImpl user) {
+        if (user == null || user.getId() == null) {
+            throw new IllegalArgumentException("User is null or unauthenticated");
+        }
+        return ResponseEntity.ok(directMessageService.getConversationList(user.getId()));
+    }
+
+    @Operation(summary = "Send Direct Message")
     @PostMapping
     public ResponseEntity<DirectMessageResponse> sendMessage(
             @AuthenticationPrincipal UserDetailsImpl user,
@@ -42,7 +54,6 @@ public class DirectMessageController {
             throw new IllegalArgumentException("User is null or unauthenticated");
         }
         Long senderId = user.getId();
-        // 1. Lưu tin nhắn xuống DB
         DirectMessageResponse response = directMessageService.sendMessage(senderId, request);
         userService.findById(request.getReceiverId()).ifPresentOrElse(receiver -> {
             if (receiver.getUsername() != null) {
@@ -51,10 +62,8 @@ public class DirectMessageController {
                         "/queue/dm",
                         response
                 );
-                log.info("WS: Đã gửi tin nhắn đến hàng đợi của user: {}", receiver.getUsername());
             }
         }, () -> log.error("REST: Không tìm thấy người nhận ID: {}", request.getReceiverId()));
-        // 3. Gửi Real-time lại cho người gửi (để đồng bộ đa thiết bị/tab)
         if (user.getUsername() != null) {
             messagingTemplate.convertAndSendToUser(
                     user.getUsername(),
@@ -62,11 +71,10 @@ public class DirectMessageController {
                     response
             );
         }
-
         return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Get Conversation Messages", description = "Retrieve history of a direct message conversation.")
+    @Operation(summary = "Get Conversation Messages")
     @GetMapping("/conversation/{conversationId}")
     public ResponseEntity<Page<DirectMessageResponse>> getMessages(
             @PathVariable String conversationId,
@@ -81,7 +89,7 @@ public class DirectMessageController {
                 directMessageService.getMessages(conversationId, user.getId(), pageable));
     }
 
-    @Operation(summary = "Edit Direct Message", description = "Modify an existing direct message.")
+    @Operation(summary = "Edit Direct Message")
     @PatchMapping("/messages/{id}")
     public ResponseEntity<DirectMessageResponse> editMessage(
             @PathVariable String id,
@@ -94,7 +102,7 @@ public class DirectMessageController {
                 directMessageService.editMessage(id, user.getId(), request));
     }
 
-    @Operation(summary = "Init Conversation", description = "Get or create a conversation with a user by their ID.")
+    @Operation(summary = "Init Conversation")
     @PostMapping("/conversation/init")
     public ResponseEntity<ConversationResponse> initConversation(
             @AuthenticationPrincipal UserDetailsImpl user,
