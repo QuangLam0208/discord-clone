@@ -1,4 +1,3 @@
-
 // --- SERVER OVERVIEW TAB LOGIC ---
 
 window.updateServerPreviews = function (name, iconUrl) {

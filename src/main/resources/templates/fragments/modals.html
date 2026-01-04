@@ -15,6 +15,8 @@
         </div>
     </div>
 
+    <!-- Role Context Menu -->
+
     <div class="modal-overlay" id="createServerModal">
         <div class="modal-box">
             <button class="close-modal-btn" onclick="closeModal('createServerModal')">&times;</button>
@@ -69,7 +71,7 @@
                 <div class="input-group">
                     <label>TÊN KÊNH</label>
                     <div class="input-with-icon"><i class="fa-solid fa-hashtag input-icon"></i><input type="text"
-                                                                                                      placeholder="kênh-mới"></div>
+                            placeholder="kênh-mới"></div>
                 </div>
                 <div class="toggle-group">
                     <div class="toggle-label">
@@ -134,7 +136,7 @@
                 <div class="input-group">
                     <label>TÊN KÊNH</label>
                     <div class="input-with-icon"><i class="fa-solid fa-hashtag input-icon"></i><input type="text"
-                                                                                                      placeholder="kênh-mới"></div>
+                            placeholder="kênh-mới"></div>
                 </div>
                 <div class="toggle-group">
                     <div class="toggle-label">
@@ -166,13 +168,13 @@
                     <label>TÌM KIẾM BẠN BÈ</label>
                     <div class="search-box-invite">
                         <input type="text" id="invite-search-input" placeholder="Tìm kiếm bạn bè"
-                               onkeyup="filterInviteFriends()">
+                            onkeyup="filterInviteFriends()">
                         <i class="fa-solid fa-magnifying-glass" style="color: #b5bac1;"></i>
                     </div>
                 </div>
 
                 <div id="invite-friend-list" class="invite-friend-list custom-scrollbar"
-                     style="max-height: 200px; overflow-y: auto; margin-bottom: 20px;">
+                    style="max-height: 200px; overflow-y: auto; margin-bottom: 20px;">
                     <!-- Friend items will optionally be injected here by JS -->
                 </div>
 
@@ -221,7 +223,7 @@
                     <div class="input-group">
                         <label>CHỦ ĐỀ KÊNH (MÔ TẢ)</label>
                         <textarea id="edit-channel-desc" class="custom-textarea"
-                                  placeholder="Cho mọi người biết kênh này nói về cái gì" rows="3"></textarea>
+                            placeholder="Cho mọi người biết kênh này nói về cái gì" rows="3"></textarea>
                     </div>
 
                     <div class="setting-divider"></div>
@@ -268,7 +270,7 @@
                 </div>
                 <!-- Sidebar Items -->
                 <div class="settings-nav-item active" id="nav-server-overview"
-                     onclick="switchServerSettingsTab('overview')">
+                    onclick="switchServerSettingsTab('overview')">
                     Hồ sơ máy chủ
                 </div>
                 <div class="settings-nav-item" id="nav-server-members" onclick="switchServerSettingsTab('members')">
@@ -287,7 +289,7 @@
                 <div class="settings-nav-separator"></div>
 
                 <div class="settings-nav-item danger" id="nav-server-delete"
-                     onclick="switchServerSettingsTab('delete')">
+                    onclick="switchServerSettingsTab('delete')">
                     Xóa Máy Chủ
                     <i class="fa-solid fa-trash-can" style="margin-left: auto;"></i>
                 </div>
@@ -317,16 +319,16 @@
                                     </div>
                                     <div>
                                         <div
-                                                style="font-size: 12px; color: #b5bac1; margin-bottom: 8px; max-width: 200px;">
+                                            style="font-size: 12px; color: #b5bac1; margin-bottom: 8px; max-width: 200px;">
                                             Chúng tôi khuyến nghị sử dụng hình ảnh có kích thước tối thiểu 512x512.
                                         </div>
                                         <button class="btn-upload-icon"
-                                                onclick="document.getElementById('editServerIconInput').click()">Thay Đổi
+                                            onclick="document.getElementById('editServerIconInput').click()">Thay Đổi
                                             Biểu Tượng</button>
                                         <button class="remove-icon-btn" onclick="removeServerIcon()">Xóa biểu
                                             tượng</button>
                                         <input type="file" id="editServerIconInput" style="display: none;"
-                                               accept="image/*">
+                                            accept="image/*">
                                     </div>
                                 </div>
                             </div>
@@ -339,7 +341,7 @@
                             <div class="input-group">
                                 <label>MÔ TẢ MÁY CHỦ</label>
                                 <textarea id="edit-server-desc" class="custom-textarea" rows="3"
-                                          placeholder="Server này nói về cái gì?"></textarea>
+                                    placeholder="Server này nói về cái gì?"></textarea>
                             </div>
                         </div>
 
@@ -357,9 +359,10 @@
                                         <div class="sc-name" id="preview-card-name">Tên Máy Chủ</div>
                                         <div class="sc-status">
                                             <span style="display: flex; align-items: center; gap: 4px;">
-                                                <div class="status-dot"></div> 1 Trực tuyến
+                                                <div class="status-dot"></div> <span id="preview-online-count">1</span>
+                                                Trực tuyến
                                             </span>
-                                            <span>• 3 Thành viên</span>
+                                            <span>• <span id="preview-member-count">3</span> Thành viên</span>
                                         </div>
                                     </div>
                                 </div>
@@ -381,7 +384,7 @@
                     <h2>Thành viên</h2>
                     <div class="members-controls-row">
                         <span
-                                style="font-size: 12px; font-weight: 700; color: #b5bac1; text-transform: uppercase;">Thành
+                            style="font-size: 12px; font-weight: 700; color: #b5bac1; text-transform: uppercase;">Thành
                             viên gần đây</span>
                         <div class="members-search-box-styled">
                             <input type="text" id="member-search-input" placeholder="Tìm kiếm">
@@ -392,13 +395,13 @@
                     <div class="members-list-wrapper">
                         <table class="members-table styled-table">
                             <thead>
-                            <tr>
-                                <th style="width: 35%; padding-left: 16px;">TÊN</th>
-                                <th style="width: 20%;">GIA NHẬP MÁY CHỦ</th>
-                                <th style="width: 20%;">THAM GIA DISCORD</th>
-                                <th style="width: 20%;">VAI TRÒ</th>
-                                <th style="width: 5%;"></th> <!-- Actions -->
-                            </tr>
+                                <tr>
+                                    <th style="width: 35%; padding-left: 16px;">TÊN</th>
+                                    <th style="width: 20%;">GIA NHẬP MÁY CHỦ</th>
+                                    <th style="width: 20%;">THAM GIA DISCORD</th>
+                                    <th style="width: 20%;">VAI TRÒ</th>
+                                    <th style="width: 5%;"></th> <!-- Actions -->
+                                </tr>
                             </thead>
                             <tbody id="members-table-body">
                             <!-- JS renders rows here -->
@@ -411,33 +414,266 @@
                     </div>
                 </div>
 
+
+
+                <!-- TAB: ROLES -->
+                <div id="tab-server-roles" class="settings-tab-content">
+                    <h2>Vai Trò</h2>
+                    <p class="placeholder-text" style="font-size: 13px; margin-bottom: 16px;">
+                        Thành viên sử dụng màu của vai trò cao nhất trong danh sách.
+                    </p>
+
+                    <div class="members-controls-row" style="margin-bottom: 24px;">
+                        <div class="members-search-box-styled search-box-flex">
+                            <input type="text" id="role-search-input" placeholder="Tìm kiếm vai trò">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <button class="btn-create-role-styled" onclick="createNewRoleFromEditor()"
+                            style="margin-left: 16px;">Tạo Vai Trò</button>
+                    </div>
+
+                    <div class="roles-list-header"
+                        style="display: flex; color: #b5bac1; font-size: 12px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; padding: 0 10px;">
+                        <span style="flex: 1;">VAI TRÒ - <span id="roles-count-label">0</span></span>
+                        <span style="width: 100px; text-align: center;">THÀNH VIÊN</span>
+                        <span style="width: 80px;"></span>
+                    </div>
+
+                    <div class="roles-list-body" id="roles-list-body">
+                        <!-- Roles will be rendered here -->
+                    </div>
+                </div>
+
+                <!-- TAB: AUDIT LOG -->
+                <div id="tab-server-audit" class="settings-tab-content">
+                    <h2>Nhật ký chỉnh sửa</h2>
+
+                    <div class="members-controls-row" style="margin-bottom: 24px; gap: 10px;">
+                        <div class="members-search-box-styled search-box-flex" style="flex: 1;">
+                            <input type="text" id="audit-log-search"
+                                placeholder="Tìm kiếm theo người dùng hoặc chi tiết" oninput="filterAuditLogs()">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <select id="audit-log-filter-action" class="audit-filter-select" onchange="filterAuditLogs()"
+                            style="background-color: #1e1f22; color: #dbdee1; border: none; padding: 8px; border-radius: 4px; outline: none; cursor: pointer;">
+                            <option value="ALL">Tất cả hành động</option>
+                            <option value="SERVER_UPDATE">Cập nhật Server</option>
+                            <option value="CHANNEL">Kênh</option>
+                            <option value="ROLE">Vai trò</option>
+                            <option value="MEMBER">Thành viên</option>
+                        </select>
+                    </div>
+
+                    <div class="audit-log-list custom-scrollbar" id="audit-log-list-container"
+                        style="flex: 1; overflow-y: auto; padding-right: 10px;">
+                        <!-- Logs will be rendered here -->
+                        <div style="text-align: center; color: #b5bac1; padding: 20px;">Đang tải nhật ký...</div>
+                    </div>
+                </div>
+
+                <!-- TAB: BANS -->
+                <div id="tab-server-bans" class="settings-tab-content">
+                    <h2 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 700;">Lệnh Cấm</h2>
+                    <p
+                        style="color: #b5bac1; font-size: 13px; margin-bottom: 20px; border-bottom: 1px solid #3f4147; padding-bottom: 20px;">
+                        Danh sách các thành viên bị cấm. Nhấp vào tên để thu hồi lệnh cấm.
+                    </p>
+
+                    <div class="members-controls-row" style="margin-bottom: 24px; gap: 10px;">
+                        <div class="members-search-box-styled search-box-flex" style="flex: 1;">
+                            <input type="text" id="server-bans-search" placeholder="Tìm kiếm theo tên"
+                                oninput="filterServerBans()">
+                            <i class="fas fa-search"></i>
+                        </div>
+                    </div>
+
+                    <div
+                        style="font-weight: 700; color: #b5bac1; margin-bottom: 8px; font-size: 12px; text-transform: uppercase;">
+                        DANH SÁCH BỊ CẤM - <span id="bans-count-label">0</span>
+                    </div>
+                    <div id="server-bans-list" class="members-list-wrapper"
+                        style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
+                        <!-- JS renders simple rows here -->
+                    </div>
+
+                    <!-- Unban Confirmation Modal (Hidden by default, or used via Overlay) -->
+                    <!-- We can use a simple confirm() or a custom overlay. User requested "hiển thị ra thông báo".
+                         I will implement a small custom overlay inside this tab or use the notification system.
+                         For better UX, I'll append a hidden overlay div for this logic. -->
+                    <div id="unban-confirm-overlay"
+                        style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 10;">
+                        <div
+                            style="background: #313338; padding: 20px; border-radius: 5px; width: 300px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                            <h3 style="color: white; margin-bottom: 15px;">Thu hồi lệnh cấm?</h3>
+                            <p id="unban-confirm-text" style="color: #b5bac1; margin-bottom: 20px;">Bạn có chắc muốn gỡ
+                                ban cho ...?</p>
+                            <div style="display: flex; gap: 10px; justify-content: center;">
+                                <button onclick="closeUnbanConfirm()"
+                                    style="padding: 8px 16px; background: transparent; color: white; border: none; cursor: pointer; border-radius: 3px; font-weight: 500;">Hủy</button>
+                                <button id="btn-confirm-revoke-ban"
+                                    style="padding: 8px 16px; background: #ed4245; color: white; border: none; cursor: pointer; border-radius: 3px; font-weight: 500;">Thu
+                                    Hồi</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB: DELETE -->
+                <div id="tab-server-delete" class="settings-tab-content">
+                    <h2>Xóa Máy Chủ</h2>
+                    <div class="warning-box">
+                        <div class="warning-msg">Bạn có chắc chắn muốn xóa máy chủ này? <strong
+                                id="delete-server-name-display"></strong>? <br>Hành động này không thể hoàn tác.</div>
+                        <button class="btn-danger-large" onclick="confirmDeleteServer()">Xóa Máy Chủ</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ROLE EDITOR FULL SCREEN VIEW -->
+        <div class="settings-layout roles-editor-layout" id="roles-editor-view" style="display: none;">
+            <div class="settings-sidebar role-edit-sidebar">
+                <div class="role-edit-nav-header" onclick="closeRoleEditor()">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>QUAY LẠI</span>
+                </div>
+                <div class="settings-nav-separator"></div>
+                <div class="role-list-header-small"
+                    style="padding: 6px 10px; font-size: 12px; font-weight: 700; color: #b5bac1;">VAI TRÒ</div>
+                <div class="role-edit-list" id="role-edit-list-container">
+                    <!-- List of roles to select will be rendered here via JS -->
+                </div>
+                <div class="role-edit-footer" style="padding: 10px; border-top: 1px solid #2b2d31;">
+                    <button class="btn-create-role-sidebar" onclick="createNewRoleFromEditor()"
+                        style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: transparent; border: none; color: #b5bac1; font-size: 13px; cursor: pointer; padding: 5px;">
+                        <i class="fas fa-plus"></i> Tạo vai trò
+                    </button>
+                </div>
             </div>
 
-            <!-- TAB: ROLES -->
-            <div id="tab-server-roles" class="settings-tab-content">
-                <h2>Vai trò</h2>
-                <p class="placeholder-text">Quản lý vai trò sẽ ở đây.</p>
-            </div>
+            <div class="settings-content-wrapper role-edit-content">
+                <div class="settings-close-btn" onclick="closeModal('serverSettingsModal')">
+                    <i class="fa-solid fa-xmark"></i>
+                    <span>ESC</span>
+                </div>
 
-            <!-- TAB: AUDIT LOG -->
-            <div id="tab-server-audit" class="settings-tab-content">
-                <h2>Nhật ký chỉnh sửa</h2>
-                <p class="placeholder-text">Nhật ký thay đổi sẽ hiển thị tại đây.</p>
-            </div>
+                <div id="role-editor-main-content">
+                    <h2 id="role-editor-title" style="margin-bottom: 20px;">SỬA ĐỔI VAI TRÒ</h2>
 
-            <!-- TAB: BANS -->
-            <div id="tab-server-bans" class="settings-tab-content">
-                <h2>Chặn</h2>
-                <p class="placeholder-text">Danh sách người dùng bị chặn.</p>
-            </div>
+                    <div class="role-editor-tabs"
+                        style="display: flex; gap: 20px; border-bottom: 1px solid #3f4147; margin-bottom: 20px; padding-bottom: 10px;">
+                        <div class="role-tab-item active" style="color: white; cursor: pointer; font-weight: 500;"
+                            onclick="switchRoleEditorTab('display')">Hiển thị</div>
+                        <div class="role-tab-item" style="color: #b5bac1; cursor: pointer; font-weight: 500;"
+                            onclick="switchRoleEditorTab('permissions')">Quyền hạn</div>
 
-            <!-- TAB: DELETE -->
-            <div id="tab-server-delete" class="settings-tab-content">
-                <h2>Xóa Máy Chủ</h2>
-                <div class="warning-box">
-                    <div class="warning-msg">Bạn có chắc chắn muốn xóa máy chủ này? <strong
-                            id="delete-server-name-display"></strong>? <br>Hành động này không thể hoàn tác.</div>
-                    <button class="btn-danger-large" onclick="confirmDeleteServer()">Xóa Máy Chủ</button>
+                        <div class="role-tab-item" style="color: #b5bac1; cursor: pointer; font-weight: 500;"
+                            onclick="switchRoleEditorTab('members')">Quản lý thành viên</div>
+                    </div>
+
+                    <div class="role-tab-content active" id="role-tab-display">
+                        <div style="display: flex; gap: 20px; align-items: flex-start;">
+                            <div class="input-group" style="flex: 1;">
+                                <label>TÊN VAI TRÒ</label>
+                                <input type="text" id="edit-role-name" class="role-input" oninput="showRoleSaveBar()"
+                                    style="background-color: #1e1f22; border: none; padding: 10px; color: #dbdee1; width: 100%; border-radius: 4px; margin-top: 8px;">
+
+                                <div style="margin-top: 20px; border-top: 1px solid #3f4147; padding-top: 20px;">
+                                    <button class="btn-delete-role" onclick="deleteCurrentRole()" style="width: auto;">
+                                        Xóa Vai Trò
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="input-group" style="flex: 1;">
+                                <label>MÀU VAI TRÒ</label>
+                                <div class="role-color-picker"
+                                    style="margin-top: 8px; display: flex; gap: 10px; align-items: center; background-color: #1e1f22; padding: 5px; border-radius: 4px;">
+                                    <input type="color" id="edit-role-color"
+                                        oninput="updateRoleColorPreview(this.value); showRoleSaveBar()"
+                                        style="height: 50px; width: 100%; border: none; background: transparent; cursor: pointer;">
+                                </div>
+                                <div style="font-size: 13px; color: #b5bac1; margin-top: 6px;">Chọn màu để phân biệt vai
+                                    trò này.</div>
+                            </div>
+                        </div>
+
+
+
+
+                    </div>
+
+                    <div class="role-tab-content" id="role-tab-permissions"
+                        style="display:none; height: 100%; flex-direction: column;">
+                        <div
+                            style="padding-bottom: 16px; border-bottom: 1px solid #3f4147; margin-bottom: 16px; position: relative;">
+                            <input type="text" id="permission-search-input" placeholder="Tìm quyền hạn"
+                                class="role-input"
+                                style="background-color: #1e1f22; border: none; padding: 10px; color: #dbdee1; width: 100%; border-radius: 4px;">
+                            <i class="fas fa-search"
+                                style="position: absolute; right: 10px; top: 10px; color: #b5bac1;"></i>
+                        </div>
+                        <div id="role-permissions-list" style="flex: 1; overflow-y: auto; padding-right: 8px;">
+                            <!-- Permissions will be rendered here dynamically -->
+                        </div>
+                    </div>
+
+
+
+                    <div class="role-tab-content" id="role-tab-members"
+                        style="display:none; height: 100%; flex-direction: column;">
+                        <div style="display:flex; gap: 10px; margin-bottom: 20px; align-items: center;">
+                            <div class="members-search-box-styled search-box-flex" style="flex:1;">
+                                <input type="text" id="role-members-search" placeholder="Tìm kiếm thành viên"
+                                    oninput="filterRoleMembers()">
+                                <i class="fas fa-search"></i>
+                            </div>
+                            <button class="btn-create-role-styled" onclick="openAddRoleMemberModal()">Thêm Thành
+                                Viên</button>
+                        </div>
+                        <div id="role-members-list" style="flex:1; overflow-y:auto;">
+                            <!-- Items go here -->
+                        </div>
+                    </div>
+
+                    <!-- Add Role Member Modal Overlay -->
+                    <div id="add-role-member-modal"
+                        style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10002; justify-content: center; align-items: center;">
+                        <div
+                            style="background: #313338; width: 440px; border-radius: 4px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 0 1px #1e1f22;">
+                            <div
+                                style="padding: 16px; display: flex; justify-content: space-between; align-items: center;">
+                                <h3 style="color: white; margin: 0; font-size: 16px; font-weight: 600;">Thêm thành viên
+                                    vào
+                                    vai trò</h3>
+                                <i class="fas fa-times" onclick="closeAddRoleMemberModal()"
+                                    style="color: #b5bac1; cursor: pointer;"></i>
+                            </div>
+                            <div style="padding: 0 16px 16px;">
+                                <div class="members-search-box-styled" style="width: 100%;">
+                                    <input type="text" id="add-role-member-search" placeholder="Tìm kiếm thành viên"
+                                        oninput="filterAddRoleMembers()">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                            </div>
+                            <div id="add-role-member-list"
+                                style="height: 300px; overflow-y: auto; padding: 0 8px 8px 8px;">
+                                <!-- Candidates go here -->
+                            </div>
+                            <div
+                                style="padding: 16px; background: #2b2d31; display: flex; justify-content: flex-end; gap: 10px;">
+                                <button class="btn-cancel" onclick="closeAddRoleMemberModal()">Hủy</button>
+                                <button class="btn-primary" onclick="submitAddRoleMembers()">Thêm</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="save-notice-bar" id="role-save-bar">
+                    <span>Bạn có thay đổi chưa lưu!</span>
+                    <div class="save-actions">
+                        <button class="btn-reset" onclick="resetRoleChanges()">ĐẶT LẠI</button>
+                        <button class="btn-save" onclick="saveRoleChanges()">LƯU THAY ĐỔI</button>
+                    </div>
                 </div>
             </div>
         </div>

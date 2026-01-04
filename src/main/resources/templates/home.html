@@ -10,11 +10,15 @@
 </head>
 
 <body>
+
 <div class="app-layout" id="app" style="display: none;">
+
     <!-- Sidebar (Server Nav) -->
     <nav th:replace="~{fragments/server-nav :: server-nav}"></nav>
+
     <!-- Channels Sidebar -->
     <aside th:replace="~{fragments/channel-sidebar :: channel-sidebar}"></aside>
+
     <!-- Chat Content -->
     <main th:replace="~{fragments/chat-content :: chat-content}"></main>
 </div>

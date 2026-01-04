@@ -28,8 +28,7 @@ public class ServerResponse {
     private int onlineCount;
 
     public static ServerResponse from(Server server) {
-        if (server == null)
-            return null;
+        if (server == null) return null;
         return ServerResponse.builder()
                 .id(server.getId())
                 .name(server.getName())

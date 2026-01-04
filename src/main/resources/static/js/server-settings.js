@@ -1,4 +1,3 @@
-
 // --- SERVER SETTINGS MODAL & PLUMBING ---
 
 window.calculateTimeAgo = function (dateString) {

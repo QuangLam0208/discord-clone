@@ -1,4 +1,3 @@
-
 // --- MEMBER MANAGEMENT LOGIC ---
 if (!window.state) { window.state = {}; }
 

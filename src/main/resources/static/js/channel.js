@@ -12,6 +12,11 @@ window.loadCategoriesAndChannels = async function (serverId) {
             Api.get(`/api/servers/${serverId}/channels`)
         ]);
 
+        // Ensure WebSocket is connected even if no channel is selected yet
+        if (window.connectChannelSocket) {
+            window.connectChannelSocket(null);
+        }
+
         const categoryMap = {};
         const nullCategoryChannels = [];
 
@@ -366,19 +371,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
                     }
 
+                    // Luôn hiển thị nút Cài đặt cho mọi người để xem danh sách thành viên
+                    ctxMenu.innerHTML += `
+                        <div class="menu-item" onclick="openServerSettings('${serverId}')">
+                            <span>Cài đặt</span><i class="fa-solid fa-gear"></i>
+                        </div>
+                        <div class="menu-separator"></div>`;
+
+                    // Chỉ chủ server mới được Xóa Server
                     if (isOwner) {
                         ctxMenu.innerHTML += `
-                            <div class="menu-item" onclick="openServerSettings('${serverId}')">
-                                <span>Cài đặt</span><i class="fa-solid fa-gear"></i>
-                            </div>
-                            <div class="menu-separator"></div>
                             <div class="menu-item logout" onclick="deleteServer('${serverId}')">
                                 <span>Xóa Server</span><i class="fa-solid fa-trash"></i>
-                            </div>`;
-                    } else {
-                        ctxMenu.innerHTML += `
-                             <div class="menu-item" style="cursor: default; color: #aaa;">
-                                <span>Chỉ chủ server mới được sửa/xóa</span>
                             </div>`;
                     }
                 }
