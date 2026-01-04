@@ -2,6 +2,7 @@ const DM = (() => {
   const st = {
     currentUserId: null,
     friends: [],
+    blockedUsers: [],
     conversations: [],
     activeFriendId: null,
     activeFriendName: '',
@@ -34,7 +35,6 @@ const DM = (() => {
         st.activeFriendName = friendName || ('User ' + friendId);
         st.unreadCounts.set(friendId, 0);
 
-        // Tìm info
         let friendInfo = st.conversations.find(c => c.friendUserId == friendId);
         if(!friendInfo) {
             friendInfo = st.friends.find(f => f.friendUserId == friendId) || {
@@ -75,10 +75,21 @@ const DM = (() => {
                 DMUI.updateSidebarItem(friendId, false);
             }
 
-            // --- LOGIC CHECK STATUS ---
+            // --- 2. LOGIC CHECK STATUS MỚI (CÓ CHECK BLOCK) ---
             const isFriend = st.friends.some(f => f.friendUserId == friendId);
-            let status = isFriend ? 'FRIEND' : 'NOT_FRIEND';
+            // Kiểm tra xem ID này có nằm trong danh sách chặn không
+            const isBlocked = st.blockedUsers.some(f => String(f.friendUserId) === String(friendId));
+
+            let status = 'NOT_FRIEND';
+
+            if (isBlocked) {
+                status = 'BLOCKED';
+            } else if (isFriend) {
+                status = 'FRIEND';
+            }
+
             let msgs = [];
+
             if (status === 'NOT_FRIEND') {
                 const [messages, outboundRequests, inboundRequests] = await Promise.all([
                     DMApi.fetchMessages(st.conversationId, 0, 50),
@@ -95,9 +106,11 @@ const DM = (() => {
                     status = 'SENT_REQUEST';
                 }
             } else {
+                // Nếu là FRIEND hoặc BLOCKED thì cứ tải tin nhắn
                 msgs = await DMApi.fetchMessages(st.conversationId, 0, 50);
             }
 
+            // Gửi status chính xác ('BLOCKED') sang cho UI vẽ 2 nút Bỏ chặn & Spam
             DMUI.renderMessages(msgs, st.currentUserId, st.displayedMsgIds, friendInfo, status);
 
         } catch (e) {
@@ -170,90 +183,187 @@ const DM = (() => {
   }
 
   async function onIncomingMessage(msg) {
-      if (String(msg.senderId) === String(st.currentUserId)) return;
-      const msgConvId = String(msg.conversationId || '');
-      const currentConvId = String(st.conversationId || '');
-      const conversationExists = st.conversations.some(c => String(c.conversationId) === msgConvId);
-      if (!conversationExists) {
-          try {
-              const newConvos = await DMApi.fetchAllConversations();
-              st.conversations = newConvos;
-              DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
-          } catch (e) { console.error('Error syncing new conversation:', e); }
-      }
-      if (st.activeFriendId && msgConvId === currentConvId) {
-        DMUI.appendMessage(msg, st.currentUserId, st.displayedMsgIds);
-      } else {
-        const friendId = msg.senderId;
-        st.unreadCounts.set(friendId, (st.unreadCounts.get(friendId) || 0) + 1);
-        if (conversationExists) {
-           DMUI.updateSidebarItem(friendId, true);
-           const idx = st.conversations.findIndex(c => String(c.conversationId) === msgConvId);
-           if (idx > 0) {
-               const [item] = st.conversations.splice(idx, 1);
-               st.conversations.unshift(item);
-               DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
-               DMUI.updateSidebarItem(friendId, true);
-           }
+        if (String(msg.senderId) === String(st.currentUserId)) return;
+
+        const msgConvId = String(msg.conversationId || '');
+        const currentConvId = String(st.conversationId || '');
+
+        let conversationExists = st.conversations.some(c => String(c.conversationId) === msgConvId);
+
+        if (!conversationExists) {
+            try {
+                const newConvos = await DMApi.fetchAllConversations();
+                st.conversations = newConvos;
+                DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
+                conversationExists = true;
+            } catch (e) { console.error('Error syncing new conversation:', e); }
         }
-      }
+
+        if (st.activeFriendId && msgConvId === currentConvId) {
+            DMUI.appendMessage(msg, st.currentUserId, st.displayedMsgIds);
+        }
+        else {
+          const friendId = msg.senderId;
+          st.unreadCounts.set(friendId, (st.unreadCounts.get(friendId) || 0) + 1);
+          if (conversationExists) {
+             const idx = st.conversations.findIndex(c => String(c.conversationId) === msgConvId);
+             if (idx >= 0) {
+                 if (idx > 0) {
+                     const [item] = st.conversations.splice(idx, 1);
+                     st.conversations.unshift(item);
+                     DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
+                 }
+                 setTimeout(() => {
+                     DMUI.updateSidebarItem(friendId, true);
+                 }, 10);
+             }
+          }
+        }
     }
 
-  // --- ACTIONS ---
+  // --- ACTIONS---
   async function handleBlock(uid) {
-      if(!confirm('Chặn người dùng này?')) return;
-      try {
-          await DMApi.blockUser(uid);
-          // Force update UI -> BLOCKED
-          DMUI.renderMessages([], st.currentUserId, st.displayedMsgIds, {friendUserId: uid}, 'BLOCKED');
-      } catch(e) { alert(e.message); }
-  }
+        const result = await Swal.fire({
+            title: 'Chặn người dùng?',
+            text: "Bạn sẽ không nhận được tin nhắn từ họ nữa.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ed4245',
+            cancelButtonColor: '#7289da',
+            confirmButtonText: 'Chặn',
+            cancelButtonText: 'Hủy',
+            background: '#36393f',
+            color: '#fff'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                await DMApi.blockUser(uid);
+
+                try { st.blockedUsers = await DMApi.fetchBlockedUsers(); } catch(e) {}
+                st.friends = await DMApi.fetchFriends();
+
+                if (String(st.activeFriendId) === String(uid)) {
+                    await onSelectFriend(uid);
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Đã chặn',
+                    toast: true,
+                    position: 'bottom-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    background: '#36393f',
+                    color: '#fff'
+                });
+            } catch(e) {
+                Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' });
+            }
+        }
+    }
 
   async function handleUnblock(uid) {
-      try {
-          await DMApi.unblockUser(uid);
-          alert('Đã bỏ chặn.');
-          onSelectFriend(uid);
-      } catch(e) { alert(e.message); }
-  }
+        try {
+            await DMApi.unblockUser(uid);
+
+            try { st.blockedUsers = await DMApi.fetchBlockedUsers(); } catch(e) {}
+
+            if (String(st.activeFriendId) === String(uid)) {
+                await onSelectFriend(uid);
+            }
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Đã bỏ chặn',
+                toast: true,
+                position: 'bottom-end',
+                showConfirmButton: false,
+                timer: 3000,
+                background: '#36393f',
+                color: '#fff'
+            });
+        } catch(e) {
+            Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' });
+        }
+    }
 
   async function handleUnfriend(uid) {
-        if(!confirm('Xóa bạn?')) return;
-        try {
-            await DMApi.unfriend(uid);
-            st.friends = st.friends.filter(f => f.friendUserId != uid);
-            if (document.getElementById('dm-all-view').style.display !== 'none') {
-                DMUI.renderFriendsCenter(st.friends, onSelectFriend);
+        const result = await Swal.fire({
+            title: 'Xóa bạn bè?',
+            text: "Bạn có chắc chắn muốn xóa người này khỏi danh sách bạn bè?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#ed4245',
+            cancelButtonColor: '#7289da',
+            confirmButtonText: 'Xóa bạn',
+            cancelButtonText: 'Hủy',
+            background: '#36393f',
+            color: '#fff'
+        });
+
+        if (result.isConfirmed) {
+            try {
+                await DMApi.unfriend(uid);
+
+                st.friends = st.friends.filter(f => f.friendUserId != uid);
+                if (document.getElementById('dm-all-view').style.display !== 'none') {
+                    DMUI.renderFriendsCenter(st.friends, onSelectFriend);
+                }
+                const countEl = document.getElementById('dm-center-count');
+                if(countEl) countEl.textContent = st.friends.length;
+
+                if (String(st.activeFriendId) === String(uid)) {
+                    await onSelectFriend(uid);
+                }
+
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Đã xóa bạn',
+                    toast: true,
+                    position: 'bottom-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    background: '#36393f',
+                    color: '#fff'
+                });
+            } catch(e) {
+                Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' });
             }
-            const countEl = document.getElementById('dm-center-count');
-            if(countEl) countEl.textContent = st.friends.length;
-            if (st.activeFriendId == uid) {
-                onSelectFriend(uid);
-            }
-        } catch(e) { alert(e.message); }
+        }
     }
 
   async function handleAddFriend(uid) {
-        try {
-            await DMApi.sendFriendRequestById(uid);
-            const btnAdd = document.getElementById('btn-dm-addfriend');
-            if (btnAdd) {
-                btnAdd.textContent = 'Đã gửi yêu cầu kết bạn';
-                btnAdd.disabled = true;
+          try {
+              await DMApi.sendFriendRequestById(uid);
 
-                btnAdd.style.backgroundColor = '#5865F2';
-                btnAdd.style.color = '#ffffff';
-                btnAdd.style.cursor = 'not-allowed';
-                btnAdd.style.opacity = '0.5';
-            }
-            const btnSpam = document.getElementById('btn-dm-spam');
-            if (btnSpam) {
-                btnSpam.style.display = 'none';
-            }
-        } catch(e) {
-            alert(e.message);
-        }
-    }
+              const btnAdd = document.getElementById('btn-dm-addfriend');
+              if (btnAdd) {
+                  btnAdd.textContent = 'Đã gửi yêu cầu kết bạn';
+                  btnAdd.disabled = true;
+                  btnAdd.style.backgroundColor = '#5865F2';
+                  btnAdd.style.color = '#ffffff';
+                  btnAdd.style.cursor = 'not-allowed';
+                  btnAdd.style.opacity = '0.5';
+              }
+              const btnSpam = document.getElementById('btn-dm-spam');
+              if (btnSpam) btnSpam.style.display = 'none';
+
+              Swal.fire({
+                    icon: 'success',
+                    title: 'Đã gửi lời mời',
+                    toast: true,
+                    position: 'bottom-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    background: '#36393f',
+                    color: '#fff'
+              });
+
+          } catch(e) {
+              Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' });
+          }
+      }
 
   function handleSpam(uid, isBlocked) {
       Swal.fire({
@@ -281,8 +391,7 @@ const DM = (() => {
                           cancelButtonText: 'Xong'
                       }).then(async (r2) => {
                           if (r2.isConfirmed) {
-                              await DMApi.blockUser(uid);
-                              DMUI.renderMessages([], st.currentUserId, st.displayedMsgIds, {friendUserId: uid}, 'BLOCKED');
+                              await handleBlock(uid);
                           } else {
                               onSelectFriend(uid);
                           }
@@ -334,31 +443,59 @@ const DM = (() => {
   }
 
   async function handleAcceptRequest(uid) {
-        try {
-            const inbound = await DMApi.listInboundRequests();
-            const req = inbound.find(r => String(r.senderId) === String(uid));
+          try {
+              const inbound = await DMApi.listInboundRequests();
+              const req = inbound.find(r => String(r.senderId) === String(uid));
 
-            if (req) {
-                await DMApi.acceptRequest(req.id);
-                onSelectFriend(uid);
-                st.friends = await DMApi.fetchFriends();
-            } else {
-                alert('Không tìm thấy yêu cầu kết bạn (có thể đã bị hủy).');
-            }
-        } catch (e) { alert(e.message); }
-    }
+              if (req) {
+                  await DMApi.acceptRequest(req.id);
+                  st.friends = await DMApi.fetchFriends();
+                  if (String(st.activeFriendId) === String(uid)) {
+                     await onSelectFriend(uid);
+                  }
+                  Swal.fire({
+                    icon: 'success',
+                    title: 'Đã chấp nhận kết bạn',
+                    toast: true,
+                    position: 'bottom-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    background: '#36393f',
+                    color: '#fff'
+                  });
+              } else {
+                  Swal.fire({ title: 'Lỗi', text: 'Không tìm thấy yêu cầu kết bạn.', icon: 'error', background: '#36393f', color: '#fff' });
+              }
+          } catch (e) {
+              Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' });
+          }
+      }
 
-    async function handleDeclineRequest(uid) {
-        try {
-            const inbound = await DMApi.listInboundRequests();
-            const req = inbound.find(r => String(r.senderId) === String(uid));
+      async function handleDeclineRequest(uid) {
+          try {
+              const inbound = await DMApi.listInboundRequests();
+              const req = inbound.find(r => String(r.senderId) === String(uid));
 
-            if (req) {
-                await DMApi.declineRequest(req.id);
-                onSelectFriend(uid);
-            }
-        } catch (e) { alert(e.message); }
-    }
+              if (req) {
+                  await DMApi.declineRequest(req.id);
+                  if (String(st.activeFriendId) === String(uid)) {
+                     await onSelectFriend(uid);
+                  }
+                  Swal.fire({
+                    icon: 'success',
+                    title: 'Đã từ chối',
+                    toast: true,
+                    position: 'bottom-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    background: '#36393f',
+                    color: '#fff'
+                  });
+              }
+          } catch (e) {
+              Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' });
+          }
+      }
 
     async function onFriendEvent(evt) {
         try {
@@ -367,8 +504,10 @@ const DM = (() => {
           const type = evt?.type;
           const data = evt?.data;
 
-          // 1. Luôn reload danh sách bạn bè & Pending list
           st.friends = await DMApi.fetchFriends();
+          // Cập nhật danh sách chặn khi có event
+          try { st.blockedUsers = await DMApi.fetchBlockedUsers(); } catch(e) {}
+
           st.conversations = await DMApi.fetchAllConversations();
           DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
 
@@ -379,15 +518,12 @@ const DM = (() => {
             DMUI.renderPending(inbound, outbound);
           }
 
-          // 2. Tự động cập nhật giao diện chat (4 nút) nếu đang mở hội thoại với người liên quan
           if (st.activeFriendId && data) {
               const currentActiveId = Number(st.activeFriendId);
               const eventSenderId = Number(data.senderId);
               const eventRecipientId = Number(data.recipientId);
 
-              // Nếu người đang chat là Người gửi HOẶC Người nhận trong sự kiện này
               if (currentActiveId === eventSenderId || currentActiveId === eventRecipientId) {
-                  console.log('Cập nhật giao diện chat do thay đổi trạng thái bạn bè...');
                   await onSelectFriend(st.activeFriendId);
               }
           }
@@ -409,34 +545,33 @@ const DM = (() => {
       if (dmSendBtn) dmSendBtn.addEventListener('click', onSend);
       if (dmInput) dmInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') onSend(); });
 
-      // --- FIX: BUTTON BẠN BÈ (LOGIC GIỐNG FEATURE/MIN) ---
       const { btnFriends } = DMUI.els();
       if (btnFriends) {
-        // Clone để xóa event cũ (nếu có) và gán mới
         const newBtnFriends = btnFriends.cloneNode(true);
         btnFriends.parentNode.replaceChild(newBtnFriends, btnFriends);
         newBtnFriends.addEventListener('click', goHome);
       }
 
-      // --- FIX: NÚT HOME LOGO ---
       const homeLogo = document.querySelector('.sidebar .sidebar-item[onclick*="switchToDM"]');
       if (homeLogo) {
         const newHomeLogo = homeLogo.cloneNode(true);
         homeLogo.parentNode.replaceChild(newHomeLogo, homeLogo);
         newHomeLogo.addEventListener('click', () => {
-            // Logic: switchToDM() từ html onclick (nếu có) + goHome
             window.switchToDM && window.switchToDM();
             goHome();
         });
       }
 
-      const [convos, friends] = await Promise.all([
+      // --- 3. LOAD DATA ---
+      const [convos, friends, blocked] = await Promise.all([
           DMApi.fetchAllConversations(),
-          DMApi.fetchFriends()
+          DMApi.fetchFriends(),
+          DMApi.fetchBlockedUsers().catch(() => [])
       ]);
 
       st.conversations = convos;
       st.friends = friends;
+      st.blockedUsers = blocked;
 
       DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
       DMUI.initFriendsDashboard({ friends: st.friends, onSelectFriend });

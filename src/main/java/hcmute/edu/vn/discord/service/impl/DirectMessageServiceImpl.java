@@ -4,6 +4,8 @@ import hcmute.edu.vn.discord.dto.request.DirectMessageRequest;
 import hcmute.edu.vn.discord.dto.request.EditMessageRequest;
 import hcmute.edu.vn.discord.dto.response.ConversationResponse;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
+import hcmute.edu.vn.discord.entity.enums.FriendStatus;
+import hcmute.edu.vn.discord.entity.jpa.Friend;
 import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.entity.mongo.DirectMessage;
 import hcmute.edu.vn.discord.entity.mongo.Conversation;
@@ -20,6 +22,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.util.*;
 
@@ -30,19 +34,38 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     private final ConversationRepository conversationRepo;
     private final DirectMessageRepository messageRepo;
     private final UserRepository userRepo;
-    private final FriendRepository friendRepo; // Cần inject thêm để check friend/block
+    private final FriendRepository friendRepository;
 
     @Override
     @Transactional
     public DirectMessageResponse sendMessage(Long senderId, DirectMessageRequest request) {
         if (request.getContent() == null || request.getContent().trim().isEmpty()) {
-            throw new IllegalArgumentException("Message content cannot be empty");
+            throw new IllegalArgumentException("Nội dung tin nhắn không được để trống");
         }
+
         if (!userRepo.existsById(senderId) || !userRepo.existsById(request.getReceiverId())) {
-            throw new EntityNotFoundException("User not found");
+            throw new EntityNotFoundException("Không tìm thấy người dùng");
         }
+
         if (senderId.equals(request.getReceiverId())) {
-            throw new IllegalArgumentException("Cannot message yourself");
+            throw new IllegalArgumentException("Không thể tự nhắn tin cho chính mình");
+        }
+
+        User sender = userRepo.findById(senderId).get();
+        User receiver = userRepo.findById(request.getReceiverId()).get();
+
+        var friendRel = friendRepository.findByRequesterAndReceiverOrRequesterAndReceiver(sender, receiver, receiver, sender);
+
+        if (friendRel.isPresent()) {
+            Friend f = friendRel.get();
+            if (f.getStatus() == FriendStatus.BLOCKED) {
+                boolean blockedBySender = f.getRequester().getId().equals(senderId);
+                if (blockedBySender) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bạn đang chặn người dùng này. Bỏ chặn để gửi tin nhắn.");
+                } else {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Không thể gửi tin nhắn. Bạn đã bị người dùng này chặn.");
+                }
+            }
         }
         Conversation conversation = findOrCreateConversation(senderId, request.getReceiverId());
         DirectMessage message = messageRepo.save(
@@ -57,6 +80,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
                         .createdAt(new Date())
                         .updatedAt(new Date())
                         .build());
+
         return toResponse(message);
     }
 

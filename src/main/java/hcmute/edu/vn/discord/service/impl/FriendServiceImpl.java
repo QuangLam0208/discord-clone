@@ -288,4 +288,20 @@ public class FriendServiceImpl implements FriendService {
                 .respondedAt(f.getRespondedAt())
                 .build();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FriendResponse> listBlockedUsers(Long currentUserId) {
+        List<Friend> list = friendRepository.findByRequesterIdAndStatus(currentUserId, FriendStatus.BLOCKED);
+        return list.stream().map(f -> {
+            User other = f.getReceiver();
+            return FriendResponse.builder()
+                    .friendUserId(other.getId())
+                    .friendUsername(other.getUsername())
+                    .displayName(other.getDisplayName())
+                    .avatarUrl(other.getAvatarUrl())
+                    .since(f.getRespondedAt())
+                    .build();
+        }).collect(Collectors.toList());
+    }
 }

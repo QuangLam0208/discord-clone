@@ -141,4 +141,10 @@ public class FriendController {
         friendService.unblockUser(current.getId(), targetUserId);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/blocked")
+    public ResponseEntity<List<FriendResponse>> listBlockedUsers(Authentication authentication) {
+        User current = getCurrentUser(authentication);
+        return ResponseEntity.ok(friendService.listBlockedUsers(current.getId()));
+    }
 }

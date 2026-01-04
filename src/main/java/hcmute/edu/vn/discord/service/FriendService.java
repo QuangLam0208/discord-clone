@@ -38,4 +38,6 @@ public interface FriendService {
 
     @Transactional
     void unblockUser(Long userId, Long targetUserId);
+
+    List<FriendResponse> listBlockedUsers(Long currentUserId);
 }

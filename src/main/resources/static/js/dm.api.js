@@ -29,7 +29,7 @@ const DMApi = (() => {
     return res.json();
   }
 
-  // API MỚI: Lấy danh sách hội thoại
+  // API Lấy danh sách hội thoại
   async function fetchAllConversations() {
     const res = await fetch('/api/direct-messages/conversations', { headers: authHeaders(false), credentials: 'include' });
     handleResponse(res);
@@ -76,18 +76,17 @@ const DMApi = (() => {
   }
   async function userByUsername(username) {
     const res = await fetch(`/api/users/username/${encodeURIComponent(username)}`, { headers: authHeaders(false), credentials: 'include' });
-    if (res.status === 404) return null; // Sửa để không throw lỗi khi search không thấy
+    if (res.status === 404) return null;
     handleResponse(res);
     return res.json();
   }
   async function sendFriendRequestByUsername(username) {
-      // Logic cũ: tìm user -> gửi request
       const u = await userByUsername(username);
       if(!u) throw new Error("Không tìm thấy người dùng");
       return sendFriendRequestById(u.id);
   }
 
-  // Mới: Gửi request bằng ID (dùng cho nút Thêm bạn)
+  // Gửi request bằng ID (dùng cho nút Thêm bạn)
   async function sendFriendRequestById(id) {
       const res = await fetch('/api/friends/requests', {
         method: 'POST',
@@ -123,7 +122,7 @@ const DMApi = (() => {
       handleResponse(res);
   }
 
-  // Mới: Unblock
+  // Unblock
   async function unblockUser(targetUserId) {
       const res = await fetch(`/api/friends/unblock/${targetUserId}`, {
         method: 'POST', headers: authHeaders(true), credentials: 'include'
@@ -131,7 +130,7 @@ const DMApi = (() => {
       handleResponse(res);
   }
 
-  // Mới: Unfriend
+  // Unfriend
   async function unfriend(targetUserId) {
       const res = await fetch(`/api/friends/${targetUserId}`, {
         method: 'DELETE', headers: authHeaders(true), credentials: 'include'
@@ -147,10 +146,16 @@ const DMApi = (() => {
       handleResponse(res);
   }
 
+  async function fetchBlockedUsers() {
+      const res = await fetch('/api/friends/blocked', { headers: authHeaders(false), credentials: 'include' });
+      handleResponse(res);
+      return res.json();
+    }
+
   return {
     getToken,
     fetchFriends,
-    fetchAllConversations, // New
+    fetchAllConversations,
     getOrCreateConversation,
     fetchMessages,
     sendMessage,
@@ -158,13 +163,14 @@ const DMApi = (() => {
     listOutboundRequests,
     userByUsername,
     sendFriendRequestByUsername,
-    sendFriendRequestById, // New
+    sendFriendRequestById,
     acceptRequest,
     declineRequest,
     cancelRequest,
     blockUser,
-    unblockUser, // New
-    unfriend, // New
-    reportUser
+    unblockUser,
+    unfriend,
+    reportUser,
+    fetchBlockedUsers
   };
 })();

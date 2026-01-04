@@ -170,7 +170,7 @@ const DMUI = (() => {
     return (dmMessages.scrollTop + dmMessages.clientHeight) >= (dmMessages.scrollHeight - threshold);
   }
 
-  // --- HTML CHO PHẦN INTRO (FIX: Avatar -> Tên hiển thị -> Tên hệ thống) ---
+  // --- HTML CHO PHẦN INTRO ---
   function getDMIntroHtml(friend, relationshipStatus) {
       if (!friend) return '';
       const displayName = friend.displayName || friend.friendUsername || ('User ' + friend.friendUserId);
@@ -202,7 +202,7 @@ const DMUI = (() => {
               <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
           `;
       } else if (relationshipStatus === 'RECEIVED_REQUEST') {
-          // --- LOGIC MỚI: Người ta gửi đến mình (4 NÚT) ---
+          // Người ta gửi đến mình ---
           actionsHtml = `
               <button class="btn-dm-action" style="${btnStyle} ${btnBlue}" id="btn-dm-accept" data-id="${friendId}" data-name="${displayName}">Chấp nhận yêu cầu</button>
               <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-decline" data-id="${friendId}" data-name="${displayName}">Bỏ qua</button>
@@ -218,7 +218,7 @@ const DMUI = (() => {
           `;
       }
 
-      // ... (Phần return HTML intro-wrapper)
+      // Phần return HTML intro-wrapper
       return `
         <div class="dm-intro-wrapper" style="margin: 16px; display: flex; flex-direction: column; gap: 8px;">
           <div class="dm-intro-avatar-large" style="width: 80px; height: 80px; margin-bottom: 12px;">
