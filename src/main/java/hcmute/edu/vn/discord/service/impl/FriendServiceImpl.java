@@ -11,12 +11,15 @@ import hcmute.edu.vn.discord.service.FriendService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.messaging.simp.SimpMessagingTemplate; // Import mới
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,6 +27,16 @@ import java.util.stream.Collectors;
 public class FriendServiceImpl implements FriendService {
     private final FriendRepository friendRepository;
     private final UserRepository userRepository;
+    private final SimpMessagingTemplate messagingTemplate;
+
+    private void sendWsNotification(String username, String type, FriendRequestResponse data) {
+        if (username != null) {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("type", type);
+            payload.put("data", data);
+            messagingTemplate.convertAndSendToUser(username, "/queue/friends", payload);
+        }
+    }
 
     @Override
     @Transactional
@@ -38,47 +51,50 @@ public class FriendServiceImpl implements FriendService {
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người nhận"));
 
         var existingOpt = friendRepository.findByRequesterAndReceiverOrRequesterAndReceiver(
-                sender, recipient,recipient, sender);
+                sender, recipient, recipient, sender);
 
+        Friend saved;
         if (existingOpt.isPresent()) {
             Friend existing = existingOpt.get();
             switch (existing.getStatus()) {
-                case PENDING -> {
-                    throw new DataIntegrityViolationException("Yêu cầu kết bạn đang chờ xử lý");
-                }
-                case ACCEPTED -> {
-                    throw new DataIntegrityViolationException("Hai bạn đã là bạn bè");
-                }
+                case PENDING -> throw new DataIntegrityViolationException("Yêu cầu kết bạn đang chờ xử lý");
+                case ACCEPTED -> throw new DataIntegrityViolationException("Hai bạn đã là bạn bè");
                 case BLOCKED -> {
-                    boolean blockedBySender = existing.getRequester().getId().equals(senderId)
-                            && existing.getReceiver().getId().equals(recipientId);
-                    String msg = blockedBySender
-                            ? ("Bạn đã chặn " + recipient.getUsername())
-                            : (recipient.getUsername() + " đã chặn bạn");
-                    throw new AccessDeniedException(msg);
+                    boolean blockedBySender = existing.getRequester().getId().equals(senderId);
+                    if (blockedBySender) {
+                        throw new IllegalArgumentException("Bạn đang chặn người dùng này. Hãy bỏ chặn trước.");
+                    } else {
+                        throw new IllegalArgumentException("Không thể gửi lời mời. Bạn đã bị người dùng này chặn.");
+                    }
                 }
                 case DECLINED -> {
-                    // Cho phép gửi lại (revive)
                     existing.setRequester(sender);
                     existing.setReceiver(recipient);
                     existing.setStatus(FriendStatus.PENDING);
                     existing.setCreatedAt(LocalDateTime.now());
                     existing.setRespondedAt(null);
-                    Friend revived = friendRepository.save(existing);
-                    return toRequestResponse(revived);
+                    saved = friendRepository.save(existing);
                 }
                 default -> throw new IllegalStateException("Trạng thái không hợp lệ");
             }
+        } else {
+            Friend friend = new Friend();
+            friend.setRequester(sender);
+            friend.setReceiver(recipient);
+            friend.setStatus(FriendStatus.PENDING);
+            friend.setCreatedAt(LocalDateTime.now());
+            saved = friendRepository.save(friend);
         }
 
-        Friend friend = new Friend();
-        friend.setRequester(sender);
-        friend.setReceiver(recipient);
-        friend.setStatus(FriendStatus.PENDING);
-        friend.setCreatedAt(LocalDateTime.now());
+        FriendRequestResponse response = toRequestResponse(saved);
 
-        Friend saved = friendRepository.save(friend);
-        return toRequestResponse(saved);
+        // 2. Bắn thông báo cho người nhận (recipient)
+        sendWsNotification(recipient.getUsername(), "FRIEND_REQUEST_RECEIVED", response);
+
+        // Bắn cho người gửi (để cập nhật UI nếu cần)
+        sendWsNotification(sender.getUsername(), "FRIEND_REQUEST_SENT", response);
+
+        return response;
     }
 
     @Transactional
@@ -97,7 +113,16 @@ public class FriendServiceImpl implements FriendService {
         friend.setStatus(FriendStatus.ACCEPTED);
         friend.setRespondedAt(LocalDateTime.now());
         Friend saved = friendRepository.save(friend);
-        return toRequestResponse(saved);
+
+        FriendRequestResponse response = toRequestResponse(saved);
+
+        // 3. Bắn thông báo cho người gửi (requester) - Đã được chấp nhận
+        sendWsNotification(friend.getRequester().getUsername(), "FRIEND_REQUEST_ACCEPTED", response);
+
+        // Bắn cho chính mình (receiver) để cập nhật UI
+        sendWsNotification(friend.getReceiver().getUsername(), "FRIEND_REQUEST_ACCEPTED", response);
+
+        return response;
     }
 
     @Override
@@ -116,7 +141,16 @@ public class FriendServiceImpl implements FriendService {
         friend.setStatus(FriendStatus.DECLINED);
         friend.setRespondedAt(LocalDateTime.now());
         Friend saved = friendRepository.save(friend);
-        return toRequestResponse(saved);
+
+        FriendRequestResponse response = toRequestResponse(saved);
+
+        // 4. Bắn thông báo cho người gửi (requester) - Đã bị từ chối
+        sendWsNotification(friend.getRequester().getUsername(), "FRIEND_REQUEST_DECLINED", response);
+
+        // Bắn cho chính mình
+        sendWsNotification(friend.getReceiver().getUsername(), "FRIEND_REQUEST_DECLINED", response);
+
+        return response;
     }
 
     @Override
@@ -127,7 +161,18 @@ public class FriendServiceImpl implements FriendService {
         if (!friend.getRequester().getId().equals(currentUserId)) {
             throw new AccessDeniedException("Chỉ người gửi mới có thể huỷ yêu cầu");
         }
+
+        // Lưu thông tin để bắn socket trước khi xóa
+        String receiverUsername = friend.getReceiver().getUsername();
+        Long senderId = friend.getRequester().getId();
+        Long receiverId = friend.getReceiver().getId();
+
         friendRepository.delete(friend);
+
+        // 5. Bắn thông báo hủy cho người nhận
+        FriendRequestResponse cancelResponse = FriendRequestResponse.builder()
+                .id(requestId).senderId(senderId).recipientId(receiverId).status("CANCELLED").build();
+        sendWsNotification(receiverUsername, "FRIEND_REQUEST_CANCELLED", cancelResponse);
     }
 
     @Override
@@ -175,6 +220,9 @@ public class FriendServiceImpl implements FriendService {
             throw new IllegalStateException("Không thể huỷ kết bạn khi chưa chấp nhận");
         }
         friendRepository.delete(friend);
+
+        // 6. Thông báo unfriend cho đối phương
+        sendWsNotification(other.getUsername(), "UNFRIEND", null);
     }
 
     @Override
@@ -199,12 +247,14 @@ public class FriendServiceImpl implements FriendService {
                     return f;
                 });
 
-        // Chỉ coi là "user block target" nếu chiều requester=user, receiver=target
         friend.setRequester(user);
         friend.setReceiver(targetUser);
         friend.setStatus(FriendStatus.BLOCKED);
         friend.setRespondedAt(LocalDateTime.now());
         friendRepository.save(friend);
+
+        // Thông báo block cho đối phương (để họ ẩn chat nếu cần)
+        sendWsNotification(targetUser.getUsername(), "BLOCKED", null);
     }
 
     @Transactional
@@ -215,7 +265,6 @@ public class FriendServiceImpl implements FriendService {
         User target = userRepository.findById(targetUserId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng"));
 
-        // Chỉ cho phép gỡ block nếu chính bạn đã block (requester=user, receiver=target, status=BLOCKED)
         Friend friend = friendRepository.findByRequesterAndReceiver(user, target)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy trạng thái block"));
 
@@ -224,6 +273,7 @@ public class FriendServiceImpl implements FriendService {
         }
 
         friendRepository.delete(friend);
+        sendWsNotification(target.getUsername(), "UNBLOCKED", null);
     }
 
     private FriendRequestResponse toRequestResponse(Friend f) {
@@ -237,5 +287,21 @@ public class FriendServiceImpl implements FriendService {
                 .createdAt(f.getCreatedAt())
                 .respondedAt(f.getRespondedAt())
                 .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FriendResponse> listBlockedUsers(Long currentUserId) {
+        List<Friend> list = friendRepository.findByRequesterIdAndStatus(currentUserId, FriendStatus.BLOCKED);
+        return list.stream().map(f -> {
+            User other = f.getReceiver();
+            return FriendResponse.builder()
+                    .friendUserId(other.getId())
+                    .friendUsername(other.getUsername())
+                    .displayName(other.getDisplayName())
+                    .avatarUrl(other.getAvatarUrl())
+                    .since(f.getRespondedAt())
+                    .build();
+        }).collect(Collectors.toList());
     }
 }

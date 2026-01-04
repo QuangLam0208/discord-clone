@@ -10,27 +10,29 @@
 </head>
 
 <body>
+    <div class="app-layout" id="app" style="display: none;">
+        <!-- Sidebar (Server Nav) -->
+        <nav th:replace="~{fragments/server-nav :: server-nav}"></nav>
+        <!-- Channels Sidebar -->
+        <aside th:replace="~{fragments/channel-sidebar :: channel-sidebar}"></aside>
+        <!-- Chat Content -->
+        <main th:replace="~{fragments/chat-content :: chat-content}"></main>
+    </div>
 
-<div class="app-layout" id="app" style="display: none;">
-
-    <!-- Sidebar (Server Nav) -->
-    <nav th:replace="~{fragments/server-nav :: server-nav}"></nav>
-
-    <!-- Channels Sidebar -->
-    <aside th:replace="~{fragments/channel-sidebar :: channel-sidebar}"></aside>
-
-    <!-- Chat Content -->
-    <main th:replace="~{fragments/chat-content :: chat-content}"></main>
-</div>
-
-<!-- Modals & Context Menus -->
-<div th:replace="~{fragments/modals :: modals}"></div>
+    <!-- Modals & Context Menus -->
+    <div th:replace="~{fragments/modals :: modals}"></div>
 
 <script src="/js/api.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 <!-- Load Modules (Order matters) -->
-<script src="/js/home.js?v=2"></script> <!-- Main State & Init -->
+    <script src="/js/dm.api.js"></script>
+    <script src="/js/dm.ui.js"></script>
+    <script src="/js/dm.ws.js"></script>
+    <script src="/js/dm.js"></script>
+
+<script src="/js/home.js?v=5"></script>
+
 <script src="/js/user.js?v=2"></script>
 <script src="/js/server.js?v=3"></script>
 <script src="/js/channel.js?v=2"></script>
@@ -42,15 +44,25 @@
     function switchToDM() { toggleViews('dm'); }
     function switchToServer(el) {
         document.querySelectorAll('.sidebar-item').forEach(e => e.classList.remove('active'));
-        el.classList.add('active');
+        if (el) el.classList.add('active');
         toggleViews('server');
     }
     function toggleViews(type) {
         const isServer = type === 'server';
-        document.getElementById('server-channels-view').style.display = isServer ? 'flex' : 'none';
-        document.getElementById('dm-channels-view').style.display = isServer ? 'none' : 'flex';
-        document.getElementById('server-chat-view').style.display = isServer ? 'flex' : 'none';
-        document.getElementById('dm-chat-view').style.display = isServer ? 'none' : 'flex';
+        const serverChannels = document.getElementById('server-channels-view');
+        const dmChannels     = document.getElementById('dm-channels-view');
+        const serverChat     = document.getElementById('server-chat-view');
+        const dmDashboard    = document.getElementById('dm-dashboard-view');
+        const dmConversation = document.getElementById('dm-conversation-view');
+
+        if (serverChannels) serverChannels.style.display = isServer ? 'flex' : 'none';
+        if (dmChannels)     dmChannels.style.display     = isServer ? 'none' : 'flex';
+        if (serverChat)     serverChat.style.display     = isServer ? 'flex' : 'none';
+
+        // Mặc định DM -> Dashboard
+        const isDM = !isServer;
+        if (dmDashboard)    dmDashboard.style.display    = isDM ? 'flex' : 'none';
+        if (dmConversation) dmConversation.style.display = 'none';
     }
 
     // 2. Modal Helpers

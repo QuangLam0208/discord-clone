@@ -1,33 +1,36 @@
-
-// MAIN APP ENTRY POINT
-
-// GLOBAL STATE & ELEMENTS
-// Exposed globally so other modules can access
 window.state = {
-    currentServerId: null,
-    currentChannelId: null,
-    currentUser: null,
-    stompClient: null,
-    tempCategoryId: null, // Used for modals
-    pendingAttachments: [] // Shared between upload.js and chat.js
+  currentServerId: null,
+  currentChannelId: null,
+  currentUser: null,
+  stompClient: null,
+  tempCategoryId: null,
+  pendingAttachments: []
 };
 
 window.elements = {
-    app: document.getElementById('app'),
-    userDisplay: document.getElementById('user-display'),
-    userAvatars: document.querySelectorAll('.user-avatar'),
-    sidebar: document.querySelector('.sidebar'), // Container chứa server list
+  app: document.getElementById('app'),
+  userDisplay: document.getElementById('user-display'),
+  userAvatars: document.querySelectorAll('.user-avatar'),
+  sidebar: document.querySelector('.sidebar'),
 };
 
-document.addEventListener('DOMContentLoaded', async function () {
-    // 2. INIT APPLICATION
-    async function init() {
-        if (elements.app) elements.app.style.display = 'flex';
-        await loadMe(); // from user.js
-        await loadServers(); // from server.js
-        console.log("App Initialized & UI Synced");
-    }
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('[App Unhandled Rejection]', e.reason);
+});
 
-    // START APP
-    await init();
+// ==================== APP BOOTSTRAP ====================
+document.addEventListener('DOMContentLoaded', async function () {
+  async function init() {
+    try {
+      if (elements.app) elements.app.style.display = 'flex';
+      await loadMe();
+      await loadServers();
+      await DM.init();
+      console.log('App Initialized & UI Synced (Server + DM)');
+    } catch (err) {
+      console.error('[App Init Error]', err);
+    }
+  }
+
+  await init();
 });

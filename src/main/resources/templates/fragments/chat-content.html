@@ -15,6 +15,7 @@
                 </div>
             </div>
         </div>
+
         <div class="input-area">
             <div class="input-wrapper">
                 <label for="chat-file-upload" class="upload-icon-btn"><i class="fa-solid fa-circle-plus"></i></label>
@@ -28,7 +29,7 @@
         </div>
     </div>
 
-    <div id="dm-chat-view" style="display: flex; height: 100%; flex-direction: column;">
+    <div id="dm-dashboard-view" style="display: flex; height: 100%; flex-direction: column;">
         <div class="top-bar friend-header-bar">
             <div class="friend-header-left">
                 <div class="friend-title-wrapper">
@@ -37,24 +38,80 @@
                 </div>
                 <div class="vertical-divider"></div>
                 <div class="friend-tabs">
-                    <button class="tab-item active">Tất cả</button>
-                    <button class="add-friend-btn">Thêm bạn</button>
+                    <button class="tab-item active" id="dmTabAll">Tất cả</button>
+                    <button class="tab-item" id="dmTabPending">Đang chờ xử lý</button>
+                    <button class="add-friend-btn" id="dmTabAddFriend">Thêm bạn</button>
                 </div>
             </div>
         </div>
         <div class="friend-dashboard-body">
             <div class="friend-list-section">
-                <div class="friend-search-wrapper">
-                    <input type="text" placeholder="Tìm kiếm">
+                <div class="friend-search-wrapper" id="dm-search-container">
+                    <input type="text" id="dm-center-search" placeholder="Tìm kiếm">
                     <i class="fa-solid fa-magnifying-glass"></i>
                 </div>
-                <div class="friend-label">TẤT CẢ BẠN BÈ — 0</div>
-                <div class="empty-list-container"></div>
+
+                <div id="dm-all-view">
+                    <div class="friend-label">TẤT CẢ BẠN BÈ — <span id="dm-center-count">0</span></div>
+                    <div id="dm-center-list" class="empty-list-container"></div>
+                </div>
+
+                <div id="dm-pending-view" style="display:none;">
+                    <div class="friend-label">ĐÃ NHẬN</div>
+                    <div id="dm-pending-in-list" class="empty-list-container"></div>
+
+                    <div class="friend-label" style="margin-top:20px;">ĐÃ GỬI</div>
+                    <div id="dm-pending-out-list" class="empty-list-container"></div>
+                </div>
+
+                <div id="dm-addfriend-view" style="display:none; padding: 20px 30px;">
+                    <h3 class="active-now-title" style="margin:0 0 8px 0;">Thêm Bạn</h3>
+                    <div style="color:#b9bbbe; margin-bottom:16px; font-size: 14px;">
+                        Bạn có thể thêm bạn bè bằng tên người dùng Discord của họ.
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:12px; background-color: #1e1f22; padding: 0 12px; border-radius: 8px; border: 1px solid #26272d; height: 58px;">
+                        <input type="text" id="dm-addfriend-username"
+                               placeholder="Tên người dùng (ví dụ: user3)"
+                               style="flex:1; background:transparent; border:none; color:#dcddde; font-size: 16px; outline: none; height: 100%; font-weight: 500;">
+                        <button class="add-friend-btn" id="dm-addfriend-send">
+                            Gửi lời mời
+                        </button>
+                    </div>
+                    <div id="dm-addfriend-result" style="margin-top:12px; color:#b9bbbe;"></div>
+                </div>
             </div>
+
             <div class="active-now-section">
                 <h3 class="active-now-title">Đang hoạt động</h3>
                 <div class="empty-active-state">
                     <div class="empty-text-bold">Hiện không có ai đang hoạt động</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="dm-conversation-view" style="display: none; height: 100%; flex-direction: column;">
+        <div class="top-bar friend-header-bar">
+            <div class="friend-header-left">
+                <div class="friend-title-wrapper">
+                    <i class="fa-solid fa-user icon-friend"></i>
+                    <span id="dm-active-friend-name" class="title-friend">Tin nhắn trực tiếp</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="dm-messages" class="custom-scrollbar" style="flex:1; overflow:auto; padding:16px; display:flex; flex-direction:column; gap:12px;">
+        </div>
+
+        <div class="input-area">
+            <div class="input-wrapper">
+                <label for="dm-file-upload" class="upload-icon-btn"><i class="fa-solid fa-circle-plus"></i></label>
+                <input type="file" id="dm-file-upload" style="display:none;">
+                <input type="text" id="dm-input" placeholder="Nhắn tin cho @...">
+                <div class="input-right-icons">
+                    <i class="fa-solid fa-gift"></i>
+                    <i class="fa-solid fa-face-smile"></i>
                 </div>
             </div>
         </div>

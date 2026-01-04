@@ -17,18 +17,15 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void registerStompEndpoints(StompEndpointRegistry registry) {
-        // Endpoint cho client connect: ws://<host>/ws
         var endpointRegistration = registry.addEndpoint("/ws");
 
-        // Cấu hình origin cho phép thông qua property app.websocket.allowed-origins
-        // Ví dụ: app.websocket.allowed-origins=http://localhost:3000,https://example.com
         if (allowedOriginPatterns != null
                 && allowedOriginPatterns.length > 0
                 && !(allowedOriginPatterns.length == 1 && allowedOriginPatterns[0].isEmpty())) {
             endpointRegistration.setAllowedOriginPatterns(allowedOriginPatterns);
         }
 
-        endpointRegistration.withSockJS(); // fallback nếu WS bị chặn
+        endpointRegistration.withSockJS();
     }
 
     @Autowired
@@ -36,10 +33,9 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        // Broker đơn giản: /topic, /queue; bật user destinations với prefix /user
         registry.enableSimpleBroker("/topic", "/queue", "/user");
         registry.setApplicationDestinationPrefixes("/app");
-        registry.setUserDestinationPrefix("/user"); // user-specific destinations: /user/queue/...
+        registry.setUserDestinationPrefix("/user");
     }
 
     @Override
