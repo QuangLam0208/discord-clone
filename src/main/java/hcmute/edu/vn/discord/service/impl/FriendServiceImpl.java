@@ -38,7 +38,7 @@ public class FriendServiceImpl implements FriendService {
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người nhận"));
 
         var existingOpt = friendRepository.findByRequesterAndReceiverOrRequesterAndReceiver(
-                sender, recipient,recipient, sender);
+                sender, recipient, recipient, sender);
 
         if (existingOpt.isPresent()) {
             Friend existing = existingOpt.get();
@@ -50,12 +50,12 @@ public class FriendServiceImpl implements FriendService {
                     throw new DataIntegrityViolationException("Hai bạn đã là bạn bè");
                 }
                 case BLOCKED -> {
-                    boolean blockedBySender = existing.getRequester().getId().equals(senderId)
-                            && existing.getReceiver().getId().equals(recipientId);
-                    String msg = blockedBySender
-                            ? ("Bạn đã chặn " + recipient.getUsername())
-                            : (recipient.getUsername() + " đã chặn bạn");
-                    throw new AccessDeniedException(msg);
+                    boolean blockedBySender = existing.getRequester().getId().equals(senderId);
+                    if (blockedBySender) {
+                        throw new IllegalArgumentException("Bạn đang chặn người dùng này. Hãy bỏ chặn trước.");
+                    } else {
+                        throw new IllegalArgumentException("Không thể gửi lời mời. Bạn đã bị người dùng này chặn.");
+                    }
                 }
                 case DECLINED -> {
                     // Cho phép gửi lại (revive)
