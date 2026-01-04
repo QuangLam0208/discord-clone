@@ -41,4 +41,7 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
 
     @EntityGraph(attributePaths = {"server", "allowedMembers", "allowedRoles"})
     Optional<Channel> findWithAccessListsById(Long id);
+
+    List<Channel> findByServerId(Long serverId);
+    List<Channel> findByServerIdAndCategoryIsNullOrderByNameAsc(Long serverId);
 }

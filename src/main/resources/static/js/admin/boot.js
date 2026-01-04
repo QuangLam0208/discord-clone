@@ -9,6 +9,9 @@
         if (typeof window.attachAdminUserHandlers === 'function') {
             window.attachAdminUserHandlers();
         }
+        if (typeof window.attachAdminMessageHandlers === 'function') {
+            window.attachAdminMessageHandlers(); // thêm init cho Messages
+        }
     }
 
     document.addEventListener('DOMContentLoaded', () => {

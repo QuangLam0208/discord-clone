@@ -1,13 +1,51 @@
 <div class="discord-admin-container" style="padding:0;">
     <div class="discord-header">
         <h1><i class="fas fa-envelope"></i> Quản lý Messages</h1>
-        <div class="discord-search">
-            <input type="text" placeholder="Tìm theo nội dung, user... (chưa triển khai)">
-            <button type="button"><i class="fas fa-search"></i></button>
-        </div>
+        <form class="discord-search search-inline" id="admin-msg-search" onsubmit="event.preventDefault(); window.searchAdminMessages();">
+            <input type="text" id="msgKeyword" placeholder="Tìm theo nội dung hoặc username...">
+            <button type="submit" class="search-btn-inline" aria-label="Tìm"><i class="fa-solid fa-magnifying-glass"></i></button>
+        </form>
     </div>
 
-    <div class="card" style="padding:16px;">
-        <div class="muted">Chức năng moderation/duyệt tin nhắn sẽ bổ sung sau. Dùng REST /api/admin/messages để tải dữ liệu.</div>
+    <div class="card" style="padding:12px;">
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px;">
+            <select id="msgStatus" class="discord-input" style="max-width:180px;">
+                <option value="all">Tất cả</option>
+                <option value="active">Chưa xóa</option>
+                <option value="deleted">Đã xóa</option>
+            </select>
+            <input type="number" id="msgServerId" class="discord-input" placeholder="Server ID" style="max-width:140px;">
+            <input type="number" id="msgChannelId" class="discord-input" placeholder="Channel ID" style="max-width:140px;">
+            <input type="text" id="msgSenderUsername" class="discord-input" placeholder="Sender username" style="max-width:200px;">
+            <input type="datetime-local" id="msgFrom" class="discord-input" style="max-width:220px;" placeholder="Từ">
+            <input type="datetime-local" id="msgTo" class="discord-input" style="max-width:220px;" placeholder="Đến">
+            <button type="button" class="btn-mini edit" onclick="window.searchAdminMessages()"><i class="fa-solid fa-filter"></i> Lọc</button>
+        </div>
+
+        <div class="discord-table-wrapper">
+            <table class="discord-table">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nội dung</th>
+                    <th>Sender</th>
+                    <th>Channel</th>
+                    <th>Server</th>
+                    <th>Thời gian</th>
+                    <th>Trạng thái</th>
+                    <th>Hành động</th>
+                </tr>
+                </thead>
+                <tbody id="admin-msg-tbody">
+                <tr><td colspan="8" class="muted" style="text-align:center;padding:20px;">Chưa có dữ liệu</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="discord-pagination" id="admin-msg-pager" style="display:none;">
+            <a href="#" class="page-btn" id="admin-msg-prev" onclick="return window.pageAdminMessages(-1)"><i class="fas fa-chevron-left"></i> Trước</a>
+            <span class="page-info">Trang <b id="admin-msg-page">1</b> / <span id="admin-msg-total">1</span></span>
+            <a href="#" class="page-btn" id="admin-msg-next" onclick="return window.pageAdminMessages(1)">Sau <i class="fas fa-chevron-right"></i></a>
+        </div>
     </div>
 </div>
