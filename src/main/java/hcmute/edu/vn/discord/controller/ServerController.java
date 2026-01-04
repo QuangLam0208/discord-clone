@@ -29,6 +29,7 @@ public class ServerController {
     private final ChannelService channelService;
     private final ServerMemberRepository serverMemberRepository;
     private final ServerAuth serverAuth;
+    private final hcmute.edu.vn.discord.service.AuditLogService auditLogService;
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
@@ -103,4 +104,12 @@ public class ServerController {
         serverService.deleteServer(id);
         return ResponseEntity.noContent().build();
     }
+
+    @GetMapping("/{id}/audit-logs")
+    @PreAuthorize("@serverAuth.isOwner(#id, authentication.name) or @serverAuth.hasPermission(#id, authentication.name, 'VIEW_AUDIT_LOG')")
+    public ResponseEntity<List<AuditLogResponse>> getAuditLogs(@PathVariable Long id) {
+        return ResponseEntity.ok(auditLogService.getAuditLogs(id).stream()
+                .map(AuditLogResponse::from).toList());
+    }
+
 }

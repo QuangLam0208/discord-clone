@@ -35,6 +35,7 @@ public class ServerRoleServiceImpl implements ServerRoleService {
     private final ServerRoleRepository serverRoleRepository;
     private final PermissionRepository permissionRepository;
     private final ServerMemberRepository serverMemberRepository;
+    private final hcmute.edu.vn.discord.service.AuditLogService auditLogService;
 
     private Server requireOwner(Long serverId, String actorUsername) {
         Server server = serverService.getServerById(serverId);
@@ -63,11 +64,7 @@ public class ServerRoleServiceImpl implements ServerRoleService {
     @Override
     public ServerRole createRole(Long serverId, ServerRoleRequest request, String actorUsername) {
         Server server = requireOwner(serverId, actorUsername);
-        // Không cho tạo trùng tên trong server
-        // Không cho tạo trùng tên trong server -> DISABLED
-        // ensureRoleNameUnique(serverId, request.getName());
 
-        // Không cho tạo role hệ thống với cách copy tên
         if (ROLE_ADMIN.equalsIgnoreCase(request.getName()) || ROLE_EVERYONE.equalsIgnoreCase(request.getName())) {
             throw new IllegalArgumentException("Không thể tạo role hệ thống với tên này");
         }
@@ -79,7 +76,17 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         role.setPriority(request.getPriority());
         role.setPermissions(mapPermissionCodes(request.getPermissionCodes()));
 
-        return serverRoleRepository.save(role);
+        ServerRole saved = serverRoleRepository.save(role);
+
+        // Audit Log
+        try {
+            User actor = userService.findByUsername(actorUsername).orElse(null);
+            auditLogService.logAction(server, actor, hcmute.edu.vn.discord.common.AuditLogAction.ROLE_CREATE,
+                    saved.getId().toString(), "ROLE", "Tạo vai trò: " + saved.getName());
+        } catch (Exception e) {
+        }
+
+        return saved;
     }
 
     @Transactional
@@ -90,26 +97,64 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         ServerRole role = serverRoleRepository.findByIdAndServerId(roleId, serverId)
                 .orElseThrow(() -> new EntityNotFoundException("Role not found"));
 
+        String oldName = role.getName();
+        String oldColor = role.getColor();
+        int oldPriority = role.getPriority();
+
         // Không cho đổi tên/xử lý role hệ thống
         if (ROLE_ADMIN.equalsIgnoreCase(role.getName()) || ROLE_EVERYONE.equalsIgnoreCase(role.getName())) {
-            // Ở đây chỉ cho đổi priority/permissions, cấm đổi tên
             role.setPriority(request.getPriority());
             role.setPermissions(mapPermissionCodes(request.getPermissionCodes()));
-            return serverRoleRepository.save(role);
-        }
+            ServerRole updated = serverRoleRepository.save(role);
 
-        // Nếu đổi tên, kiểm tra trùng
-        // Nếu đổi tên, kiểm tra trùng -> DISABLED
-        // if (!role.getName().equalsIgnoreCase(request.getName())) {
-        // ensureRoleNameUnique(serverId, request.getName());
-        // }
+            // Audit Log (System role update)
+            try {
+                User actor = userService.findByUsername(actorUsername).orElse(null);
+                auditLogService.logAction(role.getServer(), actor,
+                        hcmute.edu.vn.discord.common.AuditLogAction.ROLE_UPDATE,
+                        updated.getId().toString(), "ROLE", "Cập nhật vai trò hệ thống: " + role.getName());
+            } catch (Exception e) {
+            }
+
+            return updated;
+        }
 
         role.setName(request.getName());
         role.setColor(request.getColor());
         role.setPriority(request.getPriority());
         role.setPermissions(mapPermissionCodes(request.getPermissionCodes()));
 
-        return serverRoleRepository.save(role);
+        ServerRole updated = serverRoleRepository.save(role);
+
+        // Audit Log
+        try {
+            User actor = userService.findByUsername(actorUsername).orElse(null);
+            StringBuilder changes = new StringBuilder();
+            if (!java.util.Objects.equals(oldName, updated.getName())) {
+                changes.append("Tên: ").append(oldName).append(" -> ").append(updated.getName()).append("; ");
+            }
+            if (!java.util.Objects.equals(oldColor, updated.getColor())) {
+                changes.append("Màu: ").append(oldColor).append(" -> ").append(updated.getColor()).append("; ");
+            }
+            if (oldPriority != updated.getPriority()) {
+                changes.append("Ưu tiên: ").append(oldPriority).append(" -> ").append(updated.getPriority())
+                        .append("; ");
+            }
+
+            if (changes.length() > 0) {
+                auditLogService.logAction(updated.getServer(), actor,
+                        hcmute.edu.vn.discord.common.AuditLogAction.ROLE_UPDATE,
+                        updated.getId().toString(), "ROLE", changes.toString());
+            } else {
+                // Permissions update assumed if no property change recorded but method called
+                auditLogService.logAction(updated.getServer(), actor,
+                        hcmute.edu.vn.discord.common.AuditLogAction.ROLE_UPDATE,
+                        updated.getId().toString(), "ROLE", "Cập nhật quyền hạn");
+            }
+        } catch (Exception e) {
+        }
+
+        return updated;
     }
 
     @Transactional
@@ -124,7 +169,19 @@ public class ServerRoleServiceImpl implements ServerRoleService {
             throw new IllegalStateException("Không thể xóa role hệ thống: " + role.getName());
         }
 
+        String roleName = role.getName();
+        Server server = role.getServer();
+        String roleIdStr = role.getId().toString();
+
         serverRoleRepository.delete(role);
+
+        // Audit Log
+        try {
+            User actor = userService.findByUsername(actorUsername).orElse(null);
+            auditLogService.logAction(server, actor, hcmute.edu.vn.discord.common.AuditLogAction.ROLE_DELETE,
+                    roleIdStr, "ROLE", "Xóa vai trò: " + roleName);
+        } catch (Exception e) {
+        }
     }
 
     @Transactional(readOnly = true)
@@ -164,7 +221,20 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         newRoles.add(everyone);
 
         member.setRoles(newRoles);
-        return serverMemberRepository.save(member);
+        ServerMember saved = serverMemberRepository.save(member); // Fixed: was saving 'member', return value used for
+                                                                  // consistency generally, though member is mutable
+
+        // Audit Log
+        try {
+            User actor = userService.findByUsername(actorUsername).orElse(null);
+            auditLogService.logAction(member.getServer(), actor,
+                    hcmute.edu.vn.discord.common.AuditLogAction.MEMBER_ROLE_UPDATE,
+                    member.getId().toString(), "MEMBER", "Cập nhật vai trò cho thành viên: "
+                            + (member.getNickname() != null ? member.getNickname() : member.getUser().getUsername()));
+        } catch (Exception e) {
+        }
+
+        return saved;
     }
 
     @Transactional(readOnly = true)

@@ -1,7 +1,6 @@
 package hcmute.edu.vn.discord.dto.response;
 
 import hcmute.edu.vn.discord.entity.jpa.ServerMember;
-import hcmute.edu.vn.discord.entity.jpa.ServerRole;
 import lombok.Builder;
 import lombok.Data;
 

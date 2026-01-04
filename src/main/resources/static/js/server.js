@@ -1464,16 +1464,52 @@ window.kickMember = async function (userId) {
 // Confirm Delete
 window.confirmDeleteServer = async function () {
     const serverId = state.editingServerId;
-    try {
-        const success = await Api.delete(`/api/servers/${serverId}`);
-        if (success) {
-            closeModal('serverSettingsModal');
-            Swal.fire('Thành công', 'Đã xóa server', 'success').then(() => location.reload());
-        } else {
-            Swal.fire('Lỗi', 'Không thể xóa server', 'error');
+    const serverName = state.editingServerData.name;
+
+    const result = await Swal.fire({
+        title: 'Xóa máy chủ',
+        html: `Bạn có chắc chắn muốn xóa máy chủ này không? Hành động này không thể hoàn tác.<br>Vui lòng nhập <b>${serverName}</b> để xác nhận.`,
+        input: 'text',
+        inputAttributes: {
+            autocapitalize: 'off',
+            placeholder: serverName
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Xóa Máy Chủ',
+        cancelButtonText: 'Hủy',
+        confirmButtonColor: '#da373c',
+        background: '#313338',
+        color: '#dbdee1',
+        preConfirm: (inputValue) => {
+            if (inputValue !== serverName) {
+                Swal.showValidationMessage('Tên máy chủ không khớp. Vui lòng thử lại.');
+            }
         }
-    } catch (e) {
-        Swal.fire('Lỗi', e.message, 'error');
+    });
+
+    if (result.isConfirmed) {
+        try {
+            const success = await Api.delete(`/api/servers/${serverId}`);
+            if (success) {
+                closeModal('serverSettingsModal');
+                // Redirect home or reload
+                Swal.fire({
+                    title: 'Đã xóa',
+                    text: 'Máy chủ đã được xóa thành công.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false,
+                    background: '#313338',
+                    color: '#dbdee1'
+                }).then(() => {
+                    window.location.href = '/channels/@me';
+                });
+            } else {
+                Swal.fire('Lỗi', 'Không thể xóa server', 'error');
+            }
+        } catch (e) {
+            Swal.fire('Lỗi', e.message, 'error');
+        }
     }
 };
 
@@ -2019,4 +2055,287 @@ window.updateServerPreviews = function (name, iconUrl) {
         // Show if there is an iconUrl
         removeBtn.style.display = iconUrl ? 'block' : 'none';
     }
+}
+
+// --- AUDIT LOG LOGIC ---
+let currentAuditLogs = [];
+
+window.switchServerSettingsTab = async function (tabId) {
+    // Hide all contents
+    document.querySelectorAll('.settings-tab-content').forEach(el => el.classList.remove('active'));
+    // Deselect all nav items
+    document.querySelectorAll('.settings-nav-item').forEach(el => el.classList.remove('active'));
+
+    // Activate selected
+    document.getElementById('tab-server-' + tabId).classList.add('active');
+    document.getElementById('nav-server-' + tabId).classList.add('active');
+
+    // Load data if needed based on tab
+    if (tabId === 'audit') {
+        loadAuditLogs();
+    } else if (tabId === 'roles') {
+        loadServerRoles(state.editingServerId);
+    } else if (tabId === 'members') {
+        loadServerMembers(state.editingServerId);
+    }
+}
+
+window.loadAuditLogs = async function () {
+    const listDiv = document.getElementById('audit-log-list-container');
+    listDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #b5bac1;">Đang tải nhật ký...</div>';
+
+    try {
+        const logs = await Api.get(`/api/servers/${state.editingServerId}/audit-logs`);
+        currentAuditLogs = logs || [];
+        filterAuditLogs(); // This will filter and render
+    } catch (e) {
+        console.error("Load Audit Logs Error", e);
+        listDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #f23f42;">Lỗi tải nhật ký: ' + e.message + '</div>';
+    }
+}
+
+window.filterAuditLogs = function () {
+    const keyword = (document.getElementById('audit-log-search').value || '').toLowerCase();
+    const actionFilter = document.getElementById('audit-log-filter-action').value;
+
+    let filtered = currentAuditLogs.filter(log => {
+        // Safe access to properties
+        const actionType = log.actionType || 'UNKNOWN';
+        const changes = log.changes || '';
+        const actorName = log.actor ? (log.actor.displayName || log.actor.username || '') : '';
+
+        // Filter by Action Type
+        if (actionFilter !== 'ALL') {
+            if (actionFilter === 'SERVER_UPDATE' && actionType !== 'SERVER_UPDATE') return false;
+            if (actionFilter === 'CHANNEL' && !actionType.startsWith('CHANNEL_')) return false;
+            if (actionFilter === 'ROLE' && !actionType.startsWith('ROLE_')) return false;
+            if (actionFilter === 'MEMBER' && !actionType.startsWith('MEMBER_')) return false;
+        }
+
+        // Filter by Keyword (Actor, Action Type, Changes)
+        if (keyword) {
+            return actorName.toLowerCase().includes(keyword) ||
+                actionType.toLowerCase().includes(keyword) ||
+                changes.toLowerCase().includes(keyword);
+        }
+
+        return true;
+    });
+
+    renderAuditLogs(filtered);
+}
+
+window.renderAuditLogs = function (logs) {
+    const listDiv = document.getElementById('audit-log-list-container');
+    listDiv.innerHTML = '';
+
+    if (!logs || logs.length === 0) {
+        listDiv.innerHTML = '<div style="padding: 20px; text-align: center; color: #b5bac1;">Không có nhật ký nào.</div>';
+        return;
+    }
+
+    logs.forEach(log => {
+        const div = document.createElement('div');
+        div.className = 'audit-log-item';
+        div.style.display = 'flex';
+        div.style.alignItems = 'flex-start';
+        div.style.padding = '10px';
+        div.style.borderBottom = '1px solid #2b2d31';
+        div.style.marginBottom = '4px';
+
+        const actionType = log.actionType || 'UNKNOWN';
+        const changes = log.changes || '';
+        const actor = log.actor || {};
+        const actorName = actor.displayName || actor.username || 'Unknown';
+        const actorAvatar = actor.avatarUrl || 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+        // Icon based on action
+        let iconClass = 'fa-pen';
+        let color = '#b5bac1';
+
+        if (actionType.includes('CREATE')) { iconClass = 'fa-plus'; color = '#3ba55c'; }
+        else if (actionType.includes('DELETE')) { iconClass = 'fa-trash-can'; color = '#ed4245'; }
+        else if (actionType.includes('UPDATE')) { iconClass = 'fa-pencil'; color = '#5865f2'; }
+        else if (actionType.includes('KICK')) { iconClass = 'fa-user-minus'; color = '#ed4245'; }
+
+        const timeAgo = calculateTimeAgo(log.createdAt);
+
+        div.innerHTML = `
+            <div style="margin-right: 12px; position: relative;">
+                <img src="${actorAvatar}" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                <div style="position: absolute; bottom: -2px; right: -2px; background: #313338; border-radius: 50%; padding: 2px;">
+                    <i class="fas ${iconClass}" style="color: ${color}; font-size: 12px;"></i>
+                </div>
+            </div>
+            <div style="flex: 1;">
+                <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                    <div>
+                        <span style="font-weight: 600; color: #f2f3f5; margin-right: 6px;">${actorName}</span>
+                        <span style="color: #b5bac1; font-size: 12px; background: #2b2d31; padding: 2px 6px; border-radius: 4px;">${formatActionName(actionType)}</span>
+                    </div>
+                    <span style="font-size: 12px; color: #949ba4;">${timeAgo}</span>
+                </div>
+                <div style="color: #dbdee1; font-size: 14px; margin-top: 4px; word-break: break-word;">
+                    ${changes}
+                </div>
+            </div>
+        `;
+        listDiv.appendChild(div);
+    });
+}
+
+function formatActionName(action) {
+    if (!action) return 'UNKNOWN';
+    switch (action) {
+        case 'SERVER_UPDATE': return 'CẬP NHẬT MÁY CHỦ';
+        case 'CHANNEL_CREATE': return 'TẠO KÊNH';
+        case 'CHANNEL_UPDATE': return 'CẬP NHẬT KÊNH';
+        case 'CHANNEL_DELETE': return 'XÓA KÊNH';
+        case 'ROLE_CREATE': return 'TẠO VAI TRÒ';
+        case 'ROLE_UPDATE': return 'CẬP NHẬT VAI TRÒ';
+        case 'ROLE_DELETE': return 'XÓA VAI TRÒ';
+        case 'MEMBER_KICK': return 'ĐUỔI THÀNH VIÊN';
+        case 'MEMBER_BAN': return 'BAN THÀNH VIÊN';
+        case 'MEMBER_UNBAN': return 'BỎ BAN';
+        case 'MEMBER_ROLE_UPDATE': return 'CẬP NHẬT VAI TRÒ TV';
+        default: return action.replace('_', ' ');
+    }
+}
+
+// SERVER BANS LOGIC
+function loadServerBans() {
+    if (!currentServerId) return;
+    const listContainer = document.getElementById('server-bans-list');
+    if (!listContainer) return;
+    listContainer.innerHTML = '<div style="color: #b5bac1; text-align: center; padding: 20px;">Đang tải...</div>';
+
+    fetch(`/api/servers/${currentServerId}/bans`)
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to load bans');
+            return response.json();
+        })
+        .then(bans => {
+            allBansData = bans; // Store globally for filtering
+            renderServerBans(bans);
+        })
+        .catch(err => {
+            console.error(err);
+            listContainer.innerHTML = '<div style="color: #ed4245; text-align: center; padding: 20px;">Không thể tải danh sách cấm.</div>';
+        });
+}
+
+let allBansData = [];
+
+function renderServerBans(bans) {
+    const listContainer = document.getElementById('server-bans-list');
+    const countLabel = document.getElementById('bans-count-label');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '';
+
+    if (countLabel) countLabel.textContent = bans.length;
+
+    if (bans.length === 0) {
+        listContainer.innerHTML = '<div style="color: #b5bac1; text-align: center; padding: 20px;">Không có ai bị cấm.</div>';
+        return;
+    }
+
+    bans.forEach(member => {
+        const user = member.user;
+        const avatarUrl = user.avatarUrl || '/images/default_avatar.png';
+        const name = member.nickname || user.displayName || user.username;
+
+        const row = document.createElement('div');
+        row.className = 'member-item-row';
+        row.style.display = 'flex';
+        row.style.alignItems = 'center';
+        row.style.padding = '10px';
+        row.style.cursor = 'pointer';
+        row.style.borderBottom = '1px solid #2b2d31';
+        row.style.borderRadius = '4px';
+
+        row.onmouseover = () => row.style.backgroundColor = 'rgba(79, 84, 92, 0.16)';
+        row.onmouseout = () => row.style.backgroundColor = 'transparent';
+
+        row.onclick = () => showUnbanConfirmation(member);
+
+        row.innerHTML = `
+            <img src="${avatarUrl}" style="width: 32px; height: 32px; border-radius: 50%; margin-right: 12px; object-fit: cover;">
+            <div style="flex: 1;">
+                <div style="color: white; font-weight: 500; font-size: 14px;">${name}</div>
+                <div style="color: #b5bac1; font-size: 12px;">${user.username}</div>
+            </div>
+            <i class="fas fa-ban" style="color: #ed4245; opacity: 0.5;"></i>
+        `;
+        listContainer.appendChild(row);
+    });
+}
+
+function filterServerBans() {
+    const query = document.getElementById('server-bans-search').value.toLowerCase();
+    if (!allBansData) return;
+
+    const filtered = allBansData.filter(m => {
+        const name = (m.nickname || m.user.displayName || '').toLowerCase();
+        const username = m.user.username.toLowerCase();
+        return name.includes(query) || username.includes(query);
+    });
+    renderServerBans(filtered);
+}
+
+let memberToUnban = null;
+
+function showUnbanConfirmation(member) {
+    memberToUnban = member;
+    const overlay = document.getElementById('unban-confirm-overlay');
+    const text = document.getElementById('unban-confirm-text');
+    const btn = document.getElementById('btn-confirm-revoke-ban');
+
+    if (!overlay) return;
+
+    // Position overlay relative to the tab
+    const tab = document.getElementById('tab-server-bans');
+    if (tab) tab.style.position = 'relative';
+
+    const name = member.nickname || member.user.displayName || member.user.username;
+    text.textContent = `Bạn có chắc muốn gỡ ban cho @${name}?`;
+
+    btn.onclick = () => revokeBan(member.user.id);
+
+    overlay.style.display = 'flex';
+}
+
+function closeUnbanConfirm() {
+    const overlay = document.getElementById('unban-confirm-overlay');
+    if (overlay) overlay.style.display = 'none';
+    memberToUnban = null;
+}
+
+function revokeBan(userId) {
+    if (!currentServerId) return;
+
+    const btn = document.getElementById('btn-confirm-revoke-ban');
+    btn.innerText = "Đang xử lý...";
+    btn.disabled = true;
+
+    fetch(`/api/servers/${currentServerId}/bans/${userId}`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': csrfToken
+        }
+    })
+        .then(response => {
+            if (!response.ok) throw new Error('Unban failed');
+            closeUnbanConfirm();
+            loadServerBans();
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Lỗi khi gỡ lệnh cấm.");
+            closeUnbanConfirm();
+        })
+        .finally(() => {
+            btn.innerText = "Thu Hồi";
+            btn.disabled = false;
+        });
 }

@@ -29,6 +29,7 @@ public class ServerServiceImpl implements ServerService {
     private final ChannelRepository channelRepository;
     private final PermissionRepository permissionRepository;
     private final SimpUserRegistry simpUserRegistry;
+    private final hcmute.edu.vn.discord.service.AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -117,10 +118,42 @@ public class ServerServiceImpl implements ServerService {
     @Transactional
     public Server updateServer(Long serverId, ServerRequest request) {
         Server server = getServerById(serverId);
+
+        // Capture old values for audit log
+        String oldName = server.getName();
+        String oldDesc = server.getDescription();
+        String oldIcon = server.getIconUrl();
+
         server.setName(request.getName());
         server.setDescription(request.getDescription());
         server.setIconUrl(request.getIconUrl());
-        return serverRepository.save(server);
+        Server updated = serverRepository.save(server);
+
+        // Audit Log
+        try {
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            User actor = userRepository.findByUsername(username).orElse(null);
+
+            StringBuilder changes = new StringBuilder();
+            if (!Objects.equals(oldName, updated.getName())) {
+                changes.append("Tên: ").append(oldName).append(" -> ").append(updated.getName()).append("; ");
+            }
+            if (!Objects.equals(oldDesc, updated.getDescription())) {
+                changes.append("Mô tả: thay đổi; ");
+            }
+            if (!Objects.equals(oldIcon, updated.getIconUrl())) {
+                changes.append("Icon: thay đổi; ");
+            }
+
+            if (changes.length() > 0) {
+                auditLogService.logAction(updated, actor, hcmute.edu.vn.discord.common.AuditLogAction.SERVER_UPDATE,
+                        serverId.toString(), "SERVER", changes.toString());
+            }
+        } catch (Exception e) {
+            System.err.println("Error logging server update: " + e.getMessage());
+        }
+
+        return updated;
     }
 
     @Override
@@ -156,6 +189,12 @@ public class ServerServiceImpl implements ServerService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<hcmute.edu.vn.discord.entity.jpa.AuditLog> getAuditLogs(Long serverId) {
+        return auditLogService.getAuditLogs(serverId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public int countOnlineMembers(Long serverId) {
         // 1. Get all members of the server
         List<ServerMember> members = serverMemberRepository.findByServerId(serverId);
@@ -182,4 +221,5 @@ public class ServerServiceImpl implements ServerService {
 
         return onlineCount;
     }
+
 }

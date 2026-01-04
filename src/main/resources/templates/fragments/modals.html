@@ -450,13 +450,76 @@
                 <!-- TAB: AUDIT LOG -->
                 <div id="tab-server-audit" class="settings-tab-content">
                     <h2>Nhật ký chỉnh sửa</h2>
-                    <p class="placeholder-text">Nhật ký thay đổi sẽ hiển thị tại đây.</p>
+
+                    <div class="members-controls-row" style="margin-bottom: 24px; gap: 10px;">
+                        <div class="members-search-box-styled search-box-flex" style="flex: 1;">
+                            <input type="text" id="audit-log-search"
+                                placeholder="Tìm kiếm theo người dùng hoặc chi tiết" oninput="filterAuditLogs()">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <select id="audit-log-filter-action" class="audit-filter-select" onchange="filterAuditLogs()"
+                            style="background-color: #1e1f22; color: #dbdee1; border: none; padding: 8px; border-radius: 4px; outline: none; cursor: pointer;">
+                            <option value="ALL">Tất cả hành động</option>
+                            <option value="SERVER_UPDATE">Cập nhật Server</option>
+                            <option value="CHANNEL">Kênh</option>
+                            <option value="ROLE">Vai trò</option>
+                            <option value="MEMBER">Thành viên</option>
+                        </select>
+                    </div>
+
+                    <div class="audit-log-list custom-scrollbar" id="audit-log-list-container"
+                        style="flex: 1; overflow-y: auto; padding-right: 10px;">
+                        <!-- Logs will be rendered here -->
+                        <div style="text-align: center; color: #b5bac1; padding: 20px;">Đang tải nhật ký...</div>
+                    </div>
                 </div>
 
                 <!-- TAB: BANS -->
+                <!-- TAB: BANS -->
                 <div id="tab-server-bans" class="settings-tab-content">
-                    <h2>Chặn</h2>
-                    <p class="placeholder-text">Danh sách người dùng bị chặn.</p>
+                    <h2 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 700;">Lệnh Cấm</h2>
+                    <p
+                        style="color: #b5bac1; font-size: 13px; margin-bottom: 20px; border-bottom: 1px solid #3f4147; padding-bottom: 20px;">
+                        Danh sách các thành viên bị cấm. Nhấp vào tên để thu hồi lệnh cấm.
+                    </p>
+
+                    <div class="members-controls-row" style="margin-bottom: 24px; gap: 10px;">
+                        <div class="members-search-box-styled search-box-flex" style="flex: 1;">
+                            <input type="text" id="server-bans-search" placeholder="Tìm kiếm theo tên"
+                                oninput="filterServerBans()">
+                            <i class="fas fa-search"></i>
+                        </div>
+                    </div>
+
+                    <div
+                        style="font-weight: 700; color: #b5bac1; margin-bottom: 8px; font-size: 12px; text-transform: uppercase;">
+                        DANH SÁCH BỊ CẤM - <span id="bans-count-label">0</span>
+                    </div>
+                    <div id="server-bans-list" class="members-list-wrapper"
+                        style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
+                        <!-- JS renders simple rows here -->
+                    </div>
+
+                    <!-- Unban Confirmation Modal (Hidden by default, or used via Overlay) -->
+                    <!-- We can use a simple confirm() or a custom overlay. User requested "hiển thị ra thông báo".
+                         I will implement a small custom overlay inside this tab or use the notification system. 
+                         For better UX, I'll append a hidden overlay div for this logic. -->
+                    <div id="unban-confirm-overlay"
+                        style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 10;">
+                        <div
+                            style="background: #313338; padding: 20px; border-radius: 5px; width: 300px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                            <h3 style="color: white; margin-bottom: 15px;">Thu hồi lệnh cấm?</h3>
+                            <p id="unban-confirm-text" style="color: #b5bac1; margin-bottom: 20px;">Bạn có chắc muốn gỡ
+                                ban cho ...?</p>
+                            <div style="display: flex; gap: 10px; justify-content: center;">
+                                <button onclick="closeUnbanConfirm()"
+                                    style="padding: 8px 16px; background: transparent; color: white; border: none; cursor: pointer; border-radius: 3px; font-weight: 500;">Hủy</button>
+                                <button id="btn-confirm-revoke-ban"
+                                    style="padding: 8px 16px; background: #ed4245; color: white; border: none; cursor: pointer; border-radius: 3px; font-weight: 500;">Thu
+                                    Hồi</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- TAB: DELETE -->

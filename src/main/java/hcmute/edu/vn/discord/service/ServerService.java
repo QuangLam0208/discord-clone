@@ -18,4 +18,7 @@ public interface ServerService {
     void deleteServer(Long serverId);
 
     int countOnlineMembers(Long serverId);
+
+    List<hcmute.edu.vn.discord.entity.jpa.AuditLog> getAuditLogs(Long serverId);
+
 }

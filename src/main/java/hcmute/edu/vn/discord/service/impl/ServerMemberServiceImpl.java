@@ -27,6 +27,7 @@ public class ServerMemberServiceImpl implements ServerMemberService {
     private final UserRepository userRepository;
     private final ServerRoleRepository serverRoleRepository;
     private final PermissionRepository permissionRepository;
+    private final hcmute.edu.vn.discord.service.AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -116,7 +117,39 @@ public class ServerMemberServiceImpl implements ServerMemberService {
     public boolean removeMember(Long serverId, Long userId) {
         return serverMemberRepository.findByServerIdAndUserId(serverId, userId)
                 .map(member -> {
+                    String nickname = member.getNickname();
+                    String username = member.getUser().getUsername();
+                    Server server = member.getServer();
+
                     serverMemberRepository.delete(member);
+
+                    // Audit Log
+                    try {
+                        String actorName = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                                .getAuthentication().getName();
+                        User actor = userRepository.findByUsername(actorName).orElse(null);
+
+                        // Determine if kick or leave
+                        hcmute.edu.vn.discord.common.AuditLogAction action = hcmute.edu.vn.discord.common.AuditLogAction.MEMBER_KICK;
+                        String desc = "Đã đuổi thành viên: " + (nickname != null ? nickname : username);
+
+                        if (actor != null && actor.getId().equals(userId)) {
+                            // User left
+                            // We don't have MEMBER_LEAVE yet, so skip or add it.
+                            // For now, let's just log it as a Kick by self? No, that's weird.
+                            // Let's assume removeMember called by another is a KICK.
+                            // If called by self, it is LEAVE.
+                            // I'll skip logging leave for now to avoid confusion with Kick filter, unless
+                            // required.
+                            // Requirement said "MEMBER_KICK" is in action list.
+                            return true;
+                        }
+
+                        auditLogService.logAction(server, actor, action,
+                                userId.toString(), "MEMBER", desc);
+                    } catch (Exception e) {
+                    }
+
                     return true;
                 })
                 .orElse(false);
@@ -141,7 +174,8 @@ public class ServerMemberServiceImpl implements ServerMemberService {
 
         boolean hasEveryone = member.getRoles().stream().anyMatch(r -> "@everyone".equalsIgnoreCase(r.getName()));
         if (!hasEveryone) {
-            serverRoleRepository.findByServerIdAndName(serverId, "@everyone").ifPresent(everyone -> member.getRoles().add(everyone));
+            serverRoleRepository.findByServerIdAndName(serverId, "@everyone")
+                    .ifPresent(everyone -> member.getRoles().add(everyone));
         }
         return member.getRoles().stream().toList();
     }
