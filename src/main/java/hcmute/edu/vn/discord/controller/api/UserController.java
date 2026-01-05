@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.Principal;
 import java.util.Map;
@@ -30,6 +31,20 @@ public class UserController {
         var user = userService.findByUsername(principal.getName())
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
         return ResponseEntity.ok(UserResponse.from(user));
+    }
+
+    @PostMapping("/profile")
+    public ResponseEntity<UserResponse> updateProfile(
+            @RequestParam("displayName") String displayName,
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            Principal principal) {
+
+        if (principal == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        var updatedUser = userService.updateProfile(principal.getName(), displayName, file);
+        return ResponseEntity.ok(UserResponse.from(updatedUser));
     }
 
     @GetMapping("/username/{username}")

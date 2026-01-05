@@ -3,6 +3,8 @@ package hcmute.edu.vn.discord.service;
 import hcmute.edu.vn.discord.dto.request.RegisterRequest;
 import hcmute.edu.vn.discord.dto.response.UserDetailResponse;
 import hcmute.edu.vn.discord.entity.jpa.User;
+import org.springframework.web.multipart.MultipartFile;
+
 import java.util.Optional;
 
 public interface UserService {
@@ -13,4 +15,5 @@ public interface UserService {
     boolean existsByEmail(String email);
 
     UserDetailResponse getUserDetail(Long userId);
+    User updateProfile(String username, String displayName, MultipartFile file);
 }

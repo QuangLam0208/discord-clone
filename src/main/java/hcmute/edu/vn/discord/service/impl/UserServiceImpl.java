@@ -9,13 +9,21 @@ import hcmute.edu.vn.discord.entity.jpa.Server;
 import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.repository.*;
 import hcmute.edu.vn.discord.repository.ServerMemberRepository;
+import hcmute.edu.vn.discord.service.FileValidationService;
 import hcmute.edu.vn.discord.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -31,6 +39,13 @@ public class UserServiceImpl implements UserService {
     private final ChannelRepository channelRepository;
     private final ServerMemberRepository serverMemberRepository;
     private final MessageRepository messageRepository;
+    private final FileValidationService fileValidationService;
+
+    @Value("${discord.upload.base-url}")
+    private String baseUrl;
+
+    @Value("${discord.upload.dir:uploads}")
+    private String uploadDir;
 
     @Override
     public User registerUser(User user) {
@@ -139,5 +154,61 @@ public class UserServiceImpl implements UserService {
                 .lastActive(lastActiveLdt)   // chuyển đổi đúng cách; có thể null
                 .servers(summaries)
                 .build();
+    }
+
+    @Override
+    public User updateProfile(String username, String displayName, MultipartFile file) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        // 1. Update display name
+        if (displayName != null && !displayName.trim().isEmpty()) {
+            user.setDisplayName(displayName.trim());
+        }
+
+        // 2. Upload file
+        if (file != null && !file.isEmpty()) {
+            try {
+                String avatarUrl = saveAvatarFile(file);
+                user.setAvatarUrl(avatarUrl);
+            } catch (IOException e) {
+                throw new RuntimeException("Lỗi khi lưu avatar: " + e.getMessage());
+            }
+        }
+
+        return userRepository.save(user);
+    }
+
+    // Hàm phụ trợ lưu file
+    private String saveAvatarFile(MultipartFile file) throws IOException {
+        String detected = fileValidationService.detectContentType(file.getBytes());
+
+        if (!Set.of("image/jpeg", "image/png", "image/webp").contains(detected)) {
+            throw new IllegalArgumentException("Chỉ chấp nhận file ảnh (JPEG, PNG, WEBP)");
+        }
+
+        String extension = switch (detected) {
+            case "image/jpeg" -> ".jpg";
+            case "image/png"  -> ".png";
+            case "image/webp" -> ".webp";
+            default -> ".bin";
+        };
+
+        LocalDate today = LocalDate.now();
+        String datePath = String.format("%d/%02d/%02d", today.getYear(), today.getMonthValue(), today.getDayOfMonth());
+
+        Path baseUploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
+        Path uploadPath = baseUploadPath.resolve(datePath).normalize();
+
+        if (!Files.exists(uploadPath)) {
+            Files.createDirectories(uploadPath);
+        }
+
+        String uniqueFilename = UUID.randomUUID() + extension;
+        Path filePath = uploadPath.resolve(uniqueFilename).normalize();
+
+        file.transferTo(filePath);
+
+        return String.format("%s/files/%s/%s", baseUrl, datePath, uniqueFilename);
     }
 }
