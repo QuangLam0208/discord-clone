@@ -172,7 +172,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         if (message.isDeleted()) return toResponse(message);
 
         message.setDeleted(true);
-        message.setContent("");
+//        message.setContent("");
         message.setAttachments(new ArrayList<>());
         message.setReactions(new HashMap<>());
         message.setUpdatedAt(new Date());

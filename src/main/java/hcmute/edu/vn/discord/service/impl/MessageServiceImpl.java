@@ -132,7 +132,7 @@ public class MessageServiceImpl implements MessageService {
     }
 
     @Override
-    public void deleteMessage(String messageId, String username) {
+    public MessageResponse deleteMessage(String messageId, String username) {
         Message message = messageRepository.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy tin nhắn với ID: " + messageId));
 
@@ -171,12 +171,18 @@ public class MessageServiceImpl implements MessageService {
         }
 
         message.setDeleted(true);
-        message.setContent(null);
+//        message.setContent(null);
         message.setAttachments(null);
-        messageRepository.save(message);
+        Message savedMessage = messageRepository.save(message);
 
         messagingTemplate.convertAndSend("/topic/channel/" + message.getChannelId(),
                 Map.of("type", "DELETE_MESSAGE", "messageId", messageId));
+
+        // Trả về message đã xóa (với cờ deleted=true) để broadcast
+        // Cần sender info để mapToResponse
+        User sender = userRepository.findById(message.getSenderId()).orElse(null);
+
+        return mapToResponse(savedMessage, sender);
     }
 
     @Override

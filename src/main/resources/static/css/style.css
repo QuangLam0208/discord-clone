@@ -1299,7 +1299,7 @@ input:checked+.slider:before {
    padding-left: 30px !important;
 }
 
-  /* =========================================
+/* =========================================
    7. PROFILE & ADMIN STYLES
    ========================================= */
 
@@ -2064,6 +2064,90 @@ input:checked+.slider:before {
     font-weight: 600;
 }
 
+/* MESSAGE HOVER ACTIONS */
+.message {
+   position: relative;
+}
+
+.message-actions {
+   display: none;
+   position: absolute;
+   right: 16px;
+   top: -10px;
+   background-color: #36393f;
+   border: 1px solid #2f3136;
+   border-radius: 4px;
+   padding: 6px;
+   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+   z-index: 10;
+}
+
+.message:hover .message-actions {
+   display: flex;
+   gap: 8px;
+}
+
+.message-actions i {
+   cursor: pointer;
+   color: #b9bbbe;
+   font-size: 14px;
+   padding: 4px;
+   border-radius: 4px;
+   transition: background-color 0.1s, color 0.1s;
+}
+
+.message-actions i:hover {
+   background-color: #40444b;
+   color: #dcddde;
+}
+
+.message-actions i.trash-icon:hover {
+   color: #ed4245;
+}
+
+/* Context Menu */
+.context-menu {
+   position: fixed;
+   z-index: 10000;
+   width: 200px;
+   background: #18191c;
+   border-radius: 4px;
+   padding: 6px 8px;
+   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24);
+   display: none;
+}
+
+.context-menu.active {
+   display: block;
+}
+
+.context-menu-item {
+   padding: 8px 12px;
+   color: #b9bbbe;
+   font-size: 14px;
+   font-weight: 500;
+   cursor: pointer;
+   border-radius: 2px;
+   transition: background-color 0.1s;
+   display: flex;
+   justify-content: space-between;
+   align-items: center;
+}
+
+.context-menu-item:hover {
+   background-color: #4752c4;
+   color: #fff;
+}
+
+.context-menu-item.delete {
+   color: #ed4245;
+}
+
+.context-menu-item.delete:hover {
+   background-color: #ed4245;
+   color: #fff;
+}
+
 /* KHUNG CHỨA 2 NÚT */
 .dm-intro-actions {
     display: flex;
@@ -2665,13 +2749,47 @@ input:checked+.slider:before {
 }
 
 .date-divider span {
-    background-color: #313338;
-    padding: 0 10px;
-    z-index: 2;
-    color: #96989d;
-    font-size: 12px;
-    font-weight: 600;
+   background-color: #313338;
+   padding: 0 10px;
+   z-index: 2;
+   color: #96989d;
+   font-size: 12px;
+   font-weight: 600;
+}/* SweetAlert Discord Theme */
+.swal2-popup-discord {
+    border-radius: 4px !important;
 }
+
+.swal2-title-discord {
+    color: #fff !important;
+    font-size: 20px !important;
+    font-weight: 700 !important;
+}
+
+.swal2-container.swal2-backdrop-show,
+.swal2-container.swal2-noanimation {
+    background: rgba(0, 0, 0, 0.7) !important;
+}
+
+.swal2-styled.swal2-confirm {
+    background-color: #ed4245 !important;
+    font-weight: 600 !important;
+}
+
+.swal2-styled.swal2-confirm:focus {
+    box-shadow: 0 0 0 3px rgba(237, 66, 69, 0.5) !important;
+}
+
+.swal2-styled.swal2-cancel {
+    background-color: #747f8d !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+}
+
+.swal2-styled.swal2-cancel:hover {
+    background-color: #5d6671 !important;
+}
+
 
 /* --- Message Hover & Toolbar Styles --- */
 .message-wrapper {

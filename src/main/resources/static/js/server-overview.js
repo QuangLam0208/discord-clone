@@ -198,7 +198,7 @@ window.confirmDeleteServer = async function () {
 
     const result = await Swal.fire({
         title: 'Xóa máy chủ',
-        html: `Bạn có chắc chắn muốn xóa máy chủ này không? Hành động này không thể hoàn tác.<br>Vui lòng nhập <b>${serverName}</b> để xác nhận.`,
+        html: `Bạn có chắc chắn muốn xóa máy chủ này không? Hành động này không thể hoàn tác.<br>Vui lòng nhập <b>"${serverName}"</b> để xác nhận.`,
         input: 'text',
         inputAttributes: { autocapitalize: 'off', placeholder: serverName },
         showCancelButton: true,
@@ -223,7 +223,7 @@ window.confirmDeleteServer = async function () {
                     title: 'Đã xóa', text: 'Máy chủ đã được xóa thành công.', icon: 'success',
                     timer: 2000, showConfirmButton: false, background: '#313338', color: '#dbdee1'
                 }).then(() => {
-                    window.location.href = '/channels/@me';
+                    window.location.href = '/home';
                 });
             } else {
                 Swal.fire('Lỗi', 'Không thể xóa server', 'error');

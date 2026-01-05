@@ -79,7 +79,12 @@ public class MessageController {
             @Valid @RequestBody MessageRequest request,
             Principal principal) {
 
-        return ResponseEntity.ok(messageService.editMessage(id, principal.getName(), request));
+        MessageResponse response = messageService.editMessage(id, principal.getName(), request);
+
+        // Broadcast update
+        messagingTemplate.convertAndSend("/topic/channel/" + response.getChannelId(), response);
+
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -95,7 +100,11 @@ public class MessageController {
             @PathVariable String id,
             Principal principal) {
 
-        messageService.deleteMessage(id, principal.getName());
+        MessageResponse response = messageService.deleteMessage(id, principal.getName());
+
+        // Broadcast delete
+        messagingTemplate.convertAndSend("/topic/channel/" + response.getChannelId(), response);
+
         return ResponseEntity.noContent().build();
     }
 
