@@ -15,6 +15,9 @@
         if (typeof window.attachAdminDMHandlers === 'function') {
             window.attachAdminDMHandlers();
         }
+        if (typeof window.attachAdminAuditHandlers === 'function') {
+            window.attachAdminAuditHandlers();
+        }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -35,11 +38,11 @@
 
         const btnLogout = document.getElementById('btn-admin-logout');
         btnLogout?.addEventListener('click', () => {
-            Swal.fire({ title:'Đăng xuất?', icon:'question', showCancelButton:true, confirmButtonText:'Đăng xuất', cancelButtonText:'Hủy', confirmButtonColor:'#ed4245', background:'#313338', color:'#fff' })
-                .then(r => { if (r.isConfirmed) { localStorage.clear(); window.location.href = '/login'; }});
+            Swal.fire({ title: 'Đăng xuất?', icon: 'question', showCancelButton: true, confirmButtonText: 'Đăng xuất', cancelButtonText: 'Hủy', confirmButtonColor: '#ed4245', background: '#313338', color: '#fff' })
+                .then(r => { if (r.isConfirmed) { localStorage.clear(); window.location.href = '/login'; } });
         });
 
-        const hashSection = (location.hash || '').replace('#','') || 'dashboard';
+        const hashSection = (location.hash || '').replace('#', '') || 'dashboard';
         window.loadSection(hashSection);
     });
 
