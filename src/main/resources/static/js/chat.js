@@ -52,6 +52,8 @@ function createDateDivider(dateString) {
 
 // 1. Create Message Element
 function createMessageElement(msg) {
+    if (msg.deleted) return null; // Don't render deleted messages initially
+
     const div = document.createElement('div');
     div.className = 'message';
     div.dataset.timestamp = new Date(msg.createdAt).getTime(); // Add timestamp for Divider logic
@@ -59,8 +61,32 @@ function createMessageElement(msg) {
     const time = formatMessageTime(msg.createdAt);
 
     const senderName = msg.senderName || msg.senderId;
-    // Avatar giả lập
     const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=random&color=fff&size=40`;
+
+    // Check ownership for Edit/Delete actions
+    // Assume state.currentUser is populated (from home.js/loadMe)
+    const currentUserId = state.currentUser ? state.currentUser.id : (localStorage.getItem('userId') ? parseInt(localStorage.getItem('userId')) : null);
+    const isOwner = currentUserId && (msg.senderId === currentUserId);
+
+    // Controls HTML (Restored)
+    let controlsHtml = '';
+    if (isOwner && !msg.deleted) {
+        controlsHtml = `
+            <div class="message-actions">
+                <i class="fas fa-pen" onclick="enableEditMessage('${msg.id}')" title="Chỉnh sửa"></i>
+                <i class="fas fa-trash trash-icon" onclick="confirmDeleteMessage('${msg.id}')" title="Xóa"></i>
+            </div>
+        `;
+    }
+
+    // Context Menu Trigger: Right-click on .message (Keeping this as secondary option)
+    div.addEventListener('contextmenu', (e) => {
+        if (!isOwner || msg.deleted) return;
+        e.preventDefault();
+        showContextMenu(e.pageX, e.pageY, msg.id);
+    });
+
+
 
     let attachmentsHtml = '';
     if (msg.attachments && Array.isArray(msg.attachments) && msg.attachments.length > 0) {
@@ -76,12 +102,67 @@ function createMessageElement(msg) {
                 ${senderName} 
                 <span style="font-size: 12px; color: #b5bac1; font-weight: normal; margin-left: 5px;">${time}</span>
             </div>
-            <div class="msg-content">${msg.content || ''}</div>
+            <div class="msg-content" id="msg-content-${msg.id}">
+                ${msg.deleted ? '<em style="color: #72767d;">Tin nhắn đã bị xóa.</em>' : (msg.content || '')}
+                ${(msg.isEdited && !msg.deleted) ? '<span style="font-size: 10px; color: #72767d; margin-left: 4px;">(đã chỉnh sửa)</span>' : ''}
+            </div>
             ${attachmentsHtml}
         </div>
+        ${controlsHtml}
     `;
+
+    // Hover effect for actions
+    if (isOwner && !msg.deleted) {
+        div.style.position = 'relative';
+        // CSS will handle hover display via .message:hover .message-actions
+    }
+
+
     return div;
 }
+
+// Global Context Menu Logic
+const contextMenuEl = document.createElement('div');
+contextMenuEl.className = 'context-menu';
+document.body.appendChild(contextMenuEl);
+
+function showContextMenu(x, y, msgId) {
+    contextMenuEl.innerHTML = `
+        <div class="context-menu-item" onclick="enableEditMessage('${msgId}'); hideContextMenu()">
+            <span>Chỉnh sửa tin nhắn</span>
+            <i class="fas fa-pen"></i>
+        </div>
+        <div class="context-menu-item delete" onclick="confirmDeleteMessage('${msgId}'); hideContextMenu()">
+            <span>Xóa tin nhắn</span>
+            <i class="fas fa-trash"></i>
+        </div>
+    `;
+
+    // Position check to avoid overflow
+    const winWidth = window.innerWidth;
+    const winHeight = window.innerHeight;
+
+    let left = x;
+    let top = y;
+
+    if (x + 200 > winWidth) left = winWidth - 210;
+    if (y + 100 > winHeight) top = winHeight - 110;
+
+    contextMenuEl.style.left = `${left}px`;
+    contextMenuEl.style.top = `${top}px`;
+    contextMenuEl.classList.add('active');
+}
+
+function hideContextMenu() {
+    contextMenuEl.classList.remove('active');
+}
+
+// Hide menu on click outside
+document.addEventListener('click', (e) => {
+    if (!contextMenuEl.contains(e.target)) {
+        hideContextMenu();
+    }
+});
 
 // 2. Scroll to Bottom
 function scrollToBottom() {
@@ -107,13 +188,15 @@ async function loadMessages(channelId) {
 
             let lastDate = null;
             sortedMsgs.forEach(msg => {
+                if (msg.deleted) return; // Skip deleted
+
                 const msgDate = new Date(msg.createdAt).setHours(0, 0, 0, 0);
                 if (lastDate === null || msgDate !== lastDate) {
                     chatArea.appendChild(createDateDivider(msg.createdAt));
                     lastDate = msgDate;
                 }
                 const msgEl = createMessageElement(msg);
-                chatArea.appendChild(msgEl);
+                if (msgEl) chatArea.appendChild(msgEl);
             });
 
             scrollToBottom();
@@ -177,82 +260,52 @@ window.connectChannelSocket = connectChannelSocket; // Expose if needed
 function subscribeToChannel(channelId) {
     if (!channelId) return;
 
-    // Safety check: specific fix for "Cannot read properties of null (reading 'subscribe')"
+    // Safety check
     if (!state.stompClient || !state.stompClient.connected) {
         console.log("WebSocket not ready. connecting...", channelId);
         connectChannelSocket(channelId);
         return;
     }
 
-    // Hủy đăng ký channel cũ nếu có
     if (channelSubscription) {
         channelSubscription.unsubscribe();
     }
 
-    // Subscribe channel mới: /topic/channel/{id}
     channelSubscription = state.stompClient.subscribe(`/topic/channel/${channelId}`, function (message) {
         const receivedMsg = JSON.parse(message.body);
-        // Render tin nhắn mới nhận được
         const chatArea = document.querySelector('.chat-area');
         if (!chatArea) return;
 
-        // Nếu đây là tin nhắn đầu tiên (đang hiện text "Chưa có tin nhắn...") -> clear đi
         if (chatArea.innerText.includes("Chưa có tin nhắn")) chatArea.innerHTML = '';
 
-        // Check if we need a divider
-        const msgDate = new Date(receivedMsg.createdAt).setHours(0, 0, 0, 0);
-
-        // Find last message date from DOM ?? simpler: compare with "today" if real-time
-        // Or check last divider? 
-        // Best approach: Check the timestamp of the last .message element
-        const lastMsgEl = chatArea.querySelector('.message:last-child');
-        let lastDate = null;
-        if (lastMsgEl) {
-            // We don't store raw date on DOM, but we can infer or store it.
-            // actually, easier: if it's a new day vs "now", append divider.
-            // But if user scrolls up? this is only for new incoming messages essentially "now".
-            // So if now is different day than the last received message.
-            // Let's assume real-time messages are "now". But wait, `receivedMsg` has `createdAt`.
-            // Let's compare `receivedMsg.createdAt` with the last message's time. 
-            // We can't easily get last message time from DOM unless we store it.
-            // Hack: look at the last divider? No.
-            // Correct way: The incoming message IS sorted by time (usually).
-            // Let's just assume we need to check against the previous element in DOM.
+        // 1. DELETE Handling
+        if (receivedMsg.deleted) {
+            const existingMsgEl = document.getElementById(`msg-content-${receivedMsg.id}`)?.closest('.message');
+            if (existingMsgEl) existingMsgEl.remove();
+            return;
         }
 
-        // Logic: Always check if the date differs from the previous visible message.
-        // Implementation:
-        // Get all dividers. Get last divider. Parse text? Too hard.
-        // Simplified: Store lastRenderedDate in a global/state? Vulnerable to channel switch.
-        // Better: When appending, check if the last element in chatArea is from same day.
-        // We can attach data-date to .message elements?
-        /* 
-           We will modify createMessageElement to add data-timestamp to the div.
-        */
+        // 2. EDIT Handling (Update existing)
+        const existingContentEl = document.getElementById(`msg-content-${receivedMsg.id}`);
+        if (existingContentEl) {
+            existingContentEl.innerHTML = `
+                ${receivedMsg.content}
+                <span style="font-size: 10px; color: #72767d; margin-left: 4px;">(đã chỉnh sửa)</span>
+            `;
+            return;
+        }
 
+        // 3. NEW MESSAGE Handling
+        // Check for date divider
+        const msgDate = new Date(receivedMsg.createdAt).setHours(0, 0, 0, 0);
         let shouldAddDivider = true;
 
-        // Try to find the last message element
-        const messages = chatArea.querySelectorAll('.message');
-        if (messages.length > 0) {
-            const lastMsg = messages[messages.length - 1];
-            // We need to add data-timestamp to message elements to make this robust
-            // BUT, since we can't easily modify createMessageElement in this same tool call safely without complex referencing,
-            // we will rely on creating the message element temporarily or just state.
-            // Actually, I should update createMessageElement to include data-timestamp.
-        }
-
-        // Wait, I can update createMessageElement in this tool call too! I will do that.
-
-        // Revised Subscribe Logic assuming createMessageElement adds data-timestamp
-        const lastMessage = chatArea.lastElementChild; // Could be message or divider
-        if (lastMessage && lastMessage.classList.contains('message')) {
+        const lastMessage = chatArea.querySelector('.message:last-of-type');
+        if (lastMessage) {
             const lastTs = parseInt(lastMessage.dataset.timestamp);
             if (lastTs) {
-                const lastDateObj = new Date(lastTs);
-                if (lastDateObj.setHours(0, 0, 0, 0) === msgDate) {
-                    shouldAddDivider = false;
-                }
+                const lastDate = new Date(lastTs).setHours(0, 0, 0, 0);
+                if (lastDate === msgDate) shouldAddDivider = false;
             }
         }
 
@@ -261,11 +314,136 @@ function subscribeToChannel(channelId) {
         }
 
         const msgEl = createMessageElement(receivedMsg);
-        chatArea.appendChild(msgEl);
-        scrollToBottom();
+        if (msgEl) {
+            chatArea.appendChild(msgEl);
+            scrollToBottom();
+        }
     });
 
     console.log(`Subscribed to /topic/channel/${channelId}`);
+}
+
+// 6. Edit & Delete Logic
+
+window.enableEditMessage = function (msgId) {
+    const contentEl = document.getElementById(`msg-content-${msgId}`);
+    if (!contentEl) return;
+
+    // Avoid double edit
+    if (contentEl.querySelector('input')) return;
+
+    // Get raw text (remove "(đã chỉnh sửa)" if exists)
+    let currentText = contentEl.innerText.replace('(đã chỉnh sửa)', '').trim();
+    if (currentText === "Tin nhắn đã bị xóa.") return;
+
+    contentEl.innerHTML = `
+        <div style="margin-top: 5px;">
+            <input type="text" id="edit-input-${msgId}" value="${currentText.replace(/"/g, '&quot;')}" 
+                style="width: 100%; padding: 8px; border-radius: 4px; border: none; background: #40444b; color: #dcddde; outline: none; box-sizing: border-box;"
+                onkeydown="if(event.key === 'Enter') saveEditMessage('${msgId}')">
+            <div style="font-size: 12px; margin-top: 4px;">
+                <span style="color: #72767d;">Escape to <a href="#" onclick="cancelEditMessage('${msgId}', '${currentText.replace(/'/g, "\\'")}', event)" style="color: #00b0f4; text-decoration: none;">cancel</a> • Enter to <a href="#" onclick="saveEditMessage('${msgId}', event)" style="color: #00b0f4; text-decoration: none;">save</a></span>
+            </div>
+        </div>
+    `;
+
+    // Focus, move cursor to end
+    setTimeout(() => {
+        const input = document.getElementById(`edit-input-${msgId}`);
+        if (input) {
+            input.focus();
+            input.setSelectionRange(input.value.length, input.value.length);
+            // Escape to cancel
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') cancelEditMessage(msgId, currentText, e);
+            });
+        }
+    }, 0);
+}
+
+window.cancelEditMessage = function (msgId, originalText, e) {
+    if (e) e.preventDefault();
+    const contentEl = document.getElementById(`msg-content-${msgId}`);
+    if (!contentEl) return;
+    contentEl.innerHTML = originalText;
+}
+
+window.saveEditMessage = async function (msgId, e) {
+    if (e) e.preventDefault();
+    const input = document.getElementById(`edit-input-${msgId}`);
+    if (!input) return;
+
+    const newContent = input.value.trim();
+    if (!newContent) {
+        alert("Tin nhắn không được để trống!");
+        return;
+    }
+
+    const contentEl = document.getElementById(`msg-content-${msgId}`);
+    // Optimistic update: Show "saving..." immediately BEFORE API call
+    contentEl.innerHTML = `
+        ${newContent}
+        <span style="font-size: 10px; color: #72767d;">(đang lưu...)</span>
+    `;
+
+    // Call API
+    try {
+        await Api.put(`/api/messages/${msgId}`, { content: newContent });
+
+        contentEl.innerHTML = `
+            ${newContent}
+            <span style="font-size: 10px; color: #72767d; margin-left: 4px;">(đã chỉnh sửa)</span>
+        `;
+    } catch (err) {
+        console.error("Failed to edit message", err);
+        alert("Không thể sửa tin nhắn: " + (err.message || 'Lỗi không xác định'));
+
+        // On error, let user try again by restoring input
+        enableEditMessage(msgId);
+        const retryInput = document.getElementById(`edit-input-${msgId}`);
+        if (retryInput) retryInput.value = newContent;
+    }
+}
+
+window.confirmDeleteMessage = function (msgId) {
+    Swal.fire({
+        title: 'Xóa tin nhắn',
+        text: "Bạn có chắc chắn muốn xóa tin nhắn này không?",
+        icon: null, // Custom styled
+        showCancelButton: true,
+        confirmButtonColor: '#ed4245',
+        cancelButtonColor: '#4f545c', // Discord grey
+        confirmButtonText: 'Xóa',
+        cancelButtonText: 'Hủy bỏ',
+        background: '#36393f',
+        color: '#dcddde', // Light gray text
+        customClass: {
+            title: 'swal2-title-discord',
+            popup: 'swal2-popup-discord'
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            try {
+                // Optimistic UI update: Remove immediately
+                const existingMsgEl = document.getElementById(`msg-content-${msgId}`)?.closest('.message');
+                if (existingMsgEl) existingMsgEl.remove();
+
+                await Api.delete(`/api/messages/${msgId}`);
+                // WebSocket will also broadcast delete, but we handled it optimistically.
+                // The subscriber logic checks if element exists, so it won't error if already removed.
+            } catch (err) {
+                console.error("Failed to delete message", err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lỗi',
+                    text: 'Không thể xóa tin nhắn.',
+                    background: '#36393f',
+                    color: '#fff'
+                });
+                // In a perfect world we would revert the UI removal here if failed.
+            }
+        }
+    });
 }
 // Export globally
 window.subscribeToChannel = subscribeToChannel;
