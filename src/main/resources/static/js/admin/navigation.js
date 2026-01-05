@@ -100,6 +100,27 @@
         return window.changeAuditPage(page, keyword, action, adminId);
     };
 
+    // Global delegation for pagination links in Users/Servers
+    document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.admin-pagination-link');
+        if (!btn) return;
+        e.preventDefault();
+
+        const section = btn.getAttribute('data-section');
+        const page = parseInt(btn.getAttribute('data-page'));
+        const keyword = btn.getAttribute('data-keyword') || '';
+
+        if (section && !isNaN(page)) {
+            loadSection(section, { page: page, keyword: keyword });
+        }
+    });
+
+    window.changeSectionPage = function (section, targetPage, keyword) {
+        if (targetPage < 0) return false;
+        loadSection(section, { page: targetPage, keyword: keyword });
+        return false;
+    };
+
     window.loadSection = loadSection;
     window.__adminRoutes = routes;
 })();

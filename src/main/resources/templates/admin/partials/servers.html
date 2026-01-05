@@ -1,7 +1,8 @@
 <div class="discord-admin-container" style="padding:0;">
     <div class="discord-header">
         <h1>Quản lý Server</h1>
-        <form action="#" method="get" class="discord-search" onsubmit="event.preventDefault(); loadSection('servers', {keyword: this.keyword.value});">
+        <form action="#" method="get" class="discord-search"
+            onsubmit="event.preventDefault(); loadSection('servers', {keyword: this.keyword.value});">
             <label>
                 <input type="text" name="keyword" th:value="${keyword}" placeholder="Tìm theo tên server...">
             </label>
@@ -12,105 +13,108 @@
     <div class="discord-table-wrapper">
         <table class="discord-table">
             <thead>
-            <tr>
-                <th>ID</th>
-                <th>Tên Server</th>
-                <th>Chủ sở hữu (Owner)</th>
-                <th>Thành viên</th>
-                <th>Trạng thái</th>
-                <th>Hành động</th>
-            </tr>
+                <tr>
+                    <th>ID</th>
+                    <th>Tên Server</th>
+                    <th>Chủ sở hữu (Owner)</th>
+                    <th>Thành viên</th>
+                    <th>Trạng thái</th>
+                    <th>Hành động</th>
+                </tr>
             </thead>
             <tbody>
-            <tr th:each="sv : ${servers}" th:attr="data-server-row=${sv.id}">
-                <td style="color:#b5bac1;font-family:monospace;" th:text="'#' + ${sv.id}">#1</td>
-                <td>
-                    <div class="user-cell">
-                        <span th:text="${sv.name}">Server Name</span>
-                    </div>
-                </td>
-                <td th:attr="data-server-owner=${sv.id}">
-                    <span th:if="${sv.owner != null}" th:text="${sv.owner.username}" style="color:#f2f3f5;font-weight:600;">Owner</span>
-                    <span th:unless="${sv.owner != null}" style="color:#da373c;">No Owner</span>
-                </td>
-                <td>
-                    <span class="badge-role member" style="background-color:#2b2d31;color:#b9bbbe;">
-                        <i class="fas fa-user-friends"></i> <span th:text="${sv.members != null ? sv.members.size() : 0}">0</span>
-                    </span>
-                </td>
-                <td th:attr="data-server-status=${sv.id}">
-                    <span th:switch="${sv.status}">
-                        <span th:case="${T(hcmute.edu.vn.discord.entity.enums.ServerStatus).ACTIVE}" class="badge-status active">Active</span>
-                        <span th:case="${T(hcmute.edu.vn.discord.entity.enums.ServerStatus).FREEZE}" class="badge-status freeze">Freeze</span>
-                        <span th:case="*" class="badge-status active">Active</span>
-                    </span>
-                </td>
-                <td>
-                    <div class="action-buttons-wrapper" style="position:relative;">
-                        <button type="button" class="btn-mini edit"
-                                th:data-id="${sv.id}" th:data-name="${sv.name}"
-                                onclick="openTransferModal(this.getAttribute('data-id'), this.getAttribute('data-name'))">
-                            <i class="fas fa-right-left"></i> Chuyển
-                        </button>
-                        <button type="button" class="btn-mini warn"
-                                th:attr="data-id=${sv.id}"
-                                onclick="toggleStatusMenu(this, this.getAttribute('data-id'))">
-                            <i class="fas fa-triangle-exclamation"></i>
-                        </button>
-                        <button type="button" class="btn-mini ban"
-                                th:data-id="${sv.id}" th:data-name="${sv.name}"
-                                onclick="openDeleteModal(this.getAttribute('data-id'), this.getAttribute('data-name'))">
-                            <i class="fas fa-trash"></i>
-                        </button>
-
-                        <div class="status-menu" th:id="'status-menu-' + ${sv.id}">
-                            <div class="status-menu-header">Gán trạng thái</div>
-                            <button type="button" class="status-item active"
-                                    data-status="ACTIVE"
-                                    onclick="updateServerStatus(this.closest('[data-server-row]').getAttribute('data-server-row'), this.getAttribute('data-status'))">
-                                <i class="fas fa-circle-check"></i> ACTIVE
-                            </button>
-                            <button type="button" class="status-item freeze"
-                                    data-status="FREEZE"
-                                    onclick="updateServerStatus(this.closest('[data-server-row]').getAttribute('data-server-row'), this.getAttribute('data-status'))">
-                                <i class="fas fa-snowflake"></i> FREEZE
-                            </button>
+                <tr th:each="sv : ${servers}" th:attr="data-server-row=${sv.id}">
+                    <td style="color:#b5bac1;font-family:monospace;" th:text="'#' + ${sv.id}">#1</td>
+                    <td>
+                        <div class="user-cell">
+                            <span th:text="${sv.name}">Server Name</span>
                         </div>
-                    </div>
-                </td>
-            </tr>
+                    </td>
+                    <td th:attr="data-server-owner=${sv.id}">
+                        <span th:if="${sv.owner != null}" th:text="${sv.owner.username}"
+                            style="color:#f2f3f5;font-weight:600;">Owner</span>
+                        <span th:unless="${sv.owner != null}" style="color:#da373c;">No Owner</span>
+                    </td>
+                    <td>
+                        <span class="badge-role member" style="background-color:#2b2d31;color:#b9bbbe;">
+                            <i class="fas fa-user-friends"></i> <span
+                                th:text="${sv.members != null ? sv.members.size() : 0}">0</span>
+                        </span>
+                    </td>
+                    <td th:attr="data-server-status=${sv.id}">
+                        <span th:switch="${sv.status}">
+                            <span th:case="${T(hcmute.edu.vn.discord.entity.enums.ServerStatus).ACTIVE}"
+                                class="badge-status active">Active</span>
+                            <span th:case="${T(hcmute.edu.vn.discord.entity.enums.ServerStatus).FREEZE}"
+                                class="badge-status freeze">Freeze</span>
+                            <span th:case="*" class="badge-status active">Active</span>
+                        </span>
+                    </td>
+                    <td>
+                        <div class="action-buttons-wrapper" style="position:relative;">
+                            <button type="button" class="btn-mini edit" th:data-id="${sv.id}" th:data-name="${sv.name}"
+                                onclick="openTransferModal(this.getAttribute('data-id'), this.getAttribute('data-name'))">
+                                <i class="fas fa-right-left"></i> Chuyển
+                            </button>
+                            <button type="button" class="btn-mini warn" th:attr="data-id=${sv.id}"
+                                onclick="toggleStatusMenu(this, this.getAttribute('data-id'))">
+                                <i class="fas fa-triangle-exclamation"></i>
+                            </button>
+                            <button type="button" class="btn-mini ban" th:data-id="${sv.id}" th:data-name="${sv.name}"
+                                onclick="openDeleteModal(this.getAttribute('data-id'), this.getAttribute('data-name'))">
+                                <i class="fas fa-trash"></i>
+                            </button>
 
-            <tr th:if="${#lists.isEmpty(servers)}">
-                <td colspan="6" class="muted" style="text-align:center;padding:40px;">
-                    <i class="fas fa-search"></i> Không tìm thấy server nào.
-                </td>
-            </tr>
+                            <div class="status-menu" th:id="'status-menu-' + ${sv.id}">
+                                <div class="status-menu-header">Gán trạng thái</div>
+                                <button type="button" class="status-item active" data-status="ACTIVE"
+                                    onclick="updateServerStatus(this.closest('[data-server-row]').getAttribute('data-server-row'), this.getAttribute('data-status'))">
+                                    <i class="fas fa-circle-check"></i> ACTIVE
+                                </button>
+                                <button type="button" class="status-item freeze" data-status="FREEZE"
+                                    onclick="updateServerStatus(this.closest('[data-server-row]').getAttribute('data-server-row'), this.getAttribute('data-status'))">
+                                    <i class="fas fa-snowflake"></i> FREEZE
+                                </button>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+
+                <tr th:if="${#lists.isEmpty(servers)}">
+                    <td colspan="6" class="muted" style="text-align:center;padding:40px;">
+                        <i class="fas fa-search"></i> Không tìm thấy server nào.
+                    </td>
+                </tr>
             </tbody>
         </table>
     </div>
 
     <div class="discord-pagination" th:if="${totalPages > 1}">
-        <a th:if="${currentPage > 0}"
-           href="#"
-           th:onclick="'loadSection(\\'servers\\', {page:' + (${currentPage} - 1) + ', keyword: \\'' + ${keyword} + '\\'})'"
-           class="page-btn"><i class="fas fa-chevron-left"></i> Trước</a>
+        <a th:if="${currentPage > 0}" href="javascript:void(0)" class="page-btn admin-pagination-link"
+            data-section="servers" th:data-page="${currentPage - 1}" th:data-keyword="${keyword}">
+            <i class="fas fa-chevron-left"></i> Trước
+        </a>
 
-        <span class="page-info">Trang <b th:text="${currentPage + 1}"></b> / <span th:text="${totalPages}"></span></span>
+        <span class="page-info">Trang <b th:text="${currentPage + 1}"></b> / <span
+                th:text="${totalPages}"></span></span>
 
-        <a th:if="${currentPage < totalPages - 1}"
-           href="#"
-           th:onclick="'loadSection(\\'servers\\', {page:' + (${currentPage} + 1) + ', keyword: \\'' + ${keyword} + '\\'})'"
-           class="page-btn">Sau <i class="fas fa-chevron-right"></i></a>
+        <a th:if="${currentPage < totalPages - 1}" href="javascript:void(0)" class="page-btn admin-pagination-link"
+            data-section="servers" th:data-page="${currentPage + 1}" th:data-keyword="${keyword}">
+            Sau <i class="fas fa-chevron-right"></i>
+        </a>
     </div>
 </div>
 
 <!-- Modals -->
 <div id="deleteModal" class="modal-overlay">
     <div class="discord-modal">
-        <div class="modal-header"><h2 class="danger-title">XÓA SERVER</h2></div>
+        <div class="modal-header">
+            <h2 class="danger-title">XÓA SERVER</h2>
+        </div>
         <div class="modal-body">
             <input type="hidden" id="deleteServerId">
-            <p class="confirm-text">Bạn có chắc chắn muốn xóa server <strong id="deleteServerName">...</strong> không?</p>
+            <p class="confirm-text">Bạn có chắc chắn muốn xóa server <strong id="deleteServerName">...</strong> không?
+            </p>
             <div class="discord-warning-box">
                 <i class="fas fa-exclamation-triangle"></i>
                 <p>Hành động này không thể hoàn tác. Tất cả dữ liệu tin nhắn và kênh sẽ mất vĩnh viễn.</p>
@@ -136,18 +140,23 @@
                 <label>Chọn thành viên làm Owner mới</label>
                 <div class="discord-search search-inline" style="margin-bottom:8px;">
                     <input type="text" id="transferMemberSearch" placeholder="Tìm theo username hoặc display name...">
-                    <button type="button" class="search-btn-inline" onclick="filterTransferMemberList()" aria-label="Tìm">
+                    <button type="button" class="search-btn-inline" onclick="filterTransferMemberList()"
+                        aria-label="Tìm">
                         <i class="fa-solid fa-magnifying-glass"></i>
                     </button>
                 </div>
 
-                <div id="transferMemberList" style="max-height:260px; overflow:auto; background:#1e1f22; border:1px solid #3f4147; border-radius:6px;"></div>
-                <div class="muted" id="transferMemberHint" style="margin-top:8px;">Chỉ thành viên của server này mới có thể trở thành Owner.</div>
+                <div id="transferMemberList"
+                    style="max-height:260px; overflow:auto; background:#1e1f22; border:1px solid #3f4147; border-radius:6px;">
+                </div>
+                <div class="muted" id="transferMemberHint" style="margin-top:8px;">Chỉ thành viên của server này mới có
+                    thể trở thành Owner.</div>
             </div>
 
             <div class="discord-warning-box">
                 <i class="fas fa-exclamation-triangle"></i>
-                <p><strong>Cảnh báo:</strong> Xác nhận sẽ chuyển quyền ngay lập tức. Owner cũ sẽ mất role ADMIN; Owner mới sẽ được gán role ADMIN.</p>
+                <p><strong>Cảnh báo:</strong> Xác nhận sẽ chuyển quyền ngay lập tức. Owner cũ sẽ mất role ADMIN; Owner
+                    mới sẽ được gán role ADMIN.</p>
             </div>
         </div>
         <div class="modal-footer">
