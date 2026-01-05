@@ -29,7 +29,7 @@ public class ServerMemberServiceImpl implements ServerMemberService {
     private final UserRepository userRepository;
     private final ServerRoleRepository serverRoleRepository;
     private final PermissionRepository permissionRepository;
-    private final AuditLogService  auditLogService;
+    private final AuditLogService auditLogService;
 
     @Override
     @Transactional
@@ -123,27 +123,36 @@ public class ServerMemberServiceImpl implements ServerMemberService {
                     String username = member.getUser().getUsername();
                     Server server = member.getServer();
 
+                    // 1. Xác định người thực hiện (Actor)
+                    String actorName = org.springframework.security.core.context.SecurityContextHolder.getContext()
+                            .getAuthentication().getName();
+                    User actor = userRepository.findByUsername(actorName).orElse(null);
+
+                    // 2. Kiểm tra logic Owner
+                    if (server.getOwner() != null && server.getOwner().getId().equals(userId)) {
+                        // Nếu là chủ sở hữu đang bị thao tác
+                        if (actor != null && !actor.getId().equals(userId)) {
+                            // Người khác trục xuất Owner => CẤM
+                            throw new IllegalStateException("Không thể trục xuất chủ sở hữu khỏi server.");
+                        }
+                        // Nếu Owner tự rời => Kiểm tra số lượng thành viên
+                        int memberCount = serverMemberRepository.countByServerId(serverId);
+                        if (memberCount > 1) {
+                            throw new IllegalStateException(
+                                    "Chủ sở hữu không thể rời server khi còn thành viên khác. Vui lòng chuyển quyền sở hữu hoặc xóa server.");
+                        }
+                    }
+
                     serverMemberRepository.delete(member);
 
                     // Audit Log
                     try {
-                        String actorName = org.springframework.security.core.context.SecurityContextHolder.getContext()
-                                .getAuthentication().getName();
-                        User actor = userRepository.findByUsername(actorName).orElse(null);
-
                         // Determine if kick or leave
                         EAuditAction action = EAuditAction.MEMBER_KICK;
                         String desc = "Đã đuổi thành viên: " + (nickname != null ? nickname : username);
 
                         if (actor != null && actor.getId().equals(userId)) {
                             // User left
-                            // We don't have MEMBER_LEAVE yet, so skip or add it.
-                            // For now, let's just log it as a Kick by self? No, that's weird.
-                            // Let's assume removeMember called by another is a KICK.
-                            // If called by self, it is LEAVE.
-                            // I'll skip logging leave for now to avoid confusion with Kick filter, unless
-                            // required.
-                            // Requirement said "MEMBER_KICK" is in action list.
                             return true;
                         }
 
@@ -176,7 +185,8 @@ public class ServerMemberServiceImpl implements ServerMemberService {
 
         boolean hasEveryone = member.getRoles().stream().anyMatch(r -> "@everyone".equalsIgnoreCase(r.getName()));
         if (!hasEveryone) {
-            serverRoleRepository.findByServerIdAndName(serverId, "@everyone").ifPresent(everyone -> member.getRoles().add(everyone));
+            serverRoleRepository.findByServerIdAndName(serverId, "@everyone")
+                    .ifPresent(everyone -> member.getRoles().add(everyone));
         }
         return member.getRoles().stream().toList();
     }

@@ -436,6 +436,56 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+window.triggerInvite = async function () {
+    if (!state.currentServerId) {
+        Swal.fire('Lỗi', 'Chưa chọn server!', 'error');
+        return;
+    }
+
+    try {
+        const res = await Api.post(`/api/invites/server/${state.currentServerId}`);
+        // res is the JSON object returned by Api.post (which calls safeJson)
+        // InviteController returns InviteResponse { code, ... }
+
+        if (res && res.code) {
+            const inviteUrl = `${window.location.origin}/invite/${res.code}`;
+
+            Swal.fire({
+                title: 'Mời bạn bè',
+                html: `
+                    <p>Chia sẻ liên kết này để mời bạn bè tham gia server:</p>
+                    <div style="display: flex; gap: 8px; margin-top: 10px;">
+                        <input type="text" value="${inviteUrl}" id="inviteLinkInput" readonly 
+                            style="flex: 1; padding: 8px; border-radius: 4px; border: 1px solid #1e1f22; background: #1e1f22; color: #dbdee1;">
+                        <button onclick="copyInviteLink()" class="btn-primary" style="padding: 8px 16px;">Copy</button>
+                    </div>
+                `,
+                showConfirmButton: false,
+                background: '#313338',
+                color: '#dbdee1'
+            });
+
+            // Helper for the modal button
+            window.copyInviteLink = function () {
+                const copyText = document.getElementById("inviteLinkInput");
+                copyText.select();
+                copyText.setSelectionRange(0, 99999);
+                navigator.clipboard.writeText(copyText.value).then(() => {
+                    Swal.showValidationMessage('Đã sao chép!'); // Show quick feedback
+                    setTimeout(() => Swal.resetValidationMessage(), 1500);
+                });
+            }
+
+        } else {
+            throw new Error("Không nhận được mã mời.");
+        }
+
+    } catch (e) {
+        console.error(e);
+        Swal.fire('Lỗi', 'Không thể tạo lời mời: ' + (e.message || 'Lỗi server'), 'error');
+    }
+}
+
 // Helper to get channel type from UI if missing in API response
 function getChannelTypeFromUI(channelId) {
     const channelEl = document.querySelector(`.channel-item[data-channel-id="${channelId}"] i`);

@@ -37,13 +37,15 @@ public class ServerController {
     public ResponseEntity<ServerResponse> createServer(@Valid @RequestBody ServerRequest request) {
         request.normalize();
         Server saved = serverService.createServer(request);
-        URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(saved.getId()).toUri();
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest().path("/{id}").buildAndExpand(saved.getId())
+                .toUri();
         return ResponseEntity.created(location).body(ServerResponse.from(saved));
     }
 
     @PutMapping("/{id}")
     @PreAuthorize("@serverAuth.isOwner(#id, authentication.name)")
-    public ResponseEntity<ServerResponse> updateServer(@PathVariable Long id, @Valid @RequestBody ServerRequest request) {
+    public ResponseEntity<ServerResponse> updateServer(@PathVariable Long id,
+            @Valid @RequestBody ServerRequest request) {
         request.normalize();
         Server updated = serverService.updateServer(id, request);
         return ResponseEntity.ok(ServerResponse.from(updated));
@@ -107,5 +109,13 @@ public class ServerController {
     public ResponseEntity<List<AuditLogResponse>> getAuditLogs(@PathVariable Long id) {
         return ResponseEntity.ok(auditLogService.getAuditLogs(id).stream()
                 .map(AuditLogResponse::from).toList());
+    }
+
+    @PostMapping("/{id}/transfer-owner")
+    @PreAuthorize("@serverAuth.isOwner(#id, authentication.name)")
+    public ResponseEntity<Void> transferOwner(@PathVariable Long id,
+            @RequestBody hcmute.edu.vn.discord.dto.request.TransferOwnerRequest req) {
+        serverService.transferOwner(id, req);
+        return ResponseEntity.ok().build();
     }
 }

@@ -52,4 +52,9 @@ public class Server {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Set<ServerRole> roles = new HashSet<>();
+
+    @OneToMany(mappedBy = "server", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Set<AuditLog> auditLogs = new HashSet<>();
 }
