@@ -83,6 +83,11 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public Optional<User> findByEmail(String email) {
+        return userRepository.findByEmail(email);
+    }
+
+    @Override
     public Optional<User> findById(Long id) {
         return userRepository.findById(id);
     }
@@ -139,5 +144,13 @@ public class UserServiceImpl implements UserService {
                 .lastActive(lastActiveLdt)   // chuyển đổi đúng cách; có thể null
                 .servers(summaries)
                 .build();
+    }
+
+    @Override
+    public void changePassword(Long userId, String newPassword) {
+        User u = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+        u.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(u);
     }
 }

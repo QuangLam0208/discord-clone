@@ -7,9 +7,13 @@ import io.swagger.v3.oas.annotations.responses.*;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import hcmute.edu.vn.discord.dto.request.LoginRequest;
 import hcmute.edu.vn.discord.dto.request.RegisterRequest;
+import hcmute.edu.vn.discord.dto.request.RegisterWithOtpRequest;
 import hcmute.edu.vn.discord.dto.response.AuthResponse;
+import hcmute.edu.vn.discord.dto.response.OtpResponse;
+import hcmute.edu.vn.discord.dto.response.OtpVerificationResponse;
 import hcmute.edu.vn.discord.dto.response.UserResponse;
 import hcmute.edu.vn.discord.security.jwt.JwtUtils;
+import hcmute.edu.vn.discord.service.OtpService;
 import hcmute.edu.vn.discord.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +39,7 @@ public class AuthController {
         private final AuthenticationManager authenticationManager;
         private final UserService userService;
         private final JwtUtils jwtUtils;
+        private final OtpService otpService;
 
         @Operation(summary = "Login User", description = "Authenticate a user with username and password, returning a JWT token provided with user details.")
         @ApiResponses({
@@ -145,5 +150,120 @@ public class AuthController {
 
                 return ResponseEntity.created(URI.create("/api/users/username/" + username))
                         .body(new AuthResponse(jwt, "Bearer", UserResponse.from(userEntity)));
+        }
+
+        /**
+         * Gửi OTP khi đăng ký
+         */
+        @PostMapping("/register/send-otp")
+        public ResponseEntity<OtpResponse> sendRegistrationOtp(@RequestParam String email) {
+                // Kiểm tra email đã tồn tại chưa
+                if (userService.existsByEmail(email)) {
+                        return ResponseEntity.badRequest()
+                                .body(OtpResponse.error("Email đã được sử dụng"));
+                }
+
+                OtpResponse response = otpService.generateAndSendOtp(email);
+
+                if (!response.isSuccess()) {
+                        return ResponseEntity.badRequest().body(response);
+                }
+
+                return ResponseEntity.ok(response);
+        }
+
+        /**
+         * Xác thực OTP và hoàn tất đăng ký
+         */
+        @PostMapping("/register/verify-otp")
+        public ResponseEntity<?> registerWithOtp(
+                @Valid @RequestBody RegisterWithOtpRequest request,
+                HttpServletResponse httpResponse) {
+
+                // Xác thực OTP
+                OtpVerificationResponse otpResult = otpService.verifyOtp(
+                        request.getEmail(),
+                        request.getOtpCode()
+                );
+
+                if (!otpResult.isVerified()) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(otpResult);
+                }
+
+                // Tạo user mới: map RegisterWithOtpRequest -> RegisterRequest
+                RegisterRequest registerRequest = new RegisterRequest();
+                registerRequest.setUsername(request.getUsername());
+                registerRequest.setEmail(request.getEmail());
+                registerRequest.setPassword(request.getPassword());
+                registerRequest.setDisplayName(request.getDisplayName());
+
+                userService.registerUser(registerRequest);
+
+                // Tạo JWT và trả về
+                Authentication authentication = authenticationManager.authenticate(
+                        new UsernamePasswordAuthenticationToken(
+                                request.getUsername(),
+                                request.getPassword()
+                        )
+                );
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                String jwt = jwtUtils.generateJwtToken(authentication);
+
+                // Set cookie
+                Cookie cookie = new Cookie("jwt", jwt);
+                cookie.setHttpOnly(true);
+                cookie.setSecure(false);
+                cookie.setPath("/");
+                cookie.setMaxAge(60 * 60 * 24);
+                httpResponse.addCookie(cookie);
+
+                var userEntity = userService.findByUsername(request.getUsername())
+                        .orElseThrow(() -> new RuntimeException("User not found"));
+
+                return ResponseEntity.ok(new AuthResponse(jwt, "Bearer", UserResponse.from(userEntity)));
+        }
+
+        /**
+         * Gửi OTP reset mật khẩu
+         */
+        @PostMapping("/forgot-password")
+        public ResponseEntity<?> forgotPassword(@RequestParam String email) {
+                // Không tiết lộ tồn tại email — trả OK chung
+                if (!userService.existsByEmail(email)) {
+                        return ResponseEntity.ok(Map.of(
+                                "message", "Nếu email tồn tại, mã OTP đã được gửi"
+                        ));
+                }
+
+                otpService.generateAndSendOtp(email);
+
+                return ResponseEntity.ok(Map.of(
+                        "message", "Mã OTP đã được gửi đến email của bạn"
+                ));
+        }
+
+        /**
+         * Reset mật khẩu với OTP
+         */
+        @PostMapping("/reset-password")
+        public ResponseEntity<?> resetPassword(
+                @RequestParam String email,
+                @RequestParam String otpCode,
+                @RequestParam String newPassword) {
+
+                // Xác thực OTP
+                var otpVerify = otpService.verifyOtp(email, otpCode);
+                if (!otpVerify.isVerified()) {
+                        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                                .body(Map.of("message", "Mã OTP không hợp lệ hoặc đã hết hạn"));
+                }
+
+                // Reset password
+                var user = userService.findByEmail(email).orElseThrow();
+                userService.changePassword(user.getId(), newPassword);
+
+                return ResponseEntity.ok(Map.of("message", "Đặt lại mật khẩu thành công"));
         }
 }

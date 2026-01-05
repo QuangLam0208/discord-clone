@@ -87,6 +87,58 @@ async function register(username, email, password, displayName) {
   }
 }
 
+
+   // SEND OTP
+
+async function sendOtp(email) {
+  try {
+    const response = await fetch(`${API_AUTH}/register/send-otp?email=${encodeURIComponent(email)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || 'Không thể gửi OTP');
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Send OTP error:', error);
+    throw error;
+  }
+}
+
+
+   // REGISTER WITH OTP
+async function registerWithOtp(username, email, password, displayName, otpCode) {
+  try {
+    const response = await fetch(`${API_AUTH}/register/verify-otp`, {
+      method: 'POST',
+      headers: { 'Content-Type':  'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ username, email, password, displayName, otpCode })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      // data có thể là OtpVerificationResponse
+      if (data && data.verified === false) {
+        throw new Error(data.message || 'Mã OTP không hợp lệ');
+      }
+      throw new Error(normalizeError(response, data));
+    }
+
+    setAuth(data);
+    return data;
+  } catch (error) {
+    console.error('Register with OTP error:', error);
+    throw error;
+  }
+}
+
 /* =======================
    GET CURRENT USER (/me)
 ======================= */
@@ -233,6 +285,8 @@ function showErrorAlert(message, title = 'Có lỗi xảy ra') {
 window.AuthService = {
   login,
   register,
+  sendOtp,
+  registerWithOtp,
   getCurrentUser,
   logout,
   initForceLogout,
