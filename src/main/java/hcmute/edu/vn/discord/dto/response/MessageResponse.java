@@ -19,7 +19,7 @@ public class MessageResponse {
     private String content;
     private Date createdAt;
     private boolean deleted;
-    private boolean isEdited; // Thêm cờ để hiện chữ (đã chỉnh sửa)
+    private boolean edited; // Thêm cờ để hiện chữ (đã chỉnh sửa)
 
     // Thông tin người gửi
     private Long senderId;

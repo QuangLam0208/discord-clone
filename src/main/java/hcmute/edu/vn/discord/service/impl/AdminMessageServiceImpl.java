@@ -114,7 +114,8 @@ public class AdminMessageServiceImpl implements AdminMessageService {
     public void softDelete(String messageId, String adminUsername) {
         Message m = messageRepository.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("Message not found: " + messageId));
-        if (Boolean.TRUE.equals(m.getDeleted())) return;
+        if (Boolean.TRUE.equals(m.getDeleted()))
+            return;
         m.setDeleted(true);
         messageRepository.save(m);
 
@@ -134,7 +135,8 @@ public class AdminMessageServiceImpl implements AdminMessageService {
     public void restore(String messageId, String adminUsername) {
         Message m = messageRepository.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("Message not found: " + messageId));
-        if (!Boolean.TRUE.equals(m.getDeleted())) return;
+        if (!Boolean.TRUE.equals(m.getDeleted()))
+            return;
         m.setDeleted(false);
         messageRepository.save(m);
 
@@ -175,7 +177,8 @@ public class AdminMessageServiceImpl implements AdminMessageService {
     }
 
     private AdminMessagePageResponse toPageResponse(PageRequest pr, List<Message> messages, long total) {
-        Set<Long> channelIds = messages.stream().map(Message::getChannelId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<Long> channelIds = messages.stream().map(Message::getChannelId).filter(Objects::nonNull)
+                .collect(Collectors.toSet());
         Map<Long, Channel> chMap = channelRepository.findAllById(channelIds).stream()
                 .collect(Collectors.toMap(Channel::getId, c -> c));
 
@@ -183,7 +186,8 @@ public class AdminMessageServiceImpl implements AdminMessageService {
         Map<Long, Server> srvMap = serverRepository.findAllById(serverIds).stream()
                 .collect(Collectors.toMap(Server::getId, s -> s));
 
-        Set<Long> senderIds = messages.stream().map(Message::getSenderId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<Long> senderIds = messages.stream().map(Message::getSenderId).filter(Objects::nonNull)
+                .collect(Collectors.toSet());
         Map<Long, User> userMap = userRepository.findAllById(senderIds).stream()
                 .collect(Collectors.toMap(User::getId, u -> u));
 
@@ -233,7 +237,7 @@ public class AdminMessageServiceImpl implements AdminMessageService {
                 .attachments(msg.getAttachments())
                 .reactions(msg.getReactions())
                 .deleted(false)
-                .isEdited(Boolean.TRUE.equals(msg.getIsEdited()))
+                .edited(Boolean.TRUE.equals(msg.getIsEdited()))
                 .build();
     }
 }

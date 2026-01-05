@@ -180,7 +180,7 @@ public class MessageServiceImpl implements MessageService {
         }
 
         message.setDeleted(true);
-//        message.setContent(null);
+        // message.setContent(null);
         message.setAttachments(null);
         Message savedMessage = messageRepository.save(message);
 
@@ -335,7 +335,7 @@ public class MessageServiceImpl implements MessageService {
                 .content(Boolean.TRUE.equals(msg.getDeleted()) ? "Tin nhắn đã bị xóa" : msg.getContent())
                 .createdAt(msg.getCreatedAt())
                 .deleted(Boolean.TRUE.equals(msg.getDeleted()))
-                .isEdited(Boolean.TRUE.equals(msg.getIsEdited()))
+                .edited(Boolean.TRUE.equals(msg.getIsEdited()))
                 .senderId(msg.getSenderId())
                 .senderName(sender != null ? sender.getDisplayName() : "Unknown User")
                 .senderAvatar(sender != null ? sender.getAvatarUrl() : null)
