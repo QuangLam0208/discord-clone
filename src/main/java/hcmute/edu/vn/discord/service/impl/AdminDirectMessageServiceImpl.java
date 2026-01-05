@@ -4,6 +4,7 @@ import hcmute.edu.vn.discord.dto.request.AdminDirectMessageSearchRequest;
 import hcmute.edu.vn.discord.dto.response.AdminDirectMessageItemResponse;
 import hcmute.edu.vn.discord.dto.response.AdminMessagePageResponse;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
+import hcmute.edu.vn.discord.entity.enums.EAuditAction;
 import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.entity.mongo.Conversation;
 import hcmute.edu.vn.discord.entity.mongo.DirectMessage;
@@ -11,6 +12,7 @@ import hcmute.edu.vn.discord.repository.ConversationRepository;
 import hcmute.edu.vn.discord.repository.DirectMessageRepository;
 import hcmute.edu.vn.discord.repository.UserRepository;
 import hcmute.edu.vn.discord.service.AdminDirectMessageService;
+import hcmute.edu.vn.discord.service.AuditLogMongoService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -36,6 +38,7 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
     private final DirectMessageRepository dmRepo;
     private final ConversationRepository convRepo;
     private final UserRepository userRepo;
+    private final AuditLogMongoService auditLogMongoService;
 
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -93,21 +96,27 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
                 Sort.by(Sort.Direction.DESC, "createdAt"));
 
         Query q = new Query();
-        if (!ands.isEmpty()) q.addCriteria(new Criteria().andOperator(ands));
+        if (!ands.isEmpty())
+            q.addCriteria(new Criteria().andOperator(ands));
+
+        long total = mongoTemplate.count(q, DirectMessage.class);
+
         Query pageQ = q.with(pr);
 
         List<DirectMessage> msgs = mongoTemplate.find(pageQ, DirectMessage.class);
-        long total = mongoTemplate.count(q, DirectMessage.class);
 
-        Set<Long> senderIds = msgs.stream().map(DirectMessage::getSenderId).filter(Objects::nonNull).collect(Collectors.toSet());
-        Set<Long> receiverIds = msgs.stream().map(DirectMessage::getReceiverId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<Long> senderIds = msgs.stream().map(DirectMessage::getSenderId).filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Set<Long> receiverIds = msgs.stream().map(DirectMessage::getReceiverId).filter(Objects::nonNull)
+                .collect(Collectors.toSet());
         Set<Long> userIds = new HashSet<>();
         userIds.addAll(senderIds);
         userIds.addAll(receiverIds);
         Map<Long, User> userMap = userRepo.findAllById(userIds).stream()
                 .collect(Collectors.toMap(User::getId, u -> u));
 
-        Set<String> cids = msgs.stream().map(DirectMessage::getConversationId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Set<String> cids = msgs.stream().map(DirectMessage::getConversationId).filter(Objects::nonNull)
+                .collect(Collectors.toSet());
         Map<String, Conversation> convMap = convRepo.findAllById(cids).stream()
                 .collect(Collectors.toMap(Conversation::getId, c -> c));
 
@@ -163,7 +172,8 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
     public void softDelete(String messageId, String adminUsername) {
         DirectMessage m = dmRepo.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("DM not found: " + messageId));
-        if (Boolean.TRUE.equals(m.isDeleted())) return;
+        if (Boolean.TRUE.equals(m.isDeleted()))
+            return;
         m.setDeleted(true);
         dmRepo.save(m);
 
@@ -183,6 +193,15 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
         // User UI (queue cá nhân của 2 participants)
         Conversation conv = convRepo.findById(m.getConversationId()).orElse(null);
         sendToConversationParticipants(conv, payload);
+
+        // Audit Log
+        if (adminUsername != null) {
+            auditLogMongoService.log(
+                    adminUsername,
+                    EAuditAction.ADMIN_DELETE_MESSAGE.name(),
+                    "DirectMessage:" + messageId,
+                    "Admin soft deleted DM in Conv: " + m.getConversationId());
+        }
     }
 
     @Transactional
@@ -190,7 +209,8 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
     public void restore(String messageId, String adminUsername) {
         DirectMessage m = dmRepo.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("DM not found: " + messageId));
-        if (!Boolean.TRUE.equals(m.isDeleted())) return;
+        if (!Boolean.TRUE.equals(m.isDeleted()))
+            return;
         m.setDeleted(false);
         dmRepo.save(m);
 
@@ -210,6 +230,15 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
         // Queue cá nhân
         Conversation conv = convRepo.findById(m.getConversationId()).orElse(null);
         sendToConversationParticipants(conv, payload);
+
+        // Audit Log
+        if (adminUsername != null) {
+            auditLogMongoService.log(
+                    adminUsername,
+                    EAuditAction.ADMIN_RESTORE_MESSAGE.name(),
+                    "DirectMessage:" + messageId,
+                    "Admin restored DM in Conv: " + m.getConversationId());
+        }
     }
 
     private Map<String, Object> convertToMap(DirectMessageResponse res) {
@@ -240,10 +269,11 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
     }
 
     private void sendToConversationParticipants(Conversation conv, Object payload) {
-        if (conv == null) return;
-        userRepo.findById(conv.getUser1Id()).ifPresent(u ->
-                messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/dm", payload));
-        userRepo.findById(conv.getUser2Id()).ifPresent(u ->
-                messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/dm", payload));
+        if (conv == null)
+            return;
+        userRepo.findById(conv.getUser1Id())
+                .ifPresent(u -> messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/dm", payload));
+        userRepo.findById(conv.getUser2Id())
+                .ifPresent(u -> messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/dm", payload));
     }
 }

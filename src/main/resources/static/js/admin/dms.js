@@ -236,7 +236,7 @@
     window.searchAdminDM = searchAdminDM;
     window.pageAdminDM = function (delta) {
         const next = curPage + delta;
-        if (next < 0 || next >= totalPages) return false;
+        if (next < 0) return false;
         curPage = next;
         searchAdminDM(false);
         return false;
