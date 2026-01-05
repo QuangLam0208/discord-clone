@@ -1,9 +1,11 @@
 <div class="discord-admin-container" style="padding:0;">
     <div class="discord-header">
         <h1><i class="fas fa-user"></i> Messages · Direct</h1>
-        <form class="discord-search search-inline" id="admin-dm-search" onsubmit="event.preventDefault(); window.searchAdminDM();">
+        <form class="discord-search search-inline" id="admin-dm-search"
+            onsubmit="event.preventDefault(); window.searchAdminDM();">
             <input type="text" id="dmKeyword" placeholder="Tìm theo nội dung hoặc username...">
-            <button type="submit" class="search-btn-inline" aria-label="Tìm"><i class="fa-solid fa-magnifying-glass"></i></button>
+            <button type="submit" class="search-btn-inline" aria-label="Tìm"><i
+                    class="fa-solid fa-magnifying-glass"></i></button>
         </form>
     </div>
 
@@ -15,40 +17,47 @@
                 <option value="deleted">Đã xóa</option>
             </select>
 
-            <input type="text" id="dmConversationId" class="discord-input" placeholder="Conversation ID" style="max-width:200px;">
+            <input type="text" id="dmConversationId" class="discord-input" placeholder="Conversation ID"
+                style="max-width:200px;">
             <input type="number" id="dmUserA" class="discord-input" placeholder="User A ID" style="max-width:140px;">
             <input type="number" id="dmUserB" class="discord-input" placeholder="User B ID" style="max-width:140px;">
             <input type="number" id="dmUserId" class="discord-input" placeholder="User ID" style="max-width:140px;">
 
-            <input type="text" id="dmSenderUsername" class="discord-input" placeholder="Sender username" style="max-width:200px;">
+            <input type="text" id="dmSenderUsername" class="discord-input" placeholder="Sender username"
+                style="max-width:200px;">
             <input type="datetime-local" id="dmFrom" class="discord-input" style="max-width:220px;">
             <input type="datetime-local" id="dmTo" class="discord-input" style="max-width:220px;">
-            <button type="button" class="btn-mini edit" onclick="window.searchAdminDM()"><i class="fa-solid fa-filter"></i> Lọc</button>
+            <button type="button" class="btn-mini edit" onclick="window.searchAdminDM()"><i
+                    class="fa-solid fa-filter"></i> Lọc</button>
         </div>
 
         <div class="discord-table-wrapper">
             <table class="discord-table">
                 <thead>
-                <tr>
-                    <th>ID</th>
-                    <th>Nội dung</th>
-                    <th>Sender → Receiver</th>
-                    <th>Participants</th>
-                    <th>Thời gian</th>
-                    <th>Trạng thái</th>
-                    <th>Hành động</th>
-                </tr>
+                    <tr>
+                        <th>ID</th>
+                        <th>Nội dung</th>
+                        <th>Sender → Receiver</th>
+                        <th>Participants</th>
+                        <th>Thời gian</th>
+                        <th>Trạng thái</th>
+                        <th>Hành động</th>
+                    </tr>
                 </thead>
                 <tbody id="admin-dm-tbody">
-                <tr><td colspan="7" class="muted" style="text-align:center;padding:20px;">Chưa có dữ liệu</td></tr>
+                    <tr>
+                        <td colspan="7" class="muted" style="text-align:center;padding:20px;">Chưa có dữ liệu</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
 
         <div class="discord-pagination" id="admin-dm-pager" style="display:none;">
-            <a href="#" class="page-btn" id="admin-dm-prev" onclick="return window.pageAdminDM(-1)"><i class="fas fa-chevron-left"></i> Trước</a>
+            <a href="#" class="page-btn" id="admin-dm-prev" onclick="return window.pageAdminDM(-1)"><i
+                    class="fas fa-chevron-left"></i> Trước</a>
             <span class="page-info">Trang <b id="admin-dm-page">1</b> / <span id="admin-dm-total">1</span></span>
-            <a href="#" class="page-btn" id="admin-dm-next" onclick="return window.pageAdminDM(1)">Sau <i class="fas fa-chevron-right"></i></a>
+            <a href="#" class="page-btn" id="admin-dm-next" onclick="return window.pageAdminDM(1)">Sau <i
+                    class="fas fa-chevron-right"></i></a>
         </div>
     </div>
 </div>

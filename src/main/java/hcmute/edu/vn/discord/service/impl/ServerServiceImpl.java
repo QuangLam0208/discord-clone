@@ -9,6 +9,7 @@ import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.enums.ServerStatus;
 import hcmute.edu.vn.discord.entity.jpa.*;
 import hcmute.edu.vn.discord.repository.*;
+import hcmute.edu.vn.discord.service.AuditLogMongoService;
 import hcmute.edu.vn.discord.service.AuditLogService;
 import hcmute.edu.vn.discord.service.ServerService;
 import jakarta.persistence.EntityNotFoundException;
@@ -35,6 +36,7 @@ public class ServerServiceImpl implements ServerService {
     private final PermissionRepository permissionRepository;
     private final CategoryRepository categoryRepository;
     private final AuditLogService auditLogService;
+    private final AuditLogMongoService auditLogMongoService;
     private final SimpUserRegistry simpUserRegistry;
 
     @Override
@@ -105,6 +107,16 @@ public class ServerServiceImpl implements ServerService {
 
         serverMemberRepository.save(ownerMember);
 
+        try {
+            auditLogMongoService.log(
+                    owner.getId(),
+                    "USER_CREATE_SERVER",
+                    "ServerId: " + savedServer.getId(),
+                    "Server Name: " + savedServer.getName());
+        } catch (Exception e) {
+            // Ignore audit fail
+        }
+
         return savedServer;
     }
 
@@ -154,6 +166,10 @@ public class ServerServiceImpl implements ServerService {
             if (changes.length() > 0) {
                 auditLogService.logAction(updated, actor, EAuditAction.SERVER_UPDATE,
                         serverId.toString(), "SERVER", changes.toString());
+
+                // System Audit Log
+                auditLogMongoService.log(actor.getId(), "USER_UPDATE_SERVER", "ServerId: " + serverId,
+                        changes.toString());
             }
         } catch (Exception e) {
             System.err.println("Error logging server update: " + e.getMessage());
@@ -168,7 +184,18 @@ public class ServerServiceImpl implements ServerService {
         if (!serverRepository.existsById(serverId)) {
             throw new EntityNotFoundException("Server not found");
         }
+
         serverRepository.deleteById(serverId);
+        try {
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            User actor = userRepository.findByUsername(username).orElse(null);
+            if (actor != null) {
+                auditLogMongoService.log(actor.getId(), "USER_DELETE_SERVER", "ServerId: " + serverId,
+                        "User deleted server");
+            }
+        } catch (Exception e) {
+            // Ignore if auth fails
+        }
     }
 
     @Override
@@ -193,15 +220,13 @@ public class ServerServiceImpl implements ServerService {
 
         List<Server> servers = serverRepository.findDistinctByMembers_User_UsernameAndStatusIn(
                 u.getUsername(),
-                Set.of(ServerStatus.ACTIVE, ServerStatus.FREEZE)
-        );
+                Set.of(ServerStatus.ACTIVE, ServerStatus.FREEZE));
 
         return servers.stream()
                 .map(s -> ServerResponse.from(
                         s,
                         channelRepository.countByServerId(s.getId()),
-                        serverMemberRepository.countByServerId(s.getId())
-                ))
+                        serverMemberRepository.countByServerId(s.getId())))
                 .toList();
     }
 
@@ -210,11 +235,11 @@ public class ServerServiceImpl implements ServerService {
     public List<Server> getServersByCurrentUsername() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User u = userRepository.findByUsername(username).orElseThrow();
-        // Tải sẵn owner, nhưng KHÔNG dùng ServerResponse.from(server) trực tiếp (tránh LAZY size())
+        // Tải sẵn owner, nhưng KHÔNG dùng ServerResponse.from(server) trực tiếp (tránh
+        // LAZY size())
         return serverRepository.findDistinctByMembers_User_UsernameAndStatusIn(
                 u.getUsername(),
-                Set.of(ServerStatus.ACTIVE, ServerStatus.FREEZE)
-        );
+                Set.of(ServerStatus.ACTIVE, ServerStatus.FREEZE));
     }
 
     @Override
@@ -271,8 +296,7 @@ public class ServerServiceImpl implements ServerService {
                     u.getDisplayName(),
                     u.getAvatarUrl(),
                     isOwner,
-                    isAdmin
-            );
+                    isAdmin);
         }).toList();
     }
 
@@ -287,7 +311,8 @@ public class ServerServiceImpl implements ServerService {
                 .orElseThrow(() -> new EntityNotFoundException("Server not found: " + serverId));
 
         ServerMember newOwnerMember = serverMemberRepository.findWithUserAndRolesById(req.getNewOwnerMemberId())
-                .orElseThrow(() -> new EntityNotFoundException("New owner member not found: " + req.getNewOwnerMemberId()));
+                .orElseThrow(
+                        () -> new EntityNotFoundException("New owner member not found: " + req.getNewOwnerMemberId()));
 
         if (!newOwnerMember.getServer().getId().equals(serverId)) {
             throw new AccessDeniedException("User is not a member of this server");
@@ -299,6 +324,16 @@ public class ServerServiceImpl implements ServerService {
         // Cập nhật owner
         server.setOwner(newOwnerUser);
         serverRepository.save(server);
+
+        try {
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            User actor = userRepository.findByUsername(username).orElse(null);
+            if (actor != null) {
+                auditLogMongoService.log(actor.getId(), "USER_TRANSFER_OWNER", "ServerId: " + serverId,
+                        "New Owner: " + newOwnerUser.getUsername());
+            }
+        } catch (Exception e) {
+        }
 
         // Role ADMIN trong server
         ServerRole adminRole = serverRoleRepository.findByServerIdAndName(serverId, "ADMIN")

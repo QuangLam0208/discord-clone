@@ -2,7 +2,7 @@
   <div class="discord-header">
     <h1><i class="fas fa-clipboard-list"></i> Audit Log</h1>
     <form action="#" method="get" class="discord-search"
-          onsubmit="event.preventDefault(); loadSection('audit', { keyword: this.keyword.value, action: this.action.value, adminId: this.adminId.value });">
+      onsubmit="event.preventDefault(); loadSection('audit', { keyword: this.keyword.value, action: this.action.value, adminId: this.adminId.value });">
       <input type="text" name="keyword" th:value="${keyword}" placeholder="Tìm theo detail...">
       <input type="text" name="action" th:value="${action}" placeholder="Action (BAN_USER, DELETE_MESSAGE...)">
       <input type="number" name="adminId" th:value="${adminId}" placeholder="Admin ID">
@@ -13,43 +13,50 @@
   <div class="discord-table-wrapper">
     <table class="discord-table">
       <thead>
-      <tr>
-        <th>Thời gian</th>
-        <th>Admin ID</th>
-        <th>Action</th>
-        <th>Target</th>
-        <th>Detail</th>
-      </tr>
+        <tr>
+          <th>Thời gian</th>
+          <th>User ID</th>
+          <th>Username</th>
+          <th>Role</th>
+          <th>Action</th>
+          <th>Detail</th>
+        </tr>
       </thead>
       <tbody>
-      <tr th:each="log : ${logs}">
-        <td th:text="${#dates.format(log.createdAt, 'yyyy-MM-dd HH:mm:ss')}">2026-01-02 12:00:00</td>
-        <td th:text="${log.adminId}">1</td>
-        <td th:text="${log.action}">BAN_USER</td>
-        <td th:text="${log.target}">userId=42</td>
-        <td th:text="${log.detail}">Banned due to spam</td>
-      </tr>
+        <tr th:each="log : ${logs}">
+          <!-- Dùng #dates.format để hiển thị ngày giờ đẹp -->
+          <td th:text="${#dates.format(log.createdAt, 'yyyy-MM-dd HH:mm:ss')}" style="font-size: 0.9em; color: #aaa;">
+          </td>
+          <td th:text="${log.adminId}"></td>
+          <td th:text="${log.username}"></td>
+          <td>
+            <span th:text="${log.role}"
+              th:classappend="${log.role == 'ADMIN' ? 'role-admin' : (log.role == 'PREMIUM' ? 'role-premium' : 'role-default')}"
+              style="font-weight:bold; font-size: 0.8em; padding: 2px 6px; border-radius: 4px; background: #333;">
+            </span>
+          </td>
+          <td th:text="${log.action}" style="color: #4CAF50;"></td>
+          <td th:text="${log.detail}" style="white-space: pre-wrap; word-break: break-all;"></td>
+        </tr>
 
-      <tr th:if="${#lists.isEmpty(logs)}">
-        <td colspan="5" class="muted" style="text-align:center;padding:40px;">
-          <i class="fas fa-ghost"></i> Chưa có dữ liệu audit.
-        </td>
-      </tr>
+        <tr th:if="${#lists.isEmpty(logs)}">
+          <td colspan="5" class="muted" style="text-align:center;padding:40px;">
+            <i class="fas fa-ghost"></i> Chưa có dữ liệu audit.
+          </td>
+        </tr>
       </tbody>
     </table>
   </div>
 
   <div class="discord-pagination" th:if="${totalPages > 1}">
-    <a th:if="${currentPage > 0}"
-       href="#"
-       th:onclick="'loadSection(\\'audit\\', {page:' + (${currentPage} - 1) + ', keyword: \\'' + ${keyword} + '\\', action: \\'' + ${action} + '\\', adminId: ' + (${adminId} != null ? ${adminId} : 'null') + '})'"
-       class="page-btn"><i class="fas fa-chevron-left"></i> Trước</a>
+    <a th:if="${currentPage > 0}" href="#" th:data-page="${currentPage - 1}" th:data-keyword="${keyword}"
+      th:data-action="${action}" th:data-admin-id="${adminId}" onclick="changeAuditPageFromData(this); return false;"
+      class="page-btn"><i class="fas fa-chevron-left"></i> Trước</a>
 
     <span class="page-info">Trang <b th:text="${currentPage + 1}"></b> / <span th:text="${totalPages}"></span></span>
 
-    <a th:if="${currentPage < totalPages - 1}"
-       href="#"
-       th:onclick="'loadSection(\\'audit\\', {page:' + (${currentPage} + 1) + ', keyword: \\'' + ${keyword} + '\\', action: \\'' + ${action} + '\\', adminId: ' + (${adminId} != null ? ${adminId} : 'null') + '})'"
-       class="page-btn">Sau <i class="fas fa-chevron-right"></i></a>
+    <a th:if="${currentPage < totalPages - 1}" href="#" th:data-page="${currentPage + 1}" th:data-keyword="${keyword}"
+      th:data-action="${action}" th:data-admin-id="${adminId}" onclick="changeAuditPageFromData(this); return false;"
+      class="page-btn">Sau <i class="fas fa-chevron-right"></i></a>
   </div>
 </div>

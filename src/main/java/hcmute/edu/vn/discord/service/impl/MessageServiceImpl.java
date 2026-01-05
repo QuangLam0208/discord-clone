@@ -10,6 +10,7 @@ import hcmute.edu.vn.discord.entity.jpa.ServerMember;
 import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.entity.mongo.Message;
 import hcmute.edu.vn.discord.repository.*;
+import hcmute.edu.vn.discord.service.AuditLogMongoService;
 import hcmute.edu.vn.discord.service.MessageService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -32,6 +33,7 @@ public class MessageServiceImpl implements MessageService {
     private final ChannelRepository channelRepository;
     private final ServerRepository serverRepository;
     private final ServerMemberRepository serverMemberRepository;
+    private final AuditLogMongoService auditLogService;
 
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -123,16 +125,37 @@ public class MessageServiceImpl implements MessageService {
             throw new IllegalArgumentException("Không thể chỉnh sửa tin nhắn đã bị xóa");
         }
 
+        String oldContent = message.getContent();
         message.setContent(request.getContent().trim());
         message.setIsEdited(true); // Đánh dấu đã sửa
         Message saved = messageRepository.save(message);
+
+        try {
+            String context = "DM Channel";
+            // Try to get server info if available
+            try {
+                Channel ch = channelRepository.findById(message.getChannelId()).orElse(null);
+                if (ch != null && ch.getServer() != null) {
+                    context = "ServerId: " + ch.getServer().getId();
+                }
+            } catch (Exception ex) {
+            }
+
+            auditLogService.log(
+                    user.getId(),
+                    "USER_UPDATE_MESSAGE",
+                    "MessageId: " + messageId + " || " + context,
+                    "Old: " + oldContent + " || New: " + saved.getContent());
+        } catch (Exception e) {
+            log.error("Audit log failed", e);
+        }
+
         try {
             Map<String, Object> adminPayload = new HashMap<>();
             adminPayload.put("id", messageId);
             adminPayload.put("type", "EDIT");
             adminPayload.put("content", saved.getContent());
             adminPayload.put("edited", true);
-
             messagingTemplate.convertAndSend("/topic/admin/messages/update", adminPayload);
         } catch (Exception e) {
             log.error("Lỗi gửi socket edit message cho Admin: ", e);
@@ -196,6 +219,26 @@ public class MessageServiceImpl implements MessageService {
         // Trả về message đã xóa (với cờ deleted=true) để broadcast
         // Cần sender info để mapToResponse
         User sender = userRepository.findById(message.getSenderId()).orElse(null);
+
+        try {
+            String context = "DM Channel";
+            try {
+                Channel ch = channelRepository.findById(message.getChannelId()).orElse(null);
+                if (ch != null && ch.getServer() != null) {
+                    context = "ServerId: " + ch.getServer().getId();
+                }
+            } catch (Exception ex) {
+            }
+
+            auditLogService.log(
+                    requester.getId(),
+                    "USER_DELETE_MESSAGE",
+                    "MessageId: " + messageId + " || " + context,
+                    "Owner deleted message: "
+                            + (message.getContent() != null ? message.getContent() : "Image/Attachment"));
+        } catch (Exception e) {
+            log.error("Audit log failed", e);
+        }
 
         return mapToResponse(savedMessage, sender);
     }

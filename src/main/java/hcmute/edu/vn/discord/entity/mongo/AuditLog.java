@@ -18,10 +18,12 @@ public class AuditLog {
     private Long adminId;
 
     @Indexed
-    private String action;   // BAN_USER, DELETE_MESSAGE
-    private String target;   // userId / messageId / serverId
+    private String action; // BAN_USER, DELETE_MESSAGE
+    private String target; // userId / messageId / serverId
     private String detail;
+
+    private String username;
+    private String role; // ADMIN, PREMIUM, DEFAULT
 
     private Date createdAt = new Date();
 }
-

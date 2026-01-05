@@ -6,8 +6,10 @@ import hcmute.edu.vn.discord.dto.response.ServerMemberResponse;
 import hcmute.edu.vn.discord.dto.response.ServerRoleResponse;
 import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.jpa.Server;
+import hcmute.edu.vn.discord.entity.jpa.ServerBan;
 import hcmute.edu.vn.discord.entity.jpa.ServerMember;
 import hcmute.edu.vn.discord.entity.jpa.User;
+import hcmute.edu.vn.discord.service.AuditLogMongoService;
 import hcmute.edu.vn.discord.service.BanService;
 import hcmute.edu.vn.discord.service.ServerMemberService;
 import hcmute.edu.vn.discord.service.ServerService;
@@ -37,6 +39,7 @@ public class ServerMemberController {
     private final ServerService serverService;
     private final UserService userService;
     private final BanService banService;
+    private final AuditLogMongoService auditLogMongoService;
 
     private User getCurrentUser(Authentication auth) {
         if (auth == null || auth.getName() == null) {
@@ -59,6 +62,17 @@ public class ServerMemberController {
         // Gọi Service nhận về Entity
         ServerMember member = serverMemberService.addMemberToServer(serverId, user.getId());
         logger.info("User {} joined server {}", user.getUsername(), serverId);
+
+        // Audit Log
+        try {
+            auditLogMongoService.log(
+                    user.getId(),
+                    "USER_JOIN_SERVER",
+                    "ServerId: " + serverId,
+                    "User joined server");
+        } catch (Exception e) {
+        }
+
         return ResponseEntity.ok(ServerMemberResponse.from(member));
     }
 
@@ -66,7 +80,7 @@ public class ServerMemberController {
     @PostMapping("/add")
     @PreAuthorize("@serverAuth.canManageMembers(#serverId, authentication.name)")
     public ResponseEntity<ServerMemberResponse> addMember(@PathVariable Long serverId, @RequestParam Long userId,
-                                                          Authentication auth) {
+            Authentication auth) {
         User current = getCurrentUser(auth);
 
         // Check if banned
@@ -105,7 +119,7 @@ public class ServerMemberController {
     // 5. Remove Member (KICK)
     @DeleteMapping("/{userId}")
     public ResponseEntity<?> removeMember(@PathVariable Long serverId, @PathVariable Long userId,
-                                          Authentication auth) {
+            Authentication auth) {
         User current = getCurrentUser(auth);
         // Người có quyền (owner/quyền quản trị) được xóa người khác; người thường chỉ tự rời
         if (!canManageMembers(current, serverId) && !current.getId().equals(userId)) {
@@ -124,7 +138,7 @@ public class ServerMemberController {
     public ResponseEntity<List<ServerBanResponse>> getBans(@PathVariable Long serverId) {
         try {
             System.out.println("DEBUG: Controller getBans called for server: " + serverId);
-            List<hcmute.edu.vn.discord.entity.jpa.ServerBan> rawBans = banService.getBansByServerId(serverId);
+            List<ServerBan> rawBans = banService.getBansByServerId(serverId);
             System.out.println("DEBUG: banService returned " + rawBans.size() + " raw bans");
 
             var bans = rawBans.stream()
@@ -153,8 +167,8 @@ public class ServerMemberController {
     @PostMapping("/bans")
     @PreAuthorize("@serverAuth.canBanMembers(#serverId, authentication.name)")
     public ResponseEntity<ServerBanResponse> banMember(@PathVariable Long serverId,
-                                                       @RequestBody Map<String, Object> body,
-                                                       Authentication auth) {
+            @RequestBody Map<String, Object> body,
+            Authentication auth) {
         User current = getCurrentUser(auth);
         Long userId = Long.valueOf(body.get("userId").toString());
         String reason = body.getOrDefault("reason", "").toString();
@@ -167,6 +181,16 @@ public class ServerMemberController {
         // Check hierarchy if needed (optional for now)
 
         var ban = banService.banMember(serverId, userId, reason, current.getId());
+
+        try {
+            auditLogMongoService.log(
+                    current.getId(),
+                    "USER_BAN_MEMBER",
+                    "ServerId: " + serverId + " || TargetUserId: " + userId,
+                    "Reason: " + reason);
+        } catch (Exception e) {
+        }
+
         return ResponseEntity.ok(ServerBanResponse.from(ban));
     }
 

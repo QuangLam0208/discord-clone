@@ -9,6 +9,7 @@ import hcmute.edu.vn.discord.repository.ServerMemberRepository;
 import hcmute.edu.vn.discord.repository.ServerRepository;
 import hcmute.edu.vn.discord.repository.ServerRoleRepository;
 import hcmute.edu.vn.discord.repository.UserRepository;
+import hcmute.edu.vn.discord.service.AuditLogMongoService;
 import hcmute.edu.vn.discord.service.AuditLogService;
 import hcmute.edu.vn.discord.service.ServerMemberService;
 import jakarta.persistence.EntityNotFoundException;
@@ -29,7 +30,8 @@ public class ServerMemberServiceImpl implements ServerMemberService {
     private final UserRepository userRepository;
     private final ServerRoleRepository serverRoleRepository;
     private final PermissionRepository permissionRepository;
-    private final AuditLogService  auditLogService;
+    private final AuditLogService auditLogService;
+    private final AuditLogMongoService auditLogMongoService;
 
     @Override
     @Transactional
@@ -136,19 +138,20 @@ public class ServerMemberServiceImpl implements ServerMemberService {
                         String desc = "Đã đuổi thành viên: " + (nickname != null ? nickname : username);
 
                         if (actor != null && actor.getId().equals(userId)) {
-                            // User left
-                            // We don't have MEMBER_LEAVE yet, so skip or add it.
-                            // For now, let's just log it as a Kick by self? No, that's weird.
-                            // Let's assume removeMember called by another is a KICK.
-                            // If called by self, it is LEAVE.
-                            // I'll skip logging leave for now to avoid confusion with Kick filter, unless
-                            // required.
-                            // Requirement said "MEMBER_KICK" is in action list.
+                            // User left (Self-remove)
+                            auditLogMongoService.log(actor.getId(), "USER_LEAVE_SERVER", "ServerId: " + server.getId(),
+                                    "User left server");
                             return true;
                         }
 
+                        // KICK
                         auditLogService.logAction(server, actor, action,
                                 userId.toString(), "MEMBER", desc);
+
+                        // System Log
+                        auditLogMongoService.log(actor.getId(), "USER_KICK_MEMBER",
+                                "ServerId: " + server.getId() + " || TargetUserId: " + userId, "User kicked member");
+
                     } catch (Exception e) {
                     }
 

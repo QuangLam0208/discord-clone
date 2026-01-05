@@ -13,6 +13,7 @@ import hcmute.edu.vn.discord.repository.MessageRepository;
 import hcmute.edu.vn.discord.repository.ServerRepository;
 import hcmute.edu.vn.discord.repository.UserRepository;
 import hcmute.edu.vn.discord.service.AdminMessageService;
+import hcmute.edu.vn.discord.service.AuditLogMongoService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -40,6 +41,7 @@ public class AdminMessageServiceImpl implements AdminMessageService {
     private final ChannelRepository channelRepository;
     private final ServerRepository serverRepository;
     private final UserRepository userRepository;
+    private final AuditLogMongoService auditLogService;
 
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -127,6 +129,9 @@ public class AdminMessageServiceImpl implements AdminMessageService {
         userPayload.put("type", "DELETE_MESSAGE");
         userPayload.put("messageId", messageId);
         messagingTemplate.convertAndSend("/topic/channel/" + m.getChannelId(), userPayload);
+
+        auditLogService.log(adminUsername, hcmute.edu.vn.discord.entity.enums.EAuditAction.ADMIN_DELETE_MESSAGE.name(),
+                "Message ID: " + messageId, "Soft deleted message");
     }
 
     @Override
@@ -162,6 +167,9 @@ public class AdminMessageServiceImpl implements AdminMessageService {
         userPayload.put("deleted", false);
 
         messagingTemplate.convertAndSend("/topic/channel/" + m.getChannelId(), userPayload);
+
+        auditLogService.log(adminUsername, hcmute.edu.vn.discord.entity.enums.EAuditAction.ADMIN_RESTORE_MESSAGE.name(),
+                "Message ID: " + messageId, "Restored message");
     }
 
     private AdminMessagePageResponse emptyPage(AdminMessageSearchRequest req) {

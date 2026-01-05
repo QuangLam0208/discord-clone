@@ -1,6 +1,7 @@
 // Admin Direct Messages: search, paginate, soft delete / restore
 (function () {
     let curPage = 0;
+    let totalPages = 1;
     const pageSize = 20;
     let stompClient = null;
 
@@ -29,7 +30,7 @@
                 const data = JSON.parse(payload.body);
                 updateDmRowStatus(data);
             });
-        }, function(err){
+        }, function (err) {
             console.error('[Admin DMs] WebSocket Error:', err);
         });
     }
@@ -129,7 +130,7 @@
             const page = await Api.get(`/api/admin/direct-messages?${params.toString()}`);
             render(page);
         } catch (e) {
-            tbody.innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center;color:#ed4245;padding:20px;">${escapeHtml(e.message||'Error')}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="muted" style="text-align:center;color:#ed4245;padding:20px;">${escapeHtml(e.message || 'Error')}</td></tr>`;
             console.error('[admin direct messages] load error', e);
         }
     }
@@ -147,7 +148,7 @@
         tbody.innerHTML = items.map(rowHtml).join('');
 
         curPage = page?.page ?? 0;
-        const totalPages = page?.totalPages ?? 1;
+        totalPages = page?.totalPages ?? 1; // Update global totalPages
         const pager = document.getElementById('admin-dm-pager');
         if (pager) {
             pager.style.display = totalPages > 1 ? 'flex' : 'none';
@@ -166,11 +167,11 @@
     }
 
     function rowHtml(m) {
-        const idShort = escapeHtml(String(m.id||'').slice(0,8));
+        const idShort = escapeHtml(String(m.id || '').slice(0, 8));
         const content = escapeHtml(m.content || '').slice(0, 160);
         const editedLabel = m.edited ? ' <span style="color:#b5bac1; font-size:0.85em;">(edited)</span>' : '';
-        const participants = `${escapeHtml(m.userAUsername || String(m.userAId||'-'))} ↔ ${escapeHtml(m.userBUsername || String(m.userBId||'-'))}`;
-        const sr = `${escapeHtml(m.senderUsername || String(m.senderId||'-'))} → ${escapeHtml(m.receiverUsername || String(m.receiverId||'-'))}`;
+        const participants = `${escapeHtml(m.userAUsername || String(m.userAId || '-'))} ↔ ${escapeHtml(m.userBUsername || String(m.userBId || '-'))}`;
+        const sr = `${escapeHtml(m.senderUsername || String(m.senderId || '-'))} → ${escapeHtml(m.receiverUsername || String(m.receiverId || '-'))}`;
         const created = m.createdAt ? new Date(m.createdAt).toLocaleString() : '-';
 
         // Status Badge
@@ -197,32 +198,32 @@
     }
 
     // Helpers
-    function txt(id){ const v = document.getElementById(id)?.value || ''; return v.trim() || undefined; }
-    function val(id){ return document.getElementById(id)?.value; }
-    function num(id){ const s = (document.getElementById(id)?.value || '').trim(); if(!s) return undefined; const n = Number(s); return Number.isFinite(n)?n:undefined; }
-    function dt(id){ const s = (document.getElementById(id)?.value || '').trim(); return s || undefined; }
-    function set(p,k,v){ if(v!==undefined && v!==null && !(typeof v==='string' && v.trim()==='')) p.set(k, v); }
+    function txt(id) { const v = document.getElementById(id)?.value || ''; return v.trim() || undefined; }
+    function val(id) { return document.getElementById(id)?.value; }
+    function num(id) { const s = (document.getElementById(id)?.value || '').trim(); if (!s) return undefined; const n = Number(s); return Number.isFinite(n) ? n : undefined; }
+    function dt(id) { const s = (document.getElementById(id)?.value || '').trim(); return s || undefined; }
+    function set(p, k, v) { if (v !== undefined && v !== null && !(typeof v === 'string' && v.trim() === '')) p.set(k, v); }
 
     async function deleteAdminDM(id) {
-        const ok = await Swal.fire({ title:'Xóa DM?', text:'Xóa mềm: tin nhắn sẽ bị ẩn khỏi người dùng.', icon:'warning', showCancelButton:true, confirmButtonText:'Xóa', cancelButtonText:'Hủy', confirmButtonColor:'#ed4245', background:'#313338', color:'#fff' }).then(r=>r.isConfirmed);
+        const ok = await Swal.fire({ title: 'Xóa DM?', text: 'Xóa mềm: tin nhắn sẽ bị ẩn khỏi người dùng.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Xóa', cancelButtonText: 'Hủy', confirmButtonColor: '#ed4245', background: '#313338', color: '#fff' }).then(r => r.isConfirmed);
         if (!ok) return;
         try {
             await Api.patch(`/api/admin/direct-messages/${id}/delete`, {});
             toastOk('Đã xóa DM');
             // searchAdminDM(false); // Không cần reload, socket sẽ tự update
         }
-        catch (e) { toastErr(e.message||'Xóa DM thất bại'); }
+        catch (e) { toastErr(e.message || 'Xóa DM thất bại'); }
     }
 
     async function restoreAdminDM(id) {
-        const ok = await Swal.fire({ title:'Khôi phục DM?', icon:'question', showCancelButton:true, confirmButtonText:'Khôi phục', cancelButtonText:'Hủy', confirmButtonColor:'#5865F2', background:'#313338', color:'#fff' }).then(r=>r.isConfirmed);
+        const ok = await Swal.fire({ title: 'Khôi phục DM?', icon: 'question', showCancelButton: true, confirmButtonText: 'Khôi phục', cancelButtonText: 'Hủy', confirmButtonColor: '#5865F2', background: '#313338', color: '#fff' }).then(r => r.isConfirmed);
         if (!ok) return;
         try {
             await Api.patch(`/api/admin/direct-messages/${id}/restore`, {});
             toastOk('Đã khôi phục DM');
             // searchAdminDM(false); // Không cần reload
         }
-        catch (e) { toastErr(e.message||'Khôi phục DM thất bại'); }
+        catch (e) { toastErr(e.message || 'Khôi phục DM thất bại'); }
     }
 
     function attachAdminDMHandlers() {
@@ -233,7 +234,13 @@
     }
 
     window.searchAdminDM = searchAdminDM;
-    window.pageAdminDM = function(delta){ const next = curPage + delta; if(next<0) return false; curPage = next; searchAdminDM(false); return false; };
+    window.pageAdminDM = function (delta) {
+        const next = curPage + delta;
+        if (next < 0 || next >= totalPages) return false;
+        curPage = next;
+        searchAdminDM(false);
+        return false;
+    };
     window.deleteAdminDM = deleteAdminDM;
     window.restoreAdminDM = restoreAdminDM;
     window.attachAdminDMHandlers = attachAdminDMHandlers;

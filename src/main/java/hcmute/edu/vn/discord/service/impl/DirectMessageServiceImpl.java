@@ -14,6 +14,7 @@ import hcmute.edu.vn.discord.repository.ConversationRepository;
 import hcmute.edu.vn.discord.repository.DirectMessageRepository;
 import hcmute.edu.vn.discord.repository.FriendRepository;
 import hcmute.edu.vn.discord.repository.UserRepository;
+import hcmute.edu.vn.discord.service.AuditLogMongoService;
 import hcmute.edu.vn.discord.service.DirectMessageService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +39,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     private final DirectMessageRepository messageRepo;
     private final UserRepository userRepo;
     private final FriendRepository friendRepository;
+    private final AuditLogMongoService auditLogMongoService;
 
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -155,10 +157,21 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         if (request.getContent() == null || request.getContent().trim().isEmpty()) {
             throw new IllegalArgumentException("Message content cannot be empty");
         }
+        String oldContent = message.getContent();
         message.setContent(request.getContent());
         message.setEdited(true);
         message.setUpdatedAt(new Date());
         DirectMessage saved = messageRepo.save(message);
+
+        try {
+            auditLogMongoService.log(
+                    userId,
+                    "USER_UPDATE_MESSAGE",
+                    "MessageId: " + messageId + " || Direct Message",
+                    "Old: " + oldContent + " || New: " + saved.getContent());
+        } catch (Exception e) {
+        }
+
         // Gửi cho Admin (Để Admin thấy nội dung mới ngay lập tức)
         try {
             Map<String, Object> adminPayload = new HashMap<>();
@@ -193,6 +206,15 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         message.setUpdatedAt(new Date());
 
         DirectMessage saved = messageRepo.save(message);
+
+        try {
+            auditLogMongoService.log(
+                    userId,
+                    "USER_DELETE_MESSAGE",
+                    "MessageId: " + messageId + " || Direct Message",
+                    "Owner deleted message: " + (message.getContent() != null ? message.getContent() : "Attachment"));
+        } catch (Exception e) {
+        }
 
         try {
             messagingTemplate.convertAndSend("/topic/admin/dms/update",
@@ -276,7 +298,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
                 result.add(map);
             }
         }
-        result.sort((a, b) -> ((Date)b.get("updatedAt")).compareTo((Date)a.get("updatedAt")));
+        result.sort((a, b) -> ((Date) b.get("updatedAt")).compareTo((Date) a.get("updatedAt")));
         return result;
     }
 
@@ -284,7 +306,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         DirectMessageResponse replyRes = null;
         if (m.getReplyToId() != null) {
             Optional<DirectMessage> origin = messageRepo.findById(m.getReplyToId());
-            if(origin.isPresent()) {
+            if (origin.isPresent()) {
                 replyRes = DirectMessageResponse.builder()
                         .id(origin.get().getId())
                         .content(origin.get().isDeleted() ? "Tin nhắn đã xóa" : origin.get().getContent())
@@ -370,9 +392,9 @@ public class DirectMessageServiceImpl implements DirectMessageService {
 
     private void sendToConversationParticipants(Conversation conv, Object payload) {
         if (conv == null) return;
-        userRepo.findById(conv.getUser1Id()).ifPresent(u ->
-                messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/dm", payload));
-        userRepo.findById(conv.getUser2Id()).ifPresent(u ->
-                messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/dm", payload));
+        userRepo.findById(conv.getUser1Id())
+                .ifPresent(u -> messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/dm", payload));
+        userRepo.findById(conv.getUser2Id())
+                .ifPresent(u -> messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/dm", payload));
     }
 }
