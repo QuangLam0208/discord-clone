@@ -158,7 +158,21 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         message.setContent(request.getContent());
         message.setEdited(true);
         message.setUpdatedAt(new Date());
-        return toResponse(messageRepo.save(message));
+        DirectMessage saved = messageRepo.save(message);
+        // Gửi cho Admin (Để Admin thấy nội dung mới ngay lập tức)
+        try {
+            Map<String, Object> adminPayload = new HashMap<>();
+            adminPayload.put("id", messageId);
+            adminPayload.put("type", "EDIT");
+            adminPayload.put("content", saved.getContent());
+            adminPayload.put("edited", true);
+            messagingTemplate.convertAndSend("/topic/admin/dms/update", adminPayload);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        DirectMessageResponse response = toResponse(saved);
+        messagingTemplate.convertAndSend("/topic/dm/" + message.getConversationId(), response);
+        return response;
     }
 
     @Override
@@ -172,12 +186,26 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         if (message.isDeleted()) return toResponse(message);
 
         message.setDeleted(true);
-//        message.setContent("");
         message.setAttachments(new ArrayList<>());
         message.setReactions(new HashMap<>());
         message.setUpdatedAt(new Date());
 
         DirectMessage saved = messageRepo.save(message);
+        // Gửi cho Admin (Để đổi trạng thái sang Deleted)
+        try {
+            Map<String, Object> adminPayload = new HashMap<>();
+            adminPayload.put("id", messageId);
+            adminPayload.put("status", "DELETED");
+            messagingTemplate.convertAndSend("/topic/admin/dms/update", adminPayload);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        // Gửi cho User trong hội thoại (Để tin nhắn biến mất phía User)
+        Map<String, Object> userPayload = new HashMap<>();
+        userPayload.put("type", "DELETE_MESSAGE");
+        userPayload.put("messageId", messageId);
+        messagingTemplate.convertAndSend("/topic/dm/" + message.getConversationId(), userPayload);
+
         return toResponse(saved);
     }
 

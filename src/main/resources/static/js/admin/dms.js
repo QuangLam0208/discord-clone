@@ -62,12 +62,22 @@
         }
     }
 
-    // Helper: Cập nhật trạng thái dòng hiện tại
+    // Cập nhật trạng thái dòng hiện tại
     function updateDmRowStatus(data) {
-        // data = { id: "...", status: "DELETED" | "ACTIVE" }
         const row = document.getElementById('dm-row-' + data.id);
         if (!row) return; // Dòng không nằm trong trang hiện tại
 
+        // EDIT
+        if (data.type === 'EDIT') {
+            const contentCell = row.cells[1];
+            // Cập nhật nội dung + nhãn (edited)
+            contentCell.innerHTML = escapeHtml(data.content) + ' <span style="color:#b5bac1; font-size:0.85em;">(edited)</span>';
+
+            // Hiệu ứng nháy vàng
+            row.style.backgroundColor = '#faa61a33';
+            setTimeout(() => row.style.backgroundColor = '', 1500);
+            return;
+        }
         // Cập nhật Badge (Cột 6)
         const badgeCell = row.cells[5];
         if (data.status === 'DELETED') {
@@ -158,6 +168,7 @@
     function rowHtml(m) {
         const idShort = escapeHtml(String(m.id||'').slice(0,8));
         const content = escapeHtml(m.content || '').slice(0, 160);
+        const editedLabel = m.edited ? ' <span style="color:#b5bac1; font-size:0.85em;">(edited)</span>' : '';
         const participants = `${escapeHtml(m.userAUsername || String(m.userAId||'-'))} ↔ ${escapeHtml(m.userBUsername || String(m.userBId||'-'))}`;
         const sr = `${escapeHtml(m.senderUsername || String(m.senderId||'-'))} → ${escapeHtml(m.receiverUsername || String(m.receiverId||'-'))}`;
         const created = m.createdAt ? new Date(m.createdAt).toLocaleString() : '-';
@@ -175,7 +186,7 @@
         return `
         <tr id="dm-row-${m.id}">
           <td style="font-family:monospace;color:#b5bac1">#${idShort}</td>
-          <td>${content}</td>
+          <td>${content}${editedLabel}</td>
           <td>${sr}</td>
           <td>${participants}</td>
           <td>${created}</td>

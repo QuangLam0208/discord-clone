@@ -75,9 +75,25 @@
 
     // Xử lý khi tin nhắn bị Xóa/Khôi phục
     function handleUpdateMessageSocket(data) {
-        // data format: { id: "...", status: "DELETED" | "ACTIVE" }
+        // 1. Delete/Restore: { id: "...", status: "DELETED" }
+        // 2. Edit: { id: "...", type: "EDIT", content: "..." }
         const row = document.getElementById('msg-row-' + data.id);
         if (!row) return; // Tin nhắn không nằm trong trang hiện tại
+
+        // --- TRƯỜNG HỢP 1: SỬA NỘI DUNG (EDIT) ---
+        if (data.type === 'EDIT') {
+            // Cột nội dung là cột thứ 2 (index 1) trong bảng
+            const contentCell = row.cells[1];
+
+            // Cập nhật text và thêm nhãn (edited)
+            const newContent = escapeHtml(data.content || '');
+            contentCell.innerHTML = newContent + ' <span style="color:#b5bac1; font-size:0.85em;">(edited)</span>';
+
+            // Hiệu ứng nháy màu vàng nhẹ để báo hiệu sửa
+            row.style.backgroundColor = '#faa61a33';
+            setTimeout(() => row.style.backgroundColor = '', 1500);
+            return;
+        }
 
         // Cập nhật Badge Trạng thái (Cột thứ 7)
         const badgeCell = row.cells[6];
@@ -171,6 +187,9 @@
     function rowHtml(m) {
         const idShort = escapeHtml(m.id?.substring(0, 8) || '');
         const content = escapeHtml(m.content || '').slice(0, 120);
+        const editedLabel = m.edited
+            ? ' <span style="color:#b5bac1; font-size:0.85em;">(edited)</span>'
+            : '';
         const sender = escapeHtml(m.senderUsername || '-') + (m.senderDisplayName ? ` <span style="color:#b5bac1">(${escapeHtml(m.senderDisplayName)})</span>` : '');
         const channel = `${escapeHtml(m.channelName || '-')} <span style="color:#b5bac1">#${m.channelId ?? ''}</span>`;
         const server = `${escapeHtml(m.serverName || '-')} <span style="color:#b5bac1">#${m.serverId ?? ''}</span>`;
@@ -186,7 +205,7 @@
         return `
       <tr id="msg-row-${m.id}">
         <td style="font-family:monospace;color:#b5bac1">#${idShort}</td>
-        <td>${content}</td>
+        <td>${content}${editedLabel}</td>
         <td>${sender}</td>
         <td>${channel}</td>
         <td>${server}</td>

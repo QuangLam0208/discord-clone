@@ -175,11 +175,11 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
         m.setDeleted(true);
         dmRepo.save(m);
 
-        // 1. Update Admin UI (Change Badge & Button)
+        // Báo Admin UI (Cập nhật dòng hiện tại)
         messagingTemplate.convertAndSend("/topic/admin/dms/update",
                 Map.of("id", messageId, "status", "DELETED"));
 
-        // 2. Update User UI (Remove message)
+        // Báo User UI (Để ẩn tin nhắn)
         messagingTemplate.convertAndSend("/topic/dm/" + m.getConversationId(),
                 Map.of("type", "DELETE_MESSAGE", "messageId", messageId));
     }
@@ -193,28 +193,31 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
         m.setDeleted(false);
         dmRepo.save(m);
 
-        // 1. Update Admin UI
+        // Update Admin UI
         messagingTemplate.convertAndSend("/topic/admin/dms/update",
                 Map.of("id", messageId, "status", "ACTIVE"));
 
-        // 2. Update User UI (Send FULL message data to re-render)
+        // Update User UI (Send FULL message data to re-render)
         DirectMessageResponse response = mapToUserDirectMessageResponse(m);
 
         // Wrap trong map để thêm field 'type' cho frontend dễ xử lý
         Map<String, Object> payload = new HashMap<>();
         payload.put("type", "RESTORE_MESSAGE");
-        payload.put("id", response.getId());
-        payload.put("conversationId", response.getConversationId());
-        payload.put("senderId", response.getSenderId());
-        payload.put("receiverId", response.getReceiverId());
-        payload.put("content", response.getContent());
-        payload.put("createdAt", response.getCreatedAt());
-        payload.put("updatedAt", response.getUpdatedAt());
-        payload.put("reactions", response.getReactions());
-        payload.put("deleted", false);
-        payload.put("edited", response.isEdited());
+        payload.putAll(convertToMap(response)); // Helper convert object to map
 
         messagingTemplate.convertAndSend("/topic/dm/" + m.getConversationId(), payload);
+    }
+
+    private Map<String, Object> convertToMap(DirectMessageResponse res) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("id", res.getId());
+        map.put("conversationId", res.getConversationId());
+        map.put("content", res.getContent());
+        map.put("senderId", res.getSenderId());
+        map.put("createdAt", res.getCreatedAt());
+        map.put("edited", res.isEdited());
+        map.put("deleted", false);
+        return map;
     }
 
     private DirectMessageResponse mapToUserDirectMessageResponse(DirectMessage m) {

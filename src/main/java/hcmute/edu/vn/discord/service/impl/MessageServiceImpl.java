@@ -19,10 +19,7 @@ import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -128,7 +125,19 @@ public class MessageServiceImpl implements MessageService {
 
         message.setContent(request.getContent().trim());
         message.setIsEdited(true); // Đánh dấu đã sửa
-        return mapToResponse(messageRepository.save(message), user);
+        Message saved = messageRepository.save(message);
+        try {
+            Map<String, Object> adminPayload = new HashMap<>();
+            adminPayload.put("id", messageId);
+            adminPayload.put("type", "EDIT");
+            adminPayload.put("content", saved.getContent());
+            adminPayload.put("edited", true);
+
+            messagingTemplate.convertAndSend("/topic/admin/messages/update", adminPayload);
+        } catch (Exception e) {
+            log.error("Lỗi gửi socket edit message cho Admin: ", e);
+        }
+        return mapToResponse(saved, user);
     }
 
     @Override
@@ -177,6 +186,13 @@ public class MessageServiceImpl implements MessageService {
 
         messagingTemplate.convertAndSend("/topic/channel/" + message.getChannelId(),
                 Map.of("type", "DELETE_MESSAGE", "messageId", messageId));
+
+        try {
+            messagingTemplate.convertAndSend("/topic/admin/messages/update",
+                    Map.of("id", messageId, "status", "DELETED"));
+        } catch (Exception e) {
+            log.error("Lỗi gửi WebSocket cập nhật xóa tin nhắn cho Admin: ", e);
+        }
 
         // Trả về message đã xóa (với cờ deleted=true) để broadcast
         // Cần sender info để mapToResponse

@@ -69,6 +69,10 @@ const DM = (() => {
             const conv = await DMApi.getOrCreateConversation(friendId);
             st.conversationId = String(conv.id);
 
+            if (window.DMWS && DMWS.subscribeToConversation) {
+                DMWS.subscribeToConversation(st.conversationId, onConversationEvent);
+            }
+
             const exists = st.conversations.some(c => String(c.conversationId) === st.conversationId);
             if (!exists) {
                 const newConvoItem = {
@@ -127,23 +131,41 @@ const DM = (() => {
     }
 
     function onConversationEvent(payload) {
-        // payload = { type: "DELETE_MESSAGE" | "RESTORE_MESSAGE", ... }
-
+        // Admin/User xóa tin nhắn
         if (payload.type === 'DELETE_MESSAGE') {
             DMUI.removeMessageElement(payload.messageId);
-
-            // [QUAN TRỌNG] Xóa khỏi danh sách đã hiển thị để nếu sau này có Restore thì UI cho phép vẽ lại
             st.displayedMsgIds.delete(String(payload.messageId));
+            return;
         }
-        else if (payload.type === 'RESTORE_MESSAGE') {
-            DMUI.removeMessageElement(payload.id); // Xóa element cũ/lỗi nếu còn sót
+        // Admin khôi phục tin nhắn
+        if (payload.type === 'RESTORE_MESSAGE') {
+            DMUI.removeMessageElement(payload.id); // Xóa bản cũ nếu lỗi
+            st.displayedMsgIds.delete(String(payload.id)); // Cho phép vẽ lại
 
-            // [QUAN TRỌNG] Xóa ID khỏi Set để hàm appendMessage không chặn việc vẽ lại
-            st.displayedMsgIds.delete(String(payload.id));
-
-            // Kiểm tra xem tin nhắn được khôi phục có thuộc hội thoại đang mở không
             if (String(payload.conversationId) === String(st.conversationId)) {
                 DMUI.appendMessage(payload, st.currentUserId, st.displayedMsgIds);
+            }
+            return;
+        }
+        // User chỉnh sửa tin nhắn (Realtime Update UI)
+        if (payload.id && !payload.type) { // Tin nhắn thường hoặc tin nhắn đã sửa
+            // Tìm xem tin nhắn đã có trên UI chưa
+            const existingEl = document.getElementById(`msg-${payload.id}`);
+
+            if (existingEl) {
+                // Nếu đã có -> Đây là hành động EDIT -> Cập nhật nội dung
+                const contentDiv = existingEl.querySelector('div[style*="white-space"]');
+                if (contentDiv) {
+                    contentDiv.innerHTML = (payload.content || '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+                }
+                // Thêm nhãn (edited) nếu chưa có
+                const metaDiv = existingEl.querySelector('div[style*="font-size:12px"]');
+                if (metaDiv && !metaDiv.innerHTML.includes('(đã chỉnh sửa)') && payload.edited) {
+                    metaDiv.insertAdjacentHTML('beforeend', '<span style="font-size: 10px; color: #b9bbbe; margin-left: 4px;">(đã chỉnh sửa)</span>');
+                }
+            } else {
+                // Nếu chưa có -> Đây là tin nhắn mới -> Vẽ mới
+                // (Code cũ của onIncomingMessage đã xử lý việc này, nhưng có thể gộp vào đây nếu muốn)
             }
         }
     }
