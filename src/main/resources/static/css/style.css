@@ -2755,39 +2755,6 @@ input:checked+.slider:before {
    color: #96989d;
    font-size: 12px;
    font-weight: 600;
-}/* SweetAlert Discord Theme */
-.swal2-popup-discord {
-    border-radius: 4px !important;
-}
-
-.swal2-title-discord {
-    color: #fff !important;
-    font-size: 20px !important;
-    font-weight: 700 !important;
-}
-
-.swal2-container.swal2-backdrop-show,
-.swal2-container.swal2-noanimation {
-    background: rgba(0, 0, 0, 0.7) !important;
-}
-
-.swal2-styled.swal2-confirm {
-    background-color: #ed4245 !important;
-    font-weight: 600 !important;
-}
-
-.swal2-styled.swal2-confirm:focus {
-    box-shadow: 0 0 0 3px rgba(237, 66, 69, 0.5) !important;
-}
-
-.swal2-styled.swal2-cancel {
-    background-color: #747f8d !important;
-    color: #fff !important;
-    font-weight: 600 !important;
-}
-
-.swal2-styled.swal2-cancel:hover {
-    background-color: #5d6671 !important;
 }
 
 
@@ -2855,4 +2822,239 @@ input:checked+.slider:before {
     color: #72767d;
     margin-left: 0.25rem;
     font-weight: 400;
+}
+
+.profile-container {
+    max-width: 600px;
+    margin: 40px auto;
+    background-color: #18191c; /* Màu nền đen xám */
+    border-radius: 8px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.24);
+    overflow: hidden; /* Để bo góc ảnh hưởng đến banner */
+    color: #dcddde; /* Màu chữ xám trắng */
+}
+
+.profile-header {
+    height: 120px; /* Cao hơn để giống banner thật */
+    background-color: #5865f2; /* Màu tím Discord hoặc ảnh nền */
+    position: relative;
+}
+
+.profile-avatar {
+    width: 90px;
+    height: 90px;
+    border-radius: 50%;
+    border: 6px solid #18191c; /* Viền trùng màu nền để tạo khoảng cách */
+    background-color: #18191c;
+    position: absolute;
+    bottom: -45px; /* Để avatar nằm đè lên ranh giới banner */
+    left: 20px;
+    object-fit: cover;
+}
+
+.profile-info {
+    margin-top: 50px; /* Đẩy xuống để không bị avatar che */
+    padding: 0 20px 20px;
+    border-bottom: 1px solid #2f3136;
+}
+
+.profile-info h2 {
+    color: #fff;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.profile-info span {
+    color: #b9bbbe;
+    font-size: 14px;
+}
+
+.profile-tabs {
+    display: flex;
+    padding: 0 20px;
+    margin-top: 10px;
+    border-bottom: 1px solid #2f3136;
+}
+
+.profile-tab {
+    padding: 10px 15px;
+    color: #b9bbbe;
+    font-size: 14px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.profile-tab:hover, .profile-tab.active {
+    color: #fff;
+    border-bottom-color: #dcddde;
+    background-color: rgba(255,255,255,0.05);
+    border-radius: 4px 4px 0 0;
+}
+
+.profile-content {
+    padding: 20px;
+    background-color: #18191c;
+    min-height: 200px;
+}
+
+.section-title {
+    color: #b9bbbe;
+    font-size: 12px;
+    text-transform: uppercase;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.profile-bio {
+    color: #dcddde;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+
+/* --- DISCORD PROFILE STYLE --- */
+
+.discord-profile-card {
+    background-color: #18191c; /* Nền tối hơn */
+    width: 600px;
+    border-radius: 8px;
+    overflow: hidden; /* Để banner không bị lòi ra */
+    box-shadow: 0 8px 16px rgba(0,0,0,0.24);
+    margin: 50px auto;
+    position: relative;
+    color: #dcddde;
+    font-family: 'Whitney', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+/* 1. Banner */
+.profile-banner {
+    height: 120px; /* Chiều cao banner */
+    background-color: #5865f2; /* Màu tím mặc định Discord */
+    /* Nếu muốn ảnh nền: background-image: url('...'); background-size: cover; */
+}
+
+/* 2. Avatar Wrapper (Căn chỉnh vị trí đè lên banner) */
+.profile-header-section {
+    position: relative;
+    padding: 0 16px;
+}
+
+.profile-avatar-wrapper {
+    width: 90px;
+    height: 90px;
+    position: absolute;
+    top: -45px; /* Đẩy lên để đè vào banner một nửa */
+    left: 20px;
+    border-radius: 50%;
+    border: 6px solid #18191c; /* Viền trùng màu nền tạo cảm giác cắt */
+    background-color: #18191c;
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.profile-avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* Hiệu ứng khi rê chuột vào avatar */
+.avatar-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+}
+.profile-avatar-wrapper:hover .avatar-overlay {
+    opacity: 1;
+}
+
+/* 3. Phần thân (Body) */
+.profile-body {
+    padding: 50px 20px 20px 20px; /* padding-top 50px để tránh avatar */
+    background-color: #18191c;
+}
+
+.user-identity {
+    margin-bottom: 20px;
+}
+
+.user-identity h3 {
+    display: inline;
+    font-size: 20px;
+    color: #fff;
+    font-weight: 700;
+}
+
+.user-identity .user-tag {
+    font-size: 16px;
+    color: #b9bbbe;
+}
+
+/* Tabs */
+.profile-tabs {
+    display: flex;
+    border-bottom: 1px solid #2f3136;
+    margin-bottom: 20px;
+}
+
+.tab-item {
+    padding: 10px 15px;
+    font-size: 14px;
+    cursor: pointer;
+    color: #b9bbbe;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-item.active {
+    color: #fff;
+    border-bottom: 2px solid #dcddde;
+}
+
+/* Details */
+.detail-group {
+    margin-bottom: 20px;
+}
+
+.detail-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: #b9bbbe;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.detail-group p {
+    font-size: 14px;
+    color: #dcddde;
+}
+
+/* Button */
+.btn-discord-danger {
+    display: inline-block;
+    padding: 10px 24px;
+    background-color: transparent;
+    border: 1px solid #ed4245;
+    color: #ed4245;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: 0.2s;
+}
+
+.btn-discord-danger:hover {
+    background-color: #ed4245;
+    color: white;
 }

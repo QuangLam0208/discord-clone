@@ -15,6 +15,100 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="editProfileModal">
+        <div class="modal-box" style="width: 800px; max-width: 90vw;">
+            <button class="close-modal-btn" onclick="closeModal('editProfileModal')">&times;</button>
+            <div class="modal-body profile-modal-body" style="display: flex; gap: 24px; padding: 20px;">
+                <div class="profile-left-col"
+                     style="width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px;">
+                    <h3
+                            style="color: #b9bbbe; font-size: 12px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase;">
+                        Xem trước thẻ hồ sơ của bạn</h3>
+                    <div class="discord-profile-card"
+                         style="background-color: #111214; border-radius: 8px; overflow: hidden; position: relative; width: 300px; box-shadow: 0 8px 16px rgba(0,0,0,0.24);">
+                        <div class="card-banner" style="height: 120px; background-color: #5865F2;"></div>
+                        <div class="card-user-info" style="padding: 16px; padding-top: 50px; position: relative;">
+                            <div class="card-avatar-holder" style="position: absolute; top: -40px; left: 16px;">
+                                <label for="edit-profile-file" class="profile-avatar-upload" title="Đổi Avatar"
+                                       style="cursor: pointer; position: relative; display: block;">
+                                    <div>
+                                        <img id="edit-profile-avatar-preview" src="" alt="Avatar"
+                                             style="display: block; width: 100px; height: 100px; object-fit: cover; border-radius: 50%;">
+                                    </div>
+                                    <div class="avatar-hint-overlay"
+                                         style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; font-size: 10px; font-weight: bold;">
+                                        ĐỔI</div>
+                                    <div
+                                            style="position: absolute; top: 0; right: 0; background-color: #ebedef; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none;">
+                                        <i class="fa-solid fa-pencil" style="color: #4f545c; font-size: 14px;"></i>
+                                    </div>
+                                </label>
+                            </div>
+                            <input type="file" id="edit-profile-file" style="display: none;"
+                                   accept="image/png, image/jpeg, image/gif">
+
+                            <div class="preview-displayname" id="preview-displayname-text"
+                                 style="font-size: 20px; font-weight: 700; color: #fff;">Display Name</div>
+                            <div class="preview-username" id="preview-username-text"
+                                 style="font-size: 14px; color: #b9bbbe; margin-bottom: 12px;">user123</div>
+
+                            <div class="divider-line" style="height: 1px; background-color: #2f3136; margin: 12px 0;">
+                            </div>
+
+                            <div class="card-section-title"
+                                 style="font-size: 12px; font-weight: 700; color: #b9bbbe; margin-bottom: 8px; text-transform: uppercase; display: flex; align-items: center; justify-content: space-between;">
+                                <span>GIỚI THIỆU VỀ TÔI</span>
+                                <i class="fa-solid fa-pencil" style="cursor: pointer; font-size: 14px; color: #b9bbbe;"
+                                   title="Chỉnh sửa Bio" onclick="enableBioEdit()"></i>
+                            </div>
+                            <textarea id="edit-profile-bio" rows="3" maxlength="190" readonly
+                                      placeholder="Hãy viết gì đó về bạn..."
+                                      style="width: 100%; background-color: transparent; border: none; color: #dbdee1; font-size: 14px; resize: none; font-family: inherit; outline: none; cursor: default;"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-right-col" style="flex-grow: 1; display: flex; flex-direction: column;">
+                    <h2 style="margin-top: 0; margin-bottom: 20px;">Hồ sơ người dùng</h2>
+
+                    <div class="input-group">
+                        <label
+                                style="color: #b9bbbe; font-size: 12px; font-weight: 700; margin-bottom: 8px; display: block; text-transform: uppercase;">TÊN
+                            HIỂN THỊ</label>
+                        <input type="text" id="edit-profile-displayname" placeholder="Tên hiển thị của bạn"
+                               style="background-color: #1e1f22; border: none; padding: 10px; color: #dbdee1; width: 100%; border-radius: 4px;">
+                    </div>
+
+                    <div class="divider-line" style="height: 1px; background-color: #3f4147; margin: 24px 0;"></div>
+
+                    <div class="input-group">
+                        <label
+                                style="color: #b9bbbe; font-size: 12px; font-weight: 700; margin-bottom: 8px; display: block; text-transform: uppercase;">TÊN
+                            ĐĂNG NHẬP</label>
+                        <input type="text" id="edit-profile-username" readonly
+                               style="background-color: #1a1b1e; border: none; padding: 10px; color: #7f8287; width: 100%; border-radius: 4px; cursor: not-allowed;">
+                    </div>
+
+                    <div class="input-group" style="margin-top: 16px;">
+                        <label
+                                style="color: #b9bbbe; font-size: 12px; font-weight: 700; margin-bottom: 8px; display: block; text-transform: uppercase;">EMAIL</label>
+                        <input type="text" id="edit-profile-email" readonly
+                               style="background-color: #1a1b1e; border: none; padding: 10px; color: #7f8287; width: 100%; border-radius: 4px; cursor: not-allowed;">
+                    </div>
+
+                    <div class="modal-footer"
+                         style="padding: 20px 0 0 0; background: transparent; margin-top: auto; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button class="btn-cancel" onclick="closeModal('editProfileModal')"
+                                style="background: transparent; color: #fff; padding: 10px 20px; border: none; cursor: pointer; font-weight: 500;">Hủy</button>
+                        <button class="btn-primary" onclick="saveUserProfile()"
+                                style="background-color: #5865F2; color: white; padding: 10px 24px; border: none; border-radius: 3px; font-weight: 500; cursor: pointer;">Lưu
+                            Thay Đổi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Role Context Menu -->
 
     <div class="modal-overlay" id="createServerModal">
@@ -71,7 +165,7 @@
                 <div class="input-group">
                     <label>TÊN KÊNH</label>
                     <div class="input-with-icon"><i class="fa-solid fa-hashtag input-icon"></i><input type="text"
-                            placeholder="kênh-mới"></div>
+                                                                                                      placeholder="kênh-mới"></div>
                 </div>
                 <div class="toggle-group">
                     <div class="toggle-label">
@@ -136,7 +230,7 @@
                 <div class="input-group">
                     <label>TÊN KÊNH</label>
                     <div class="input-with-icon"><i class="fa-solid fa-hashtag input-icon"></i><input type="text"
-                            placeholder="kênh-mới"></div>
+                                                                                                      placeholder="kênh-mới"></div>
                 </div>
                 <div class="toggle-group">
                     <div class="toggle-label">
@@ -168,13 +262,13 @@
                     <label>TÌM KIẾM BẠN BÈ</label>
                     <div class="search-box-invite">
                         <input type="text" id="invite-search-input" placeholder="Tìm kiếm bạn bè"
-                            onkeyup="filterInviteFriends()">
+                               onkeyup="filterInviteFriends()">
                         <i class="fa-solid fa-magnifying-glass" style="color: #b5bac1;"></i>
                     </div>
                 </div>
 
                 <div id="invite-friend-list" class="invite-friend-list custom-scrollbar"
-                    style="max-height: 200px; overflow-y: auto; margin-bottom: 20px;">
+                     style="max-height: 200px; overflow-y: auto; margin-bottom: 20px;">
                     <!-- Friend items will optionally be injected here by JS -->
                 </div>
 
@@ -223,7 +317,7 @@
                     <div class="input-group">
                         <label>CHỦ ĐỀ KÊNH (MÔ TẢ)</label>
                         <textarea id="edit-channel-desc" class="custom-textarea"
-                            placeholder="Cho mọi người biết kênh này nói về cái gì" rows="3"></textarea>
+                                  placeholder="Cho mọi người biết kênh này nói về cái gì" rows="3"></textarea>
                     </div>
 
                     <div class="setting-divider"></div>
@@ -270,7 +364,7 @@
                 </div>
                 <!-- Sidebar Items -->
                 <div class="settings-nav-item active" id="nav-server-overview"
-                    onclick="switchServerSettingsTab('overview')">
+                     onclick="switchServerSettingsTab('overview')">
                     Hồ sơ máy chủ
                 </div>
                 <div class="settings-nav-item" id="nav-server-members" onclick="switchServerSettingsTab('members')">
@@ -289,7 +383,7 @@
                 <div class="settings-nav-separator"></div>
 
                 <div class="settings-nav-item danger" id="nav-server-delete"
-                    onclick="switchServerSettingsTab('delete')">
+                     onclick="switchServerSettingsTab('delete')">
                     Xóa Máy Chủ
                     <i class="fa-solid fa-trash-can" style="margin-left: auto;"></i>
                 </div>
@@ -319,16 +413,16 @@
                                     </div>
                                     <div>
                                         <div
-                                            style="font-size: 12px; color: #b5bac1; margin-bottom: 8px; max-width: 200px;">
+                                                style="font-size: 12px; color: #b5bac1; margin-bottom: 8px; max-width: 200px;">
                                             Chúng tôi khuyến nghị sử dụng hình ảnh có kích thước tối thiểu 512x512.
                                         </div>
                                         <button class="btn-upload-icon"
-                                            onclick="document.getElementById('editServerIconInput').click()">Thay Đổi
+                                                onclick="document.getElementById('editServerIconInput').click()">Thay Đổi
                                             Biểu Tượng</button>
                                         <button class="remove-icon-btn" onclick="removeServerIcon()">Xóa biểu
                                             tượng</button>
                                         <input type="file" id="editServerIconInput" style="display: none;"
-                                            accept="image/*">
+                                               accept="image/*">
                                     </div>
                                 </div>
                             </div>
@@ -341,7 +435,7 @@
                             <div class="input-group">
                                 <label>MÔ TẢ MÁY CHỦ</label>
                                 <textarea id="edit-server-desc" class="custom-textarea" rows="3"
-                                    placeholder="Server này nói về cái gì?"></textarea>
+                                          placeholder="Server này nói về cái gì?"></textarea>
                             </div>
                         </div>
 
@@ -384,7 +478,7 @@
                     <h2>Thành viên</h2>
                     <div class="members-controls-row">
                         <span
-                            style="font-size: 12px; font-weight: 700; color: #b5bac1; text-transform: uppercase;">Thành
+                                style="font-size: 12px; font-weight: 700; color: #b5bac1; text-transform: uppercase;">Thành
                             viên gần đây</span>
                         <div class="members-search-box-styled">
                             <input type="text" id="member-search-input" placeholder="Tìm kiếm">
@@ -395,13 +489,12 @@
                     <div class="members-list-wrapper">
                         <table class="members-table styled-table">
                             <thead>
-                                <tr>
-                                    <th style="width: 35%; padding-left: 16px;">TÊN</th>
-                                    <th style="width: 20%;">GIA NHẬP MÁY CHỦ</th>
-                                    <th style="width: 20%;">THAM GIA DISCORD</th>
-                                    <th style="width: 20%;">VAI TRÒ</th>
-                                    <th style="width: 5%;"></th> <!-- Actions -->
-                                </tr>
+                            <tr>
+                                <th style="width: 35%; padding-left: 16px;">TÊN</th>
+                                <th style="width: 20%;">GIA NHẬP MÁY CHỦ</th>
+                                <th style="width: 20%;">THAM GIA DISCORD</th>
+                                <th style="width: 20%;">VAI TRÒ</th>
+                                <th style="width: 5%;"></th> </tr>
                             </thead>
                             <tbody id="members-table-body">
                             <!-- JS renders rows here -->
@@ -429,11 +522,11 @@
                             <i class="fas fa-search"></i>
                         </div>
                         <button class="btn-create-role-styled" onclick="createNewRoleFromEditor()"
-                            style="margin-left: 16px;">Tạo Vai Trò</button>
+                                style="margin-left: 16px;">Tạo Vai Trò</button>
                     </div>
 
                     <div class="roles-list-header"
-                        style="display: flex; color: #b5bac1; font-size: 12px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; padding: 0 10px;">
+                         style="display: flex; color: #b5bac1; font-size: 12px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; padding: 0 10px;">
                         <span style="flex: 1;">VAI TRÒ - <span id="roles-count-label">0</span></span>
                         <span style="width: 100px; text-align: center;">THÀNH VIÊN</span>
                         <span style="width: 80px;"></span>
@@ -451,11 +544,11 @@
                     <div class="members-controls-row" style="margin-bottom: 24px; gap: 10px;">
                         <div class="members-search-box-styled search-box-flex" style="flex: 1;">
                             <input type="text" id="audit-log-search"
-                                placeholder="Tìm kiếm theo người dùng hoặc chi tiết" oninput="filterAuditLogs()">
+                                   placeholder="Tìm kiếm theo người dùng hoặc chi tiết" oninput="filterAuditLogs()">
                             <i class="fas fa-search"></i>
                         </div>
                         <select id="audit-log-filter-action" class="audit-filter-select" onchange="filterAuditLogs()"
-                            style="background-color: #1e1f22; color: #dbdee1; border: none; padding: 8px; border-radius: 4px; outline: none; cursor: pointer;">
+                                style="background-color: #1e1f22; color: #dbdee1; border: none; padding: 8px; border-radius: 4px; outline: none; cursor: pointer;">
                             <option value="ALL">Tất cả hành động</option>
                             <option value="SERVER_UPDATE">Cập nhật Server</option>
                             <option value="CHANNEL">Kênh</option>
@@ -465,7 +558,7 @@
                     </div>
 
                     <div class="audit-log-list custom-scrollbar" id="audit-log-list-container"
-                        style="flex: 1; overflow-y: auto; padding-right: 10px;">
+                         style="flex: 1; overflow-y: auto; padding-right: 10px;">
                         <!-- Logs will be rendered here -->
                         <div style="text-align: center; color: #b5bac1; padding: 20px;">Đang tải nhật ký...</div>
                     </div>
@@ -475,43 +568,38 @@
                 <div id="tab-server-bans" class="settings-tab-content">
                     <h2 style="margin: 0 0 20px 0; font-size: 20px; font-weight: 700;">Lệnh Cấm</h2>
                     <p
-                        style="color: #b5bac1; font-size: 13px; margin-bottom: 20px; border-bottom: 1px solid #3f4147; padding-bottom: 20px;">
+                            style="color: #b5bac1; font-size: 13px; margin-bottom: 20px; border-bottom: 1px solid #3f4147; padding-bottom: 20px;">
                         Danh sách các thành viên bị cấm. Nhấp vào tên để thu hồi lệnh cấm.
                     </p>
 
                     <div class="members-controls-row" style="margin-bottom: 24px; gap: 10px;">
                         <div class="members-search-box-styled search-box-flex" style="flex: 1;">
                             <input type="text" id="server-bans-search" placeholder="Tìm kiếm theo tên"
-                                oninput="filterServerBans()">
+                                   oninput="filterServerBans()">
                             <i class="fas fa-search"></i>
                         </div>
                     </div>
 
                     <div
-                        style="font-weight: 700; color: #b5bac1; margin-bottom: 8px; font-size: 12px; text-transform: uppercase;">
+                            style="font-weight: 700; color: #b5bac1; margin-bottom: 8px; font-size: 12px; text-transform: uppercase;">
                         DANH SÁCH BỊ CẤM - <span id="bans-count-label">0</span>
                     </div>
                     <div id="server-bans-list" class="members-list-wrapper"
-                        style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
-                        <!-- JS renders simple rows here -->
+                         style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
                     </div>
 
-                    <!-- Unban Confirmation Modal (Hidden by default, or used via Overlay) -->
-                    <!-- We can use a simple confirm() or a custom overlay. User requested "hiển thị ra thông báo".
-                         I will implement a small custom overlay inside this tab or use the notification system.
-                         For better UX, I'll append a hidden overlay div for this logic. -->
                     <div id="unban-confirm-overlay"
-                        style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 10;">
+                         style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 10;">
                         <div
-                            style="background: #313338; padding: 20px; border-radius: 5px; width: 300px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+                                style="background: #313338; padding: 20px; border-radius: 5px; width: 300px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
                             <h3 style="color: white; margin-bottom: 15px;">Thu hồi lệnh cấm?</h3>
                             <p id="unban-confirm-text" style="color: #b5bac1; margin-bottom: 20px;">Bạn có chắc muốn gỡ
                                 ban cho ...?</p>
                             <div style="display: flex; gap: 10px; justify-content: center;">
                                 <button onclick="closeUnbanConfirm()"
-                                    style="padding: 8px 16px; background: transparent; color: white; border: none; cursor: pointer; border-radius: 3px; font-weight: 500;">Hủy</button>
+                                        style="padding: 8px 16px; background: transparent; color: white; border: none; cursor: pointer; border-radius: 3px; font-weight: 500;">Hủy</button>
                                 <button id="btn-confirm-revoke-ban"
-                                    style="padding: 8px 16px; background: #ed4245; color: white; border: none; cursor: pointer; border-radius: 3px; font-weight: 500;">Thu
+                                        style="padding: 8px 16px; background: #ed4245; color: white; border: none; cursor: pointer; border-radius: 3px; font-weight: 500;">Thu
                                     Hồi</button>
                             </div>
                         </div>
@@ -539,13 +627,13 @@
                 </div>
                 <div class="settings-nav-separator"></div>
                 <div class="role-list-header-small"
-                    style="padding: 6px 10px; font-size: 12px; font-weight: 700; color: #b5bac1;">VAI TRÒ</div>
+                     style="padding: 6px 10px; font-size: 12px; font-weight: 700; color: #b5bac1;">VAI TRÒ</div>
                 <div class="role-edit-list" id="role-edit-list-container">
                     <!-- List of roles to select will be rendered here via JS -->
                 </div>
                 <div class="role-edit-footer" style="padding: 10px; border-top: 1px solid #2b2d31;">
                     <button class="btn-create-role-sidebar" onclick="createNewRoleFromEditor()"
-                        style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: transparent; border: none; color: #b5bac1; font-size: 13px; cursor: pointer; padding: 5px;">
+                            style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; background: transparent; border: none; color: #b5bac1; font-size: 13px; cursor: pointer; padding: 5px;">
                         <i class="fas fa-plus"></i> Tạo vai trò
                     </button>
                 </div>
@@ -561,14 +649,14 @@
                     <h2 id="role-editor-title" style="margin-bottom: 20px;">SỬA ĐỔI VAI TRÒ</h2>
 
                     <div class="role-editor-tabs"
-                        style="display: flex; gap: 20px; border-bottom: 1px solid #3f4147; margin-bottom: 20px; padding-bottom: 10px;">
+                         style="display: flex; gap: 20px; border-bottom: 1px solid #3f4147; margin-bottom: 20px; padding-bottom: 10px;">
                         <div class="role-tab-item active" style="color: white; cursor: pointer; font-weight: 500;"
-                            onclick="switchRoleEditorTab('display')">Hiển thị</div>
+                             onclick="switchRoleEditorTab('display')">Hiển thị</div>
                         <div class="role-tab-item" style="color: #b5bac1; cursor: pointer; font-weight: 500;"
-                            onclick="switchRoleEditorTab('permissions')">Quyền hạn</div>
+                             onclick="switchRoleEditorTab('permissions')">Quyền hạn</div>
 
                         <div class="role-tab-item" style="color: #b5bac1; cursor: pointer; font-weight: 500;"
-                            onclick="switchRoleEditorTab('members')">Quản lý thành viên</div>
+                             onclick="switchRoleEditorTab('members')">Quản lý thành viên</div>
                     </div>
 
                     <div class="role-tab-content active" id="role-tab-display">
@@ -576,7 +664,7 @@
                             <div class="input-group" style="flex: 1;">
                                 <label>TÊN VAI TRÒ</label>
                                 <input type="text" id="edit-role-name" class="role-input" oninput="showRoleSaveBar()"
-                                    style="background-color: #1e1f22; border: none; padding: 10px; color: #dbdee1; width: 100%; border-radius: 4px; margin-top: 8px;">
+                                       style="background-color: #1e1f22; border: none; padding: 10px; color: #dbdee1; width: 100%; border-radius: 4px; margin-top: 8px;">
 
                                 <div style="margin-top: 20px; border-top: 1px solid #3f4147; padding-top: 20px;">
                                     <button class="btn-delete-role" onclick="deleteCurrentRole()" style="width: auto;">
@@ -587,10 +675,10 @@
                             <div class="input-group" style="flex: 1;">
                                 <label>MÀU VAI TRÒ</label>
                                 <div class="role-color-picker"
-                                    style="margin-top: 8px; display: flex; gap: 10px; align-items: center; background-color: #1e1f22; padding: 5px; border-radius: 4px;">
+                                     style="margin-top: 8px; display: flex; gap: 10px; align-items: center; background-color: #1e1f22; padding: 5px; border-radius: 4px;">
                                     <input type="color" id="edit-role-color"
-                                        oninput="updateRoleColorPreview(this.value); showRoleSaveBar()"
-                                        style="height: 50px; width: 100%; border: none; background: transparent; cursor: pointer;">
+                                           oninput="updateRoleColorPreview(this.value); showRoleSaveBar()"
+                                           style="height: 50px; width: 100%; border: none; background: transparent; cursor: pointer;">
                                 </div>
                                 <div style="font-size: 13px; color: #b5bac1; margin-top: 6px;">Chọn màu để phân biệt vai
                                     trò này.</div>
@@ -603,14 +691,14 @@
                     </div>
 
                     <div class="role-tab-content" id="role-tab-permissions"
-                        style="display:none; height: 100%; flex-direction: column;">
+                         style="display:none; height: 100%; flex-direction: column;">
                         <div
-                            style="padding-bottom: 16px; border-bottom: 1px solid #3f4147; margin-bottom: 16px; position: relative;">
+                                style="padding-bottom: 16px; border-bottom: 1px solid #3f4147; margin-bottom: 16px; position: relative;">
                             <input type="text" id="permission-search-input" placeholder="Tìm quyền hạn"
-                                class="role-input"
-                                style="background-color: #1e1f22; border: none; padding: 10px; color: #dbdee1; width: 100%; border-radius: 4px;">
+                                   class="role-input"
+                                   style="background-color: #1e1f22; border: none; padding: 10px; color: #dbdee1; width: 100%; border-radius: 4px;">
                             <i class="fas fa-search"
-                                style="position: absolute; right: 10px; top: 10px; color: #b5bac1;"></i>
+                               style="position: absolute; right: 10px; top: 10px; color: #b5bac1;"></i>
                         </div>
                         <div id="role-permissions-list" style="flex: 1; overflow-y: auto; padding-right: 8px;">
                             <!-- Permissions will be rendered here dynamically -->
@@ -620,11 +708,11 @@
 
 
                     <div class="role-tab-content" id="role-tab-members"
-                        style="display:none; height: 100%; flex-direction: column;">
+                         style="display:none; height: 100%; flex-direction: column;">
                         <div style="display:flex; gap: 10px; margin-bottom: 20px; align-items: center;">
                             <div class="members-search-box-styled search-box-flex" style="flex:1;">
                                 <input type="text" id="role-members-search" placeholder="Tìm kiếm thành viên"
-                                    oninput="filterRoleMembers()">
+                                       oninput="filterRoleMembers()">
                                 <i class="fas fa-search"></i>
                             </div>
                             <button class="btn-create-role-styled" onclick="openAddRoleMemberModal()">Thêm Thành
@@ -637,30 +725,30 @@
 
                     <!-- Add Role Member Modal Overlay -->
                     <div id="add-role-member-modal"
-                        style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10002; justify-content: center; align-items: center;">
+                         style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 10002; justify-content: center; align-items: center;">
                         <div
-                            style="background: #313338; width: 440px; border-radius: 4px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 0 1px #1e1f22;">
+                                style="background: #313338; width: 440px; border-radius: 4px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 0 0 1px #1e1f22;">
                             <div
-                                style="padding: 16px; display: flex; justify-content: space-between; align-items: center;">
+                                    style="padding: 16px; display: flex; justify-content: space-between; align-items: center;">
                                 <h3 style="color: white; margin: 0; font-size: 16px; font-weight: 600;">Thêm thành viên
                                     vào
                                     vai trò</h3>
                                 <i class="fas fa-times" onclick="closeAddRoleMemberModal()"
-                                    style="color: #b5bac1; cursor: pointer;"></i>
+                                   style="color: #b5bac1; cursor: pointer;"></i>
                             </div>
                             <div style="padding: 0 16px 16px;">
                                 <div class="members-search-box-styled" style="width: 100%;">
                                     <input type="text" id="add-role-member-search" placeholder="Tìm kiếm thành viên"
-                                        oninput="filterAddRoleMembers()">
+                                           oninput="filterAddRoleMembers()">
                                     <i class="fas fa-search"></i>
                                 </div>
                             </div>
                             <div id="add-role-member-list"
-                                style="height: 300px; overflow-y: auto; padding: 0 8px 8px 8px;">
+                                 style="height: 300px; overflow-y: auto; padding: 0 8px 8px 8px;">
                                 <!-- Candidates go here -->
                             </div>
                             <div
-                                style="padding: 16px; background: #2b2d31; display: flex; justify-content: flex-end; gap: 10px;">
+                                    style="padding: 16px; background: #2b2d31; display: flex; justify-content: flex-end; gap: 10px;">
                                 <button class="btn-cancel" onclick="closeAddRoleMemberModal()">Hủy</button>
                                 <button class="btn-primary" onclick="submitAddRoleMembers()">Thêm</button>
                             </div>

@@ -1,34 +1,355 @@
 <!DOCTYPE html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org">
-<head>
-    <title>Hồ sơ cá nhân</title>
-    <link rel="stylesheet" th:href="@{/css/style.css}">
-</head>
-<body>
-<div class="main-container center-view">
-    <div class="profile-card" style="background:#2f3136; padding:40px; border-radius:8px; width:500px; margin:auto; margin-top:50px; color:white">
-        <h2 style="margin-bottom:20px">Hồ sơ của tôi</h2>
 
-        <div class="profile-avatar-upload" onclick="document.getElementById('avatarInput').click()">
-            <img th:src="${user.avatarUrl != null ? user.avatarUrl : '/images/default.png'}"
-                 style="width:100px; height:100px; border-radius:50%; object-fit:cover; border:4px solid #202225">
-            <div class="profile-overlay"><i class="fas fa-camera"></i></div>
+<head>
+    <title>Cài đặt tài khoản</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        /* Modal Style Override cho giống Discord Profile */
+        .modal-box {
+            width: 800px !important;
+            max-width: 95vw;
+        }
+
+        .profile-modal-body {
+            display: flex;
+            gap: 32px;
+            padding: 0;
+            height: 400px;
+        }
+
+        .profile-left-col {
+            width: 300px;
+            flex-shrink: 0;
+            background-color: #111214;
+            border-radius: 8px 0 0 8px;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        .profile-right-col {
+            flex-grow: 1;
+            padding: 32px 32px 32px 0;
+            overflow-y: auto;
+        }
+
+        /* Discord Profile Card Preview Style */
+        .discord-profile-card {
+            width: 300px;
+            height: 100%;
+            background-color: #111214;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-banner {
+            height: 105px;
+            background-color: #5865f2;
+            /* Default Color */
+            width: 100%;
+        }
+
+        .card-user-info {
+            padding: 50px 16px 16px 16px;
+            margin-top: -30px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .card-avatar-holder {
+            position: absolute;
+            top: -50px;
+            left: 16px;
+            width: 92px;
+            height: 92px;
+            cursor: pointer;
+        }
+
+        .profile-avatar-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 6px solid #111214;
+            background-color: #111214;
+            position: relative;
+            z-index: 2;
+        }
+
+        .avatar-hint-overlay {
+            position: absolute;
+            top: 6px;
+            left: 6px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+            text-transform: uppercase;
+            font-weight: 700;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 3;
+            transition: opacity 0.2s;
+        }
+
+        .card-avatar-holder:hover .avatar-hint-overlay {
+            opacity: 1;
+        }
+
+        .preview-displayname {
+            font-size: 20px;
+            font-weight: 700;
+            color: #f2f3f5;
+            line-height: 1.2;
+            word-break: break-all;
+        }
+
+        .preview-username {
+            font-size: 14px;
+            color: #b5bac1;
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        .card-badges {
+            display: flex;
+            gap: 4px;
+            margin: 12px 0;
+            background-color: #1e1f22;
+            padding: 6px;
+            border-radius: 4px;
+            width: fit-content;
+        }
+
+        .divider-line {
+            height: 1px;
+            background-color: #2f3136;
+            margin: 12px 0;
+        }
+
+        .card-section-title {
+            font-size: 12px;
+            font-weight: 700;
+            color: #b5bac1;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .card-bio-placeholder {
+            font-size: 13px;
+            color: #dbdee1;
+            line-height: 1.4;
+        }
+
+        .discord-input {
+            width: 100%;
+            background-color: #1e1f22;
+            border: none;
+            padding: 10px;
+            border-radius: 3px;
+            color: #dbdee1;
+            margin-bottom: 24px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .discord-input:focus {
+            background-color: #000;
+        }
+
+        .input-label {
+            color: #b9bbbe;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            display: block;
+        }
+    </style>
+</head>
+
+<body class="settings-page-body">
+
+    <div class="settings-container fade-in">
+
+        <div class="settings-sidebar">
+            <div class="sidebar-header">CÀI ĐẶT NGƯỜI DÙNG</div>
+            <div class="sidebar-item active">Tài khoản của tôi</div>
+            <div class="sidebar-item">Hồ sơ người dùng</div>
+            <div class="sidebar-item">Quyền riêng tư & An toàn</div>
+            <div class="sidebar-separator"></div>
+            <div class="sidebar-item danger"><a th:href="@{/logout}" style="color:inherit;text-decoration:none">Đăng
+                    xuất</a></div>
+
+            <div class="back-btn-wrapper">
+                <a th:href="@{/}" class="back-to-chat"><i class="fas fa-sign-out-alt"></i> Thoát</a>
+            </div>
         </div>
 
-        <form th:action="@{/profile/avatar}" method="post" enctype="multipart/form-data" id="uploadForm">
-            <input type="file" name="avatarFile" id="avatarInput" style="display:none" onchange="document.getElementById('uploadForm').submit()">
-        </form>
+        <div class="settings-content">
+            <h2 class="section-heading">Tài khoản của tôi</h2>
 
-        <div class="user-info" style="margin-top:20px">
-            <label style="color:#b9bbbe; font-size:12px; font-weight:bold">USERNAME</label>
-            <p th:text="${user.username}" style="font-size:16px; margin-bottom:15px"></p>
+            <div class="my-account-card">
+                <div class="account-banner" style="background-color: #5865f2;"></div>
 
-            <label style="color:#b9bbbe; font-size:12px; font-weight:bold">EMAIL</label>
-            <p th:text="${user.email}" style="font-size:16px; margin-bottom:15px"></p>
+                <div class="account-card-body">
+                    <div class="account-header-row">
+                        <div class="avatar-section">
+                            <div class="settings-avatar-wrapper" onclick="openEditProfileModal()">
+                                <img th:src="${user.avatarUrl != null ? user.avatarUrl : '/images/default.png'}"
+                                    class="settings-avatar" id="main-avatar-display">
+                                <div class="avatar-badge"><i class="fas fa-edit"></i></div>
+                            </div>
+                            <h3 class="account-username">
+                                <span th:text="${user.displayName != null ? user.displayName : user.username}"
+                                    id="main-displayname">Display Name</span>
+                                <span class="discriminator" th:text="${user.username}">username</span>
+                            </h3>
+                        </div>
 
-            <a th:href="@{/logout}" class="btn-danger" style="text-decoration:none; padding:8px 16px; display:inline-block; border-radius:4px">Đăng xuất</a>
+                        <button class="btn-discord-primary" onclick="openEditProfileModal()">
+                            Chỉnh sửa hồ sơ
+                        </button>
+                    </div>
+
+                    <div class="account-info-box">
+                        <div class="info-row">
+                            <div class="info-col">
+                                <label>TÊN HIỂN THỊ</label>
+                                <p th:text="${user.displayName != null ? user.displayName : user.username}">Name</p>
+                            </div>
+                            <button class="btn-edit" onclick="openEditProfileModal()">Chỉnh sửa</button>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-col">
+                                <label>USERNAME</label>
+                                <p th:text="${user.username}">Username</p>
+                            </div>
+                            <button class="btn-edit" disabled style="opacity:0.5; cursor: default;">Khóa</button>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-col">
+                                <label>EMAIL</label>
+                                <p th:text="${user.email}">*****@gmail.com</p>
+                            </div>
+                            <button class="btn-edit" onclick="openEditProfileModal()">Chỉnh sửa</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
+
+    <div id="editProfileModal" class="modal-overlay">
+        <div class="modal-box"> <button class="close-modal-btn"
+                onclick="closeModal('editProfileModal')">&times;</button>
+
+            <div class="modal-body profile-modal-body">
+                <!-- LEFT: PREVIEW CARD -->
+                <div class="profile-left-col">
+                    <div class="discord-profile-card">
+                        <div class="card-banner"></div>
+
+                        <!-- Avatar Holder positioned relative to banner/card -->
+                        <div class="card-user-info">
+                            <div class="card-avatar-holder"
+                                onclick="document.getElementById('edit-profile-file').click()">
+                                <img id="edit-profile-avatar-preview" src="" class="profile-avatar-preview">
+                                <div class="avatar-hint-overlay">ĐỔI</div>
+                            </div>
+
+                            <div style="margin-top: 10px;">
+                                <div class="preview-displayname" id="preview-displayname-text">Display Name</div>
+                                <div class="preview-username" id="preview-username-text">username</div>
+                            </div>
+
+                            <div class="divider-line"></div>
+
+                            <div class="card-section-title">GIỚI THIỆU TÔI</div>
+                            <div class="card-bio-placeholder">
+                                (Phần giới thiệu bản thân sẽ hiển thị ở đây...)
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Hidden Input -->
+                    <input type="file" id="edit-profile-file" style="display: none;" accept="image/*">
+                </div>
+
+                <!-- RIGHT: FORM INPUTS -->
+                <div class="profile-right-col">
+                    <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 20px;">Hồ sơ người dùng</h2>
+
+                    <label class="input-label">Tên hiển thị</label>
+                    <input type="text" id="edit-profile-displayname" class="discord-input"
+                        placeholder="Tên hiển thị của bạn">
+
+                    <label class="input-label">Email</label>
+                    <input type="text" id="edit-profile-email" class="discord-input" readonly
+                        style="opacity: 0.7; cursor: not-allowed;">
+
+                    <label class="input-label">Username</label>
+                    <input type="text" id="edit-profile-username" class="discord-input" readonly
+                        style="opacity: 0.7; cursor: not-allowed;">
+
+                    <div class="input-note"
+                        style="margin-top: -10px; margin-bottom: 30px; font-size: 12px; color: #b5bac1;">
+                        Username và Email hiện không thể thay đổi tại đây.
+                    </div>
+
+                    <div class="modal-footer" style="padding: 0; background: none; justify-content: flex-end;">
+                        <button class="btn-cancel" onclick="closeModal('editProfileModal')"
+                            style="margin-right: 10px;">Hủy</button>
+                        <button class="btn-primary" onclick="saveUserProfile()">Lưu thay đổi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/js/api.js}"></script>
+    <script th:src="@{/js/user.js}"></script>
+
+    <script>
+        // Hàm đóng Modal
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+
+        // Ghi đè hoặc bổ sung nếu user.js chưa xử lý phần hiển thị modal
+        // Lưu ý: user.js của bạn đã có hàm openEditProfileModal,
+        // script dưới đây đảm bảo modal hiện lên bằng CSS class 'active' khớp với style.css
+        const originalOpenEdit = window.openEditProfileModal;
+
+        window.openEditProfileModal = function () {
+            // Gọi hàm gốc để load dữ liệu vào form
+            if (typeof originalOpenEdit === 'function') {
+                originalOpenEdit();
+            } else {
+                // Fallback nếu hàm gốc lỗi: Tự load dữ liệu từ trang
+                const displayName = document.getElementById('main-displayname').innerText;
+                const avatarSrc = document.getElementById('main-avatar-display').src;
+
+                document.getElementById('edit-profile-displayname').value = displayName;
+                document.getElementById('edit-profile-avatar-preview').src = avatarSrc;
+            }
+
+            // Hiển thị modal
+            document.getElementById('editProfileModal').classList.add('active');
+        }
+    </script>
+
 </body>
+
 </html>
