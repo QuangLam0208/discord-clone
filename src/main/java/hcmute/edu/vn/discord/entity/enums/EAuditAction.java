@@ -1,6 +1,6 @@
-package hcmute.edu.vn.discord.common;
+package hcmute.edu.vn.discord.entity.enums;
 
-public enum AuditLogAction {
+public enum EAuditAction {
     SERVER_UPDATE,
     CHANNEL_CREATE,
     CHANNEL_UPDATE,

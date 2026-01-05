@@ -1,5 +1,6 @@
 package hcmute.edu.vn.discord.service.impl;
 
+import hcmute.edu.vn.discord.entity.enums.EAuditAction;
 import hcmute.edu.vn.discord.entity.enums.ChannelType;
 import hcmute.edu.vn.discord.entity.jpa.*;
 import hcmute.edu.vn.discord.repository.*;
@@ -65,7 +66,7 @@ public class ChannelServiceImpl implements ChannelService {
                     .getAuthentication().getName();
             creator = userRepository.findByUsername(username).orElse(null);
         }
-        auditLogService.logAction(server, creator, hcmute.edu.vn.discord.common.AuditLogAction.CHANNEL_CREATE,
+        auditLogService.logAction(server, creator, EAuditAction.CHANNEL_CREATE,
                 saved.getId().toString(), "CHANNEL", "Tạo kênh: " + saved.getName());
 
         return saved;
@@ -122,7 +123,7 @@ public class ChannelServiceImpl implements ChannelService {
 
             if (changes.length() > 0) {
                 auditLogService.logAction(updated.getServer(), actor,
-                        hcmute.edu.vn.discord.common.AuditLogAction.CHANNEL_UPDATE,
+                        EAuditAction.CHANNEL_UPDATE,
                         updated.getId().toString(), "CHANNEL", changes.toString());
             }
         } catch (Exception e) {
@@ -147,7 +148,7 @@ public class ChannelServiceImpl implements ChannelService {
                     .getAuthentication().getName();
             User actor = userRepository.findByUsername(username).orElse(null);
 
-            auditLogService.logAction(server, actor, hcmute.edu.vn.discord.common.AuditLogAction.CHANNEL_DELETE,
+            auditLogService.logAction(server, actor, EAuditAction.CHANNEL_DELETE,
                     channelIdStr, "CHANNEL", "Xóa kênh: " + channelName);
         } catch (Exception e) {
         }

@@ -1,5 +1,6 @@
 package hcmute.edu.vn.discord.service.impl;
 
+import hcmute.edu.vn.discord.entity.enums.EAuditAction;
 import hcmute.edu.vn.discord.dto.request.ServerRequest;
 import hcmute.edu.vn.discord.dto.request.TransferOwnerRequest;
 import hcmute.edu.vn.discord.dto.response.*;
@@ -151,7 +152,7 @@ public class ServerServiceImpl implements ServerService {
             }
 
             if (changes.length() > 0) {
-                auditLogService.logAction(updated, actor, hcmute.edu.vn.discord.common.AuditLogAction.SERVER_UPDATE,
+                auditLogService.logAction(updated, actor, EAuditAction.SERVER_UPDATE,
                         serverId.toString(), "SERVER", changes.toString());
             }
         } catch (Exception e) {

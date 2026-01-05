@@ -1,6 +1,6 @@
 package hcmute.edu.vn.discord.dto.response;
 
-import hcmute.edu.vn.discord.common.AuditLogAction;
+import hcmute.edu.vn.discord.entity.enums.EAuditAction;
 import hcmute.edu.vn.discord.entity.jpa.AuditLog;
 import lombok.Builder;
 import lombok.Data;
@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 public class AuditLogResponse {
     private Long id;
     private UserResponse actor;
-    private AuditLogAction actionType;
+    private EAuditAction actionType;
     private String targetId;
     private String targetType;
     private String changes;

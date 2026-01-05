@@ -1,5 +1,6 @@
 package hcmute.edu.vn.discord.service.impl;
 
+import hcmute.edu.vn.discord.entity.enums.EAuditAction;
 import hcmute.edu.vn.discord.dto.request.AssignRolesRequest;
 import hcmute.edu.vn.discord.dto.request.ServerRoleRequest;
 import hcmute.edu.vn.discord.entity.jpa.Permission;
@@ -81,7 +82,7 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         // Audit Log
         try {
             User actor = userService.findByUsername(actorUsername).orElse(null);
-            auditLogService.logAction(server, actor, hcmute.edu.vn.discord.common.AuditLogAction.ROLE_CREATE,
+            auditLogService.logAction(server, actor, EAuditAction.ROLE_CREATE,
                     saved.getId().toString(), "ROLE", "Tạo vai trò: " + saved.getName());
         } catch (Exception e) {
         }
@@ -111,7 +112,7 @@ public class ServerRoleServiceImpl implements ServerRoleService {
             try {
                 User actor = userService.findByUsername(actorUsername).orElse(null);
                 auditLogService.logAction(role.getServer(), actor,
-                        hcmute.edu.vn.discord.common.AuditLogAction.ROLE_UPDATE,
+                        EAuditAction.ROLE_UPDATE,
                         updated.getId().toString(), "ROLE", "Cập nhật vai trò hệ thống: " + role.getName());
             } catch (Exception e) {
             }
@@ -143,12 +144,12 @@ public class ServerRoleServiceImpl implements ServerRoleService {
 
             if (changes.length() > 0) {
                 auditLogService.logAction(updated.getServer(), actor,
-                        hcmute.edu.vn.discord.common.AuditLogAction.ROLE_UPDATE,
+                        EAuditAction.ROLE_UPDATE,
                         updated.getId().toString(), "ROLE", changes.toString());
             } else {
                 // Permissions update assumed if no property change recorded but method called
                 auditLogService.logAction(updated.getServer(), actor,
-                        hcmute.edu.vn.discord.common.AuditLogAction.ROLE_UPDATE,
+                        EAuditAction.ROLE_UPDATE,
                         updated.getId().toString(), "ROLE", "Cập nhật quyền hạn");
             }
         } catch (Exception e) {
@@ -178,7 +179,7 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         // Audit Log
         try {
             User actor = userService.findByUsername(actorUsername).orElse(null);
-            auditLogService.logAction(server, actor, hcmute.edu.vn.discord.common.AuditLogAction.ROLE_DELETE,
+            auditLogService.logAction(server, actor, EAuditAction.ROLE_DELETE,
                     roleIdStr, "ROLE", "Xóa vai trò: " + roleName);
         } catch (Exception e) {
         }
@@ -228,7 +229,7 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         try {
             User actor = userService.findByUsername(actorUsername).orElse(null);
             auditLogService.logAction(member.getServer(), actor,
-                    hcmute.edu.vn.discord.common.AuditLogAction.MEMBER_ROLE_UPDATE,
+                    EAuditAction.MEMBER_ROLE_UPDATE,
                     member.getId().toString(), "MEMBER", "Cập nhật vai trò cho thành viên: "
                             + (member.getNickname() != null ? member.getNickname() : member.getUser().getUsername()));
         } catch (Exception e) {

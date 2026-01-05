@@ -1,5 +1,6 @@
 package hcmute.edu.vn.discord.service.impl;
 
+import hcmute.edu.vn.discord.entity.enums.EAuditAction;
 import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.enums.ServerStatus;
 import hcmute.edu.vn.discord.entity.jpa.*;
@@ -131,7 +132,7 @@ public class ServerMemberServiceImpl implements ServerMemberService {
                         User actor = userRepository.findByUsername(actorName).orElse(null);
 
                         // Determine if kick or leave
-                        hcmute.edu.vn.discord.common.AuditLogAction action = hcmute.edu.vn.discord.common.AuditLogAction.MEMBER_KICK;
+                        EAuditAction action = EAuditAction.MEMBER_KICK;
                         String desc = "Đã đuổi thành viên: " + (nickname != null ? nickname : username);
 
                         if (actor != null && actor.getId().equals(userId)) {

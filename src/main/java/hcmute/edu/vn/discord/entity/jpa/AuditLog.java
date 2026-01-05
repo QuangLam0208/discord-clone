@@ -1,6 +1,6 @@
 package hcmute.edu.vn.discord.entity.jpa;
 
-import hcmute.edu.vn.discord.common.AuditLogAction;
+import hcmute.edu.vn.discord.entity.enums.EAuditAction;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -33,7 +33,7 @@ public class AuditLog {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private AuditLogAction actionType;
+    private EAuditAction actionType;
 
     @Column(name = "target_id")
     private String targetId; // ID of the target (Role ID, Channel ID, Member ID)

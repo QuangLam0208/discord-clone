@@ -1,6 +1,6 @@
 package hcmute.edu.vn.discord.service.impl;
 
-import hcmute.edu.vn.discord.common.AuditLogAction;
+import hcmute.edu.vn.discord.entity.enums.EAuditAction;
 import hcmute.edu.vn.discord.entity.jpa.AuditLog;
 import hcmute.edu.vn.discord.entity.jpa.Server;
 import hcmute.edu.vn.discord.entity.jpa.User;
@@ -18,7 +18,7 @@ public class AuditLogServiceImpl implements AuditLogService {
     private final AuditLogRepository auditLogRepository;
 
     @Override
-    public void logAction(Server server, User actor, AuditLogAction action, String targetId, String targetType,
+    public void logAction(Server server, User actor, EAuditAction action, String targetId, String targetType,
                           String changes) {
         AuditLog log = AuditLog.builder()
                 .server(server)
