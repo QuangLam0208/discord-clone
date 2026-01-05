@@ -34,19 +34,13 @@
     }
 
     function onAuditReceived(log) {
-        // Use flexible selector or ID
-        const tableBody = document.getElementById('admin-audit-tbody')
-            || document.querySelector('.discord-table tbody');
+        // STRICT ID selection only. Do not fallback to generic class.
+        const tableBody = document.getElementById('admin-audit-tbody');
 
         if (!tableBody) {
-            console.log('[Audit] No table body found. Ignoring.');
+            // Not on audit page, so do nothing.
+            // console.log('[Audit] Not on audit page (no #admin-audit-tbody). Ignoring.');
             return;
-        }
-
-        // Double check it's the right table by checking headers if using class selector
-        if (!tableBody.id) {
-            const headerRow = document.querySelector('.discord-table thead tr');
-            if (!headerRow || headerRow.children.length !== 6) return;
         }
 
         console.log('[Audit] Rendering row for:', log);
