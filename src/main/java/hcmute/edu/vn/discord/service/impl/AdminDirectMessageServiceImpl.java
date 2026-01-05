@@ -44,12 +44,10 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
     public AdminMessagePageResponse search(AdminDirectMessageSearchRequest req) {
         List<Criteria> ands = new ArrayList<>();
 
-        // Resolve conversationId từ cặp userA/userB hoặc từ userId nếu không truyền thẳng conversationId
         Set<String> convIds = new LinkedHashSet<>();
         if (StringUtils.hasText(req.getConversationId())) {
             convIds.add(req.getConversationId());
         } else if (req.getUserAId() != null && req.getUserBId() != null) {
-            // tìm theo cả 2 chiều (A,B) và (B,A)
             convRepo.findByUser1IdAndUser2Id(req.getUserAId(), req.getUserBId()).ifPresent(c -> convIds.add(c.getId()));
             convRepo.findByUser1IdAndUser2Id(req.getUserBId(), req.getUserAId()).ifPresent(c -> convIds.add(c.getId()));
         } else if (req.getUserId() != null) {
@@ -60,7 +58,6 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
             ands.add(Criteria.where("conversationId").in(convIds));
         }
 
-        // Sender filter
         if (req.getSenderId() != null && req.getSenderId() > 0) {
             ands.add(Criteria.where("senderId").is(req.getSenderId()));
         } else if (StringUtils.hasText(req.getSenderUsername())) {
@@ -68,20 +65,17 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
                     .ifPresent(u -> ands.add(Criteria.where("senderId").is(u.getId())));
         }
 
-        // Keyword filter
         if (StringUtils.hasText(req.getKeyword())) {
             Pattern regex = Pattern.compile(Pattern.quote(req.getKeyword()), Pattern.CASE_INSENSITIVE);
             ands.add(Criteria.where("content").regex(regex));
         }
 
-        // Status filter
         if ("active".equalsIgnoreCase(req.getStatus())) {
             ands.add(Criteria.where("deleted").ne(true));
         } else if ("deleted".equalsIgnoreCase(req.getStatus())) {
             ands.add(Criteria.where("deleted").is(true));
         }
 
-        // Date range
         Instant from = req.getFrom();
         Instant to = req.getTo();
         if (from != null || to != null) {
@@ -105,7 +99,6 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
         List<DirectMessage> msgs = mongoTemplate.find(pageQ, DirectMessage.class);
         long total = mongoTemplate.count(q, DirectMessage.class);
 
-        // lookup users + conversations
         Set<Long> senderIds = msgs.stream().map(DirectMessage::getSenderId).filter(Objects::nonNull).collect(Collectors.toSet());
         Set<Long> receiverIds = msgs.stream().map(DirectMessage::getReceiverId).filter(Objects::nonNull).collect(Collectors.toSet());
         Set<Long> userIds = new HashSet<>();
@@ -114,7 +107,6 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
         Map<Long, User> userMap = userRepo.findAllById(userIds).stream()
                 .collect(Collectors.toMap(User::getId, u -> u));
 
-        // lookup conversations để lấy participants
         Set<String> cids = msgs.stream().map(DirectMessage::getConversationId).filter(Objects::nonNull).collect(Collectors.toSet());
         Map<String, Conversation> convMap = convRepo.findAllById(cids).stream()
                 .collect(Collectors.toMap(Conversation::getId, c -> c));
@@ -142,7 +134,7 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
                     .senderDisplayName(su != null ? su.getDisplayName() : null)
                     .senderAvatarUrl(su != null ? su.getAvatarUrl() : null)
                     .receiverId(ru != null ? ru.getId() : m.getReceiverId())
-                    .receiverUsername(ru != null ? ru.getUsername() : null)           // NEW
+                    .receiverUsername(ru != null ? ru.getUsername() : null)
                     .content(m.getContent())
                     .deleted(Boolean.TRUE.equals(m.isDeleted()))
                     .edited(Boolean.TRUE.equals(m.isEdited()))
@@ -151,8 +143,8 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
                     .createdAt(m.getCreatedAt() != null ? m.getCreatedAt().toInstant() : null)
                     .userAId(aId)
                     .userBId(bId)
-                    .userAUsername(aUsername)                                         // NEW
-                    .userBUsername(bUsername)                                         // NEW
+                    .userAUsername(aUsername)
+                    .userBUsername(bUsername)
                     .build();
         }).toList();
 
@@ -175,13 +167,22 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
         m.setDeleted(true);
         dmRepo.save(m);
 
-        // Báo Admin UI (Cập nhật dòng hiện tại)
+        // Admin UI
         messagingTemplate.convertAndSend("/topic/admin/dms/update",
                 Map.of("id", messageId, "status", "DELETED"));
 
-        // Báo User UI (Để ẩn tin nhắn)
-        messagingTemplate.convertAndSend("/topic/dm/" + m.getConversationId(),
-                Map.of("type", "DELETE_MESSAGE", "messageId", messageId));
+        // Build payload cho User UI
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("type", "DELETE_MESSAGE");
+        payload.put("messageId", messageId);
+        payload.put("conversationId", m.getConversationId());
+
+        // User UI (topic theo hội thoại)
+        messagingTemplate.convertAndSend("/topic/dm/" + m.getConversationId(), payload);
+
+        // User UI (queue cá nhân của 2 participants)
+        Conversation conv = convRepo.findById(m.getConversationId()).orElse(null);
+        sendToConversationParticipants(conv, payload);
     }
 
     @Transactional
@@ -193,19 +194,22 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
         m.setDeleted(false);
         dmRepo.save(m);
 
-        // Update Admin UI
+        // Admin UI
         messagingTemplate.convertAndSend("/topic/admin/dms/update",
                 Map.of("id", messageId, "status", "ACTIVE"));
 
-        // Update User UI (Send FULL message data to re-render)
+        // User UI (full message & type)
         DirectMessageResponse response = mapToUserDirectMessageResponse(m);
-
-        // Wrap trong map để thêm field 'type' cho frontend dễ xử lý
         Map<String, Object> payload = new HashMap<>();
         payload.put("type", "RESTORE_MESSAGE");
-        payload.putAll(convertToMap(response)); // Helper convert object to map
+        payload.putAll(convertToMap(response));
 
+        // Topic theo hội thoại
         messagingTemplate.convertAndSend("/topic/dm/" + m.getConversationId(), payload);
+
+        // Queue cá nhân
+        Conversation conv = convRepo.findById(m.getConversationId()).orElse(null);
+        sendToConversationParticipants(conv, payload);
     }
 
     private Map<String, Object> convertToMap(DirectMessageResponse res) {
@@ -233,5 +237,13 @@ public class AdminDirectMessageServiceImpl implements AdminDirectMessageService 
                 .deleted(m.isDeleted())
                 .reactions(m.getReactions())
                 .build();
+    }
+
+    private void sendToConversationParticipants(Conversation conv, Object payload) {
+        if (conv == null) return;
+        userRepo.findById(conv.getUser1Id()).ifPresent(u ->
+                messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/dm", payload));
+        userRepo.findById(conv.getUser2Id()).ifPresent(u ->
+                messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/dm", payload));
     }
 }

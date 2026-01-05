@@ -167,11 +167,13 @@ public class DirectMessageServiceImpl implements DirectMessageService {
             adminPayload.put("content", saved.getContent());
             adminPayload.put("edited", true);
             messagingTemplate.convertAndSend("/topic/admin/dms/update", adminPayload);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        } catch (Exception e) { e.printStackTrace(); }
+
         DirectMessageResponse response = toResponse(saved);
+
         messagingTemplate.convertAndSend("/topic/dm/" + message.getConversationId(), response);
+        Conversation conv = conversationRepo.findById(message.getConversationId()).orElse(null);
+        sendToConversationParticipants(conv, response);
         return response;
     }
 
@@ -191,20 +193,22 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         message.setUpdatedAt(new Date());
 
         DirectMessage saved = messageRepo.save(message);
-        // Gửi cho Admin (Để đổi trạng thái sang Deleted)
+
         try {
-            Map<String, Object> adminPayload = new HashMap<>();
-            adminPayload.put("id", messageId);
-            adminPayload.put("status", "DELETED");
-            messagingTemplate.convertAndSend("/topic/admin/dms/update", adminPayload);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        // Gửi cho User trong hội thoại (Để tin nhắn biến mất phía User)
-        Map<String, Object> userPayload = new HashMap<>();
-        userPayload.put("type", "DELETE_MESSAGE");
-        userPayload.put("messageId", messageId);
-        messagingTemplate.convertAndSend("/topic/dm/" + message.getConversationId(), userPayload);
+            messagingTemplate.convertAndSend("/topic/admin/dms/update",
+                    Map.of("id", messageId, "status", "DELETED"));
+        } catch (Exception e) { e.printStackTrace(); }
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("type", "DELETE_MESSAGE");
+        payload.put("messageId", messageId);
+        payload.put("conversationId", message.getConversationId());
+
+        // Broadcast theo hội thoại
+        messagingTemplate.convertAndSend("/topic/dm/" + message.getConversationId(), payload);
+        // Queue cá nhân
+        Conversation conv = conversationRepo.findById(message.getConversationId()).orElse(null);
+        sendToConversationParticipants(conv, payload);
 
         return toResponse(saved);
     }
@@ -362,5 +366,13 @@ public class DirectMessageServiceImpl implements DirectMessageService {
                 .userAUsername(userAUsername)
                 .userBUsername(userBUsername)
                 .build();
+    }
+
+    private void sendToConversationParticipants(Conversation conv, Object payload) {
+        if (conv == null) return;
+        userRepo.findById(conv.getUser1Id()).ifPresent(u ->
+                messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/dm", payload));
+        userRepo.findById(conv.getUser2Id()).ifPresent(u ->
+                messagingTemplate.convertAndSendToUser(u.getUsername(), "/queue/dm", payload));
     }
 }

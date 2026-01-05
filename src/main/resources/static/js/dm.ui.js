@@ -642,6 +642,6 @@ const DMUI = (() => {
     els, showDashboard, showConversation, setActiveFriendName, renderFriendsSidebar, updateSidebarItem,
     renderFriendsCenter, renderMessages, appendMessage, replaceTempMessage, markMessageError,
     scrollToBottom, resetActiveItems, highlightFriendsButton, initFriendsDashboard, setActiveTab,
-    renderPending, reloadFriends
+    renderPending, reloadFriends, removeMessageElement
   };
 })();

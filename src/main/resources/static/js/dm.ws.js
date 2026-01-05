@@ -8,6 +8,10 @@ const DMWS = (() => {
   let onFriendEventHandler = null;
   let stompClient = null;
 
+  // LƯU LẠI HỘI THOẠI HIỆN TẠI ĐỂ RE-SUBSCRIBE SAU RECONNECT
+  let currentConversationId = null;
+  let currentConvCallback = null;
+
   // ----- WS connect (robust) -----
   function connectWS(onDmMessage, onFriendEvent) {
     onDmMessageHandler = onDmMessage;
@@ -38,6 +42,7 @@ const DMWS = (() => {
 
       try { subscriptionDM?.unsubscribe(); } catch {}
       try { subscriptionFriends?.unsubscribe(); } catch {}
+      try { subscriptionCurrentConv?.unsubscribe(); } catch {}
 
       // Subscribe DM queue
       subscriptionDM = client.subscribe('/user/queue/dm', (frame) => {
@@ -52,6 +57,20 @@ const DMWS = (() => {
         catch (e) { console.error('WS parse Friends error', e); }
       });
       console.log('[WS] SUBSCRIBED /user/queue/friends');
+
+      // RE-SUBSCRIBE VÀO HỘI THOẠI ĐANG MỞ (NẾU CÓ)
+      if (currentConversationId && currentConvCallback) {
+        try { subscriptionCurrentConv?.unsubscribe(); } catch {}
+        subscriptionCurrentConv = client.subscribe(`/topic/dm/${currentConversationId}`, (frame) => {
+          try {
+            const payload = JSON.parse(frame.body);
+            currentConvCallback && currentConvCallback(payload);
+          } catch (e) {
+            console.error('WS parse conversation event error', e);
+          }
+        });
+        console.log(`[WS] RE-SUBSCRIBED /topic/dm/${currentConversationId}`);
+      }
     }, (err) => {
       console.error('WS connect error', err);
       wsConnected = false;
@@ -73,19 +92,25 @@ const DMWS = (() => {
   }
 
   function subscribeToConversation(conversationId, callback) {
-    if (!stompClient || !stompClient.connected || !conversationId) return;
-
-    // Hủy đăng ký hội thoại cũ nếu có (để tránh nghe lộn xộn)
-    if (subscriptionCurrentConv) {
-      subscriptionCurrentConv.unsubscribe();
-      subscriptionCurrentConv = null;
+    if (!stompClient || !stompClient.connected || !conversationId) {
+      // Lưu sẵn, sẽ re-subscribe sau khi connect xong
+      currentConversationId = conversationId || null;
+      currentConvCallback = callback || null;
+      return;
     }
 
-    // Đăng ký topic: /topic/dm/{conversationId} (Khớp với Backend AdminService)
+    // Hủy đăng ký hội thoại cũ nếu có (để tránh nghe lộn xộn)
+    try { subscriptionCurrentConv?.unsubscribe(); } catch {}
+    subscriptionCurrentConv = null;
+
+    currentConversationId = conversationId;
+    currentConvCallback = callback;
+
+    // Đăng ký topic: /topic/dm/{conversationId}
     subscriptionCurrentConv = stompClient.subscribe(`/topic/dm/${conversationId}`, (frame) => {
       try {
         const payload = JSON.parse(frame.body);
-        callback(payload);
+        callback && callback(payload);
       } catch (e) {
         console.error('WS parse conversation event error', e);
       }
@@ -97,6 +122,7 @@ const DMWS = (() => {
     try {
       if (subscriptionDM) subscriptionDM.unsubscribe();
       if (subscriptionFriends) subscriptionFriends.unsubscribe();
+      if (subscriptionCurrentConv) subscriptionCurrentConv.unsubscribe();
       if (stompClient) stompClient.disconnect(() => console.log('[WS] Disconnected'));
     } catch (e) { console.error(e); }
     wsConnected = false;

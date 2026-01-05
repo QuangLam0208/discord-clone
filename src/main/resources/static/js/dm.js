@@ -143,29 +143,30 @@ const DM = (() => {
             st.displayedMsgIds.delete(String(payload.id)); // Cho phép vẽ lại
 
             if (String(payload.conversationId) === String(st.conversationId)) {
-                DMUI.appendMessage(payload, st.currentUserId, st.displayedMsgIds);
+                // Bổ sung avatarMap và friendName để hiển thị đầy đủ
+                const avatarMap = {
+                    [st.currentUserId]: st.currentUser?.avatarUrl,
+                    [payload.senderId]: st.activeFriendAvatar
+                };
+                DMUI.appendMessage(payload, st.currentUserId, st.displayedMsgIds, avatarMap, st.activeFriendName);
             }
             return;
         }
         // User chỉnh sửa tin nhắn (Realtime Update UI)
         if (payload.id && !payload.type) { // Tin nhắn thường hoặc tin nhắn đã sửa
-            // Tìm xem tin nhắn đã có trên UI chưa
             const existingEl = document.getElementById(`msg-${payload.id}`);
 
             if (existingEl) {
-                // Nếu đã có -> Đây là hành động EDIT -> Cập nhật nội dung
                 const contentDiv = existingEl.querySelector('div[style*="white-space"]');
                 if (contentDiv) {
                     contentDiv.innerHTML = (payload.content || '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
                 }
-                // Thêm nhãn (edited) nếu chưa có
                 const metaDiv = existingEl.querySelector('div[style*="font-size:12px"]');
                 if (metaDiv && !metaDiv.innerHTML.includes('(đã chỉnh sửa)') && payload.edited) {
                     metaDiv.insertAdjacentHTML('beforeend', '<span style="font-size: 10px; color: #b9bbbe; margin-left: 4px;">(đã chỉnh sửa)</span>');
                 }
             } else {
-                // Nếu chưa có -> Đây là tin nhắn mới -> Vẽ mới
-                // (Code cũ của onIncomingMessage đã xử lý việc này, nhưng có thể gộp vào đây nếu muốn)
+                // Tin nhắn mới -> có thể vẽ bổ sung nếu cần
             }
         }
     }
@@ -305,6 +306,25 @@ const DM = (() => {
 
   // --- HÀM REAL-TIME (UPDATE MỚI NHẤT) ---
   async function onIncomingMessage(msg) {
+      // Nếu payload là sự kiện có type -> xử lý như ở onConversationEvent
+      if (msg && msg.type === 'DELETE_MESSAGE') {
+          DMUI.removeMessageElement(msg.messageId);
+          st.displayedMsgIds.delete(String(msg.messageId));
+          return;
+      }
+      if (msg && msg.type === 'RESTORE_MESSAGE') {
+          DMUI.removeMessageElement(msg.id);
+          st.displayedMsgIds.delete(String(msg.id));
+          if (String(msg.conversationId) === String(st.conversationId)) {
+              const avatarMap = {
+                  [st.currentUserId]: st.currentUser?.avatarUrl,
+                  [msg.senderId]: st.activeFriendAvatar
+              };
+              DMUI.appendMessage(msg, st.currentUserId, st.displayedMsgIds, avatarMap, st.activeFriendName);
+          }
+          return;
+      }
+
       const msgIdStr = String(msg.id);
       const domId = `msg-${msgIdStr}`;
       const existingEl = document.getElementById(domId);
