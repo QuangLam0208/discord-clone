@@ -36,6 +36,7 @@ public class UserController {
     @PostMapping("/profile")
     public ResponseEntity<UserResponse> updateProfile(
             @RequestParam("displayName") String displayName,
+            @RequestParam(value = "bio", required = false) String bio,
             @RequestParam(value = "file", required = false) MultipartFile file,
             Principal principal) {
 
@@ -43,7 +44,7 @@ public class UserController {
             return ResponseEntity.status(401).build();
         }
 
-        var updatedUser = userService.updateProfile(principal.getName(), displayName, file);
+        var updatedUser = userService.updateProfile(principal.getName(), displayName, bio, file);
         return ResponseEntity.ok(UserResponse.from(updatedUser));
     }
 

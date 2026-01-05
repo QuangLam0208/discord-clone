@@ -38,8 +38,8 @@ public class AdminServerController {
     // GET /api/admin/servers?page=&size=&q=
     @GetMapping
     public Page<Server> listServers(@RequestParam(defaultValue = "0") int page,
-                                    @RequestParam(defaultValue = "10") int size,
-                                    @RequestParam(defaultValue = "") String q) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String q) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("id").ascending());
         if (q == null || q.isBlank()) {
             return serverRepository.findAll(pageable);
@@ -74,8 +74,7 @@ public class AdminServerController {
         } catch (DataIntegrityViolationException ex) {
             return ResponseEntity.badRequest().body(Map.of(
                     "message", "Không thể xóa server do ràng buộc dữ liệu",
-                    "error", ex.getMessage()
-            ));
+                    "error", ex.getMessage()));
         }
     }
 

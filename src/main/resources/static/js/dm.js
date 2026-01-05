@@ -497,7 +497,7 @@ const DM = (() => {
             try {
                 const user = await DMApi.userByUsername(val);
                 results.innerHTML = '';
-                if (user) {
+                if (user && String(user.id) !== String(st.currentUserId)) {
                     const div = document.createElement('div');
                     div.style.padding = '8px 12px';
                     div.style.color = '#fff';

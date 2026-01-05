@@ -16,39 +16,96 @@
     </div>
 
     <div class="modal-overlay" id="editProfileModal">
-        <div class="modal-box">
+        <div class="modal-box" style="width: 800px; max-width: 90vw;">
             <button class="close-modal-btn" onclick="closeModal('editProfileModal')">&times;</button>
-            <div class="modal-header" style="text-align: left;">
-                <h2>Hồ Sơ Người Dùng</h2>
-                <p>Tùy chỉnh cách bạn xuất hiện trên Server.</p>
-            </div>
-            <div class="modal-body">
-                <label for="edit-profile-file" class="profile-avatar-upload" title="Đổi Avatar">
-                    <img id="edit-profile-avatar-preview" src="" alt="Avatar">
-                    <div class="profile-overlay">
-                        <i class="fa-solid fa-camera"></i>
+            <div class="modal-body profile-modal-body" style="display: flex; gap: 24px; padding: 20px;">
+                <div class="profile-left-col"
+                     style="width: 300px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px;">
+                    <h3
+                            style="color: #b9bbbe; font-size: 12px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase;">
+                        Xem trước thẻ hồ sơ của bạn</h3>
+                    <div class="discord-profile-card"
+                         style="background-color: #111214; border-radius: 8px; overflow: hidden; position: relative; width: 300px; box-shadow: 0 8px 16px rgba(0,0,0,0.24);">
+                        <div class="card-banner" style="height: 120px; background-color: #5865F2;"></div>
+                        <div class="card-user-info" style="padding: 16px; padding-top: 50px; position: relative;">
+                            <div class="card-avatar-holder" style="position: absolute; top: -40px; left: 16px;">
+                                <label for="edit-profile-file" class="profile-avatar-upload" title="Đổi Avatar"
+                                       style="cursor: pointer; position: relative; display: block;">
+                                    <div
+                                            style="width: 80px; height: 80px; background-color: #2f3136; border-radius: 50%; display: flex; justify-content: center; align-items: center;">
+                                        <img id="edit-profile-avatar-preview" src="" alt="Avatar"
+                                             style="display: block; width: 72px; height: 72px; object-fit: cover; border-radius: 50%;">
+                                    </div>
+                                    <div class="avatar-hint-overlay"
+                                         style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); border-radius: 50%; color: white; display: flex; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s; font-size: 10px; font-weight: bold;">
+                                        ĐỔI</div>
+                                    <div
+                                            style="position: absolute; top: 0; right: 0; background-color: #ebedef; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none;">
+                                        <i class="fa-solid fa-pencil" style="color: #4f545c; font-size: 14px;"></i>
+                                    </div>
+                                </label>
+                            </div>
+                            <input type="file" id="edit-profile-file" style="display: none;"
+                                   accept="image/png, image/jpeg, image/gif">
+
+                            <div class="preview-displayname" id="preview-displayname-text"
+                                 style="font-size: 20px; font-weight: 700; color: #fff;">Display Name</div>
+                            <div class="preview-username" id="preview-username-text"
+                                 style="font-size: 14px; color: #b9bbbe; margin-bottom: 12px;">user123</div>
+
+                            <div class="divider-line" style="height: 1px; background-color: #2f3136; margin: 12px 0;">
+                            </div>
+
+                            <div class="card-section-title"
+                                 style="font-size: 12px; font-weight: 700; color: #b9bbbe; margin-bottom: 8px; text-transform: uppercase; display: flex; align-items: center; justify-content: space-between;">
+                                <span>GIỚI THIỆU VỀ TÔI</span>
+                                <i class="fa-solid fa-pencil" style="cursor: pointer; font-size: 14px; color: #b9bbbe;"
+                                   title="Chỉnh sửa Bio" onclick="enableBioEdit()"></i>
+                            </div>
+                            <textarea id="edit-profile-bio" rows="3" maxlength="190" readonly
+                                      placeholder="Hãy viết gì đó về bạn..."
+                                      style="width: 100%; background-color: transparent; border: none; color: #dbdee1; font-size: 14px; resize: none; font-family: inherit; outline: none; cursor: default;"></textarea>
+                        </div>
                     </div>
-                </label>
-                <input type="file" id="edit-profile-file" style="display: none;" accept="image/png, image/jpeg, image/gif">
-
-                <div class="input-group">
-                    <label>TÊN HIỂN THỊ</label>
-                    <input type="text" id="edit-profile-displayname" placeholder="Tên hiển thị của bạn">
                 </div>
 
-                <div class="input-group">
-                    <label>TÊN ĐĂNG NHẬP</label>
-                    <input type="text" id="edit-profile-username" readonly style="background-color: #1a1b1e; color: #7f8287; cursor: not-allowed;">
-                </div>
+                <div class="profile-right-col" style="flex-grow: 1; display: flex; flex-direction: column;">
+                    <h2 style="margin-top: 0; margin-bottom: 20px;">Hồ sơ người dùng</h2>
 
-                <div class="input-group">
-                    <label>EMAIL</label>
-                    <input type="text" id="edit-profile-email" readonly style="background-color: #1a1b1e; color: #7f8287; cursor: not-allowed;">
+                    <div class="input-group">
+                        <label
+                                style="color: #b9bbbe; font-size: 12px; font-weight: 700; margin-bottom: 8px; display: block; text-transform: uppercase;">TÊN
+                            HIỂN THỊ</label>
+                        <input type="text" id="edit-profile-displayname" placeholder="Tên hiển thị của bạn"
+                               style="background-color: #1e1f22; border: none; padding: 10px; color: #dbdee1; width: 100%; border-radius: 4px;">
+                    </div>
+
+                    <div class="divider-line" style="height: 1px; background-color: #3f4147; margin: 24px 0;"></div>
+
+                    <div class="input-group">
+                        <label
+                                style="color: #b9bbbe; font-size: 12px; font-weight: 700; margin-bottom: 8px; display: block; text-transform: uppercase;">TÊN
+                            ĐĂNG NHẬP</label>
+                        <input type="text" id="edit-profile-username" readonly
+                               style="background-color: #1a1b1e; border: none; padding: 10px; color: #7f8287; width: 100%; border-radius: 4px; cursor: not-allowed;">
+                    </div>
+
+                    <div class="input-group" style="margin-top: 16px;">
+                        <label
+                                style="color: #b9bbbe; font-size: 12px; font-weight: 700; margin-bottom: 8px; display: block; text-transform: uppercase;">EMAIL</label>
+                        <input type="text" id="edit-profile-email" readonly
+                               style="background-color: #1a1b1e; border: none; padding: 10px; color: #7f8287; width: 100%; border-radius: 4px; cursor: not-allowed;">
+                    </div>
+
+                    <div class="modal-footer"
+                         style="padding: 20px 0 0 0; background: transparent; margin-top: auto; display: flex; justify-content: flex-end; gap: 10px;">
+                        <button class="btn-cancel" onclick="closeModal('editProfileModal')"
+                                style="background: transparent; color: #fff; padding: 10px 20px; border: none; cursor: pointer; font-weight: 500;">Hủy</button>
+                        <button class="btn-primary" onclick="saveUserProfile()"
+                                style="background-color: #5865F2; color: white; padding: 10px 24px; border: none; border-radius: 3px; font-weight: 500; cursor: pointer;">Lưu
+                            Thay Đổi</button>
+                    </div>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn-cancel" onclick="closeModal('editProfileModal')">Hủy</button>
-                <button class="btn-primary" onclick="saveUserProfile()">Lưu Thay Đổi</button>
             </div>
         </div>
     </div>
@@ -438,8 +495,7 @@
                                 <th style="width: 20%;">GIA NHẬP MÁY CHỦ</th>
                                 <th style="width: 20%;">THAM GIA DISCORD</th>
                                 <th style="width: 20%;">VAI TRÒ</th>
-                                <th style="width: 5%;"></th> <!-- Actions -->
-                            </tr>
+                                <th style="width: 5%;"></th> </tr>
                             </thead>
                             <tbody id="members-table-body">
                             <!-- JS renders rows here -->
@@ -531,13 +587,8 @@
                     </div>
                     <div id="server-bans-list" class="members-list-wrapper"
                          style="max-height: 400px; overflow-y: auto; padding-right: 5px;">
-                        <!-- JS renders simple rows here -->
                     </div>
 
-                    <!-- Unban Confirmation Modal (Hidden by default, or used via Overlay) -->
-                    <!-- We can use a simple confirm() or a custom overlay. User requested "hiển thị ra thông báo".
-                         I will implement a small custom overlay inside this tab or use the notification system.
-                         For better UX, I'll append a hidden overlay div for this logic. -->
                     <div id="unban-confirm-overlay"
                          style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); justify-content: center; align-items: center; z-index: 10;">
                         <div

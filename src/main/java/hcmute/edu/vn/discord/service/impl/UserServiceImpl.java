@@ -117,8 +117,7 @@ public class UserServiceImpl implements UserService {
                 .map(s -> ServerSummaryResponse.from(
                         s,
                         channelRepository.countByServerId(s.getId()),
-                        serverMemberRepository.countByServerId(s.getId())
-                ))
+                        serverMemberRepository.countByServerId(s.getId())))
                 .toList();
 
         // Lấy message mới nhất => Instant
@@ -150,16 +149,20 @@ public class UserServiceImpl implements UserService {
                 .username(u.getUsername())
                 .displayName(u.getDisplayName())
                 .birthDate(u.getBirthDate())
-                .createdAt(createdAtLdt)     // nếu DTO là LocalDateTime; nếu DTO là Instant thì set trực tiếp Instant
-                .lastActive(lastActiveLdt)   // chuyển đổi đúng cách; có thể null
+                .createdAt(createdAtLdt) // nếu DTO là LocalDateTime; nếu DTO là Instant thì set trực tiếp Instant
+                .lastActive(lastActiveLdt) // chuyển đổi đúng cách; có thể null
                 .servers(summaries)
                 .build();
     }
 
     @Override
-    public User updateProfile(String username, String displayName, MultipartFile file) {
+    public User updateProfile(String username, String displayName, String bio, MultipartFile file) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        if (bio != null) {
+            user.setBio(bio.trim());
+        }
 
         // 1. Update display name
         if (displayName != null && !displayName.trim().isEmpty()) {
@@ -189,7 +192,7 @@ public class UserServiceImpl implements UserService {
 
         String extension = switch (detected) {
             case "image/jpeg" -> ".jpg";
-            case "image/png"  -> ".png";
+            case "image/png" -> ".png";
             case "image/webp" -> ".webp";
             default -> ".bin";
         };

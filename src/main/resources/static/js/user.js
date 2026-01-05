@@ -30,25 +30,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsPopup = document.getElementById('settings-popup');
     const btnLogoutAction = document.getElementById('btn-logout-action');
     const btnProfileAction = document.getElementById('btn-profile-action');
-        if (btnProfileAction) {
-            btnProfileAction.addEventListener('click', () => {
-                document.getElementById('settings-popup').classList.remove('show');
-                openEditProfileModal();
-            });
-        }
+    if (btnProfileAction) {
+        btnProfileAction.addEventListener('click', () => {
+            document.getElementById('settings-popup').classList.remove('show');
+            openEditProfileModal();
+        });
+    }
     const fileInput = document.getElementById('edit-profile-file');
-        if (fileInput) {
-            fileInput.addEventListener('change', function(e) {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = function(evt) {
-                        document.getElementById('edit-profile-avatar-preview').src = evt.target.result;
-                    }
-                    reader.readAsDataURL(file);
+    if (fileInput) {
+        fileInput.addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function (evt) {
+                    document.getElementById('edit-profile-avatar-preview').src = evt.target.result;
                 }
-            });
-        }
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Live Preview for Display Name
+    const displayNameInput = document.getElementById('edit-profile-displayname');
+    if (displayNameInput) {
+        displayNameInput.addEventListener('input', (e) => {
+            const val = e.target.value;
+            const preview = document.getElementById('preview-displayname-text');
+            if (preview) {
+                preview.innerText = val ? val : (state.currentUser ? state.currentUser.username : '');
+            }
+        });
+    }
 
     if (btnSettings && settingsPopup) {
         if (!btnSettings.hasAttribute('tabindex')) {
@@ -103,35 +115,42 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function openEditProfileModal() {
-    const user = state.currentUser; // Biến này lấy từ hàm loadMe()
+    const user = state.currentUser;
     if (!user) return;
 
     // Điền thông tin vào input
     document.getElementById('edit-profile-displayname').value = user.displayName || "";
     document.getElementById('edit-profile-username').value = user.username || "";
     document.getElementById('edit-profile-email').value = user.email || "";
+    document.getElementById('edit-profile-bio').value = user.bio || "";
 
     // Điền ảnh avatar
+    const previewDisplay = document.getElementById('preview-displayname-text');
+    const previewUsername = document.getElementById('preview-username-text');
+
+    if (previewDisplay) previewDisplay.innerText = user.displayName || user.username;
+    if (previewUsername) previewUsername.innerText = user.username;
+
     const avatarPreview = document.getElementById('edit-profile-avatar-preview');
     const nameForAvatar = user.displayName || user.username || 'User';
     avatarPreview.src = user.avatarUrl
         ? user.avatarUrl
         : `https://ui-avatars.com/api/?name=${encodeURIComponent(nameForAvatar)}&background=random&color=fff&size=128&bold=true`;
 
-    // Hiển thị Modal (dùng class active hoặc hàm openModal có sẵn)
     const modal = document.getElementById('editProfileModal');
     if (modal) modal.classList.add('active');
-    // Lưu ý: Nếu bạn có hàm openModal('id') toàn cục thì dùng: openModal('editProfileModal');
 }
 
 // Hàm gọi API lưu thông tin
 async function saveUserProfile() {
     const newDisplayName = document.getElementById('edit-profile-displayname').value;
+    const newBio = document.getElementById('edit-profile-bio').value;
     const fileInput = document.getElementById('edit-profile-file');
     const file = fileInput.files[0];
 
     const formData = new FormData();
     formData.append("displayName", newDisplayName);
+    formData.append("bio", newBio);
     if (file) {
         formData.append("file", file);
     }
@@ -154,8 +173,8 @@ async function saveUserProfile() {
             if (typeof updateUserAvatarUI === "function") {
                 updateUserAvatarUI(updatedUser.avatarUrl, updatedUser.displayName);
             } else {
-                 // Nếu chưa có hàm tách riêng, reload trang cho nhanh
-                 location.reload();
+                // Nếu chưa có hàm tách riêng, reload trang cho nhanh
+                location.reload();
             }
 
             closeModal('editProfileModal');
@@ -170,5 +189,15 @@ async function saveUserProfile() {
     } catch (e) {
         console.error(e);
         alert("Có lỗi xảy ra.");
+    }
+}
+
+// Global helper to toggle bio edit
+function enableBioEdit() {
+    const bioInput = document.getElementById('edit-profile-bio');
+    if (bioInput) {
+        bioInput.removeAttribute('readonly');
+        bioInput.style.cursor = 'text';
+        bioInput.focus();
     }
 }

@@ -17,4 +17,5 @@ public class FriendResponse {
     private String displayName;
     private String avatarUrl;
     private LocalDateTime since;
+    private boolean online;
 }
