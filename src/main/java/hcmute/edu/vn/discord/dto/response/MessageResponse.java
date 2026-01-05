@@ -1,13 +1,18 @@
 package hcmute.edu.vn.discord.dto.response;
 
 import hcmute.edu.vn.discord.entity.mongo.Message;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.util.Date;
 import java.util.List;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class MessageResponse {
     private String id;
     private Long channelId;

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8" />
+    <title>Admin Dashboard · Discord Clone</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+
+    <!-- SweetAlert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Admin CSS -->
+    <link rel="stylesheet" href="/css/admin.css" />
+</head>
+<body>
+<div class="admin-root">
+    <!-- Sidebar trái -->
+    <aside class="admin-sidebar">
+        <div class="brand">
+            <i class="fa-brands fa-discord"></i>
+            <span class="brand-text">Admin</span>
+        </div>
+
+        <nav class="nav" id="admin-nav">
+            <a class="nav-item active" href="#" data-section="dashboard">
+                <i class="fa-solid fa-gauge"></i>
+                <span>Tổng quan</span>
+            </a>
+            <a class="nav-item" href="#" data-section="users">
+                <i class="fa-solid fa-user-shield"></i>
+                <span>Users</span>
+            </a>
+            <a class="nav-item" href="#" data-section="servers">
+                <i class="fa-solid fa-server"></i>
+                <span>Servers</span>
+            </a>
+            <a class="nav-item" href="#" data-section="messages">
+                <i class="fa-solid fa-envelope"></i>
+                <span>Messages</span>
+            </a>
+            <a class="nav-item" href="#" data-section="audit">
+                <i class="fa-solid fa-clipboard-list"></i>
+                <span>Audit</span>
+            </a>
+            <div class="separator"></div>
+            <a class="nav-item" href="/home">
+                <i class="fa-solid fa-arrow-left"></i>
+                <span>Về ứng dụng</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="current-user">
+                <div class="avatar" id="admin-avatar"></div>
+                <div class="uinfo">
+                    <div class="uname" id="admin-name">Admin</div>
+                    <div class="utag">#admin</div>
+                </div>
+            </div>
+            <button class="btn-logout" id="btn-admin-logout" title="Đăng xuất">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+        </div>
+    </aside>
+
+    <!-- Nội dung chính -->
+    <main class="admin-main">
+        <header class="topbar">
+            <div class="page-title" id="admin-page-title">
+                <i class="fa-solid fa-gauge"></i>
+                <span>Dashboard</span>
+            </div>
+            <div class="ws-indicator" id="ws-indicator" title="WebSocket status"></div>
+        </header>
+
+        <!-- Khu vực nội dung được tải động -->
+        <section class="content">
+            <div id="admin-content">
+                <div class="muted" style="padding: 20px;">Đang tải nội dung...</div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<script src="/js/api.js" defer></script>
+<script src="/js/admin/helpers.js" defer></script>
+<script src="/js/admin/servers.js" defer></script>
+<script src="/js/admin/users.js" defer></script>
+<script src="/js/admin/navigation.js" defer></script>
+<script src="/js/admin/boot.js" defer></script>
+<script src="/js/admin/messages.js" defer></script>
+</body>
+</html>

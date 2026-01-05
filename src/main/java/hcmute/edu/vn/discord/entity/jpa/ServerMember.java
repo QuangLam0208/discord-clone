@@ -43,4 +43,3 @@ public class ServerMember {
     )
     private Set<ServerRole> roles = new HashSet<>();
 }
-

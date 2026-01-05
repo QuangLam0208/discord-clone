@@ -71,6 +71,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 color: '#fff'
             }).then((result) => {
                 if (result.isConfirmed) {
+                    if (typeof DM !== 'undefined') {
+                        DM.reset();
+                    }
                     localStorage.clear();
                     window.location.href = '/login';
                 }

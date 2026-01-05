@@ -7,11 +7,12 @@ function getToken() {
 }
 
 function setAuth(data) {
-  // Backend trả về { token, type, user: { username, displayName, ... } }
+  // Backend trả về { token, type, user: { id, username, displayName, ... } }
   const token = data?.token || data?.accessToken;
   const user = data?.user;
 
   if (token) localStorage.setItem('accessToken', token);
+  if (user?.id) localStorage.setItem('userId', String(user.id));
   if (user?.username) localStorage.setItem('username', user.username);
   if (user?.displayName || user?.username) {
     localStorage.setItem('displayName', user.displayName || user.username);
@@ -20,6 +21,7 @@ function setAuth(data) {
 
 function clearAuth() {
   localStorage.removeItem('accessToken');
+  localStorage.removeItem('userId');
   localStorage.removeItem('username');
   localStorage.removeItem('displayName');
 }
@@ -42,6 +44,7 @@ async function login(username, password) {
     const response = await fetch(`${API_AUTH}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', // nhận cookie JWT httpOnly nếu server set
       body: JSON.stringify({ username, password })
     });
 
@@ -66,6 +69,7 @@ async function register(username, email, password, displayName) {
     const response = await fetch(`${API_AUTH}/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ username, email, password, displayName })
     });
 
@@ -95,11 +99,12 @@ async function getCurrentUser() {
 
   const response = await fetch(`${API_USER}/me`, {
     method: 'GET',
-    headers: { 'Authorization': `Bearer ${token}` }
+    headers: { 'Authorization': `Bearer ${token}` },
+    credentials: 'include'
   });
 
   if (response.status === 401) {
-    logout();
+    await logout(); // gọi logout server + clear client
     return null;
   }
 
@@ -115,10 +120,86 @@ async function getCurrentUser() {
 /* =======================
    LOGOUT
 ======================= */
-function logout() {
-  clearAuth();
-  window.location.href = '/login';
+async function logout() {
+  try {
+    // Xóa cookie JWT phía server (nếu có) + clear client
+    await fetch(`${API_AUTH}/logout`, { method: 'POST', credentials: 'include' });
+  } catch (e) {
+    // ignore network error, vẫn clear client
+  } finally {
+    clearAuth();
+    window.location.href = '/login';
+  }
 }
+
+/* =======================
+   REALTIME FORCE LOGOUT (WS)
+======================= */
+// Kết nối WS và subscribe kênh force-logout theo user (dùng JwtChannelInterceptor)
+// Yêu cầu: SockJS + Stomp đã được include (ở layout): sockjs.min.js, stomp.min.js
+let stompClient = null;
+let wsConnected = false;
+let wsReconnectTimer = null;
+
+function initForceLogout() {
+  // Tránh kết nối nhiều lần
+  if (wsConnected) return;
+  const token = getToken();
+  const userId = localStorage.getItem('userId');
+  if (!token || !userId) {
+    return; // chưa đăng nhập -> không kết nối
+  }
+
+  try {
+    const sock = new SockJS('/ws');
+    stompClient = Stomp.over(sock);
+    stompClient.debug = null; // tắt log để console sạch
+
+    // Truyền JWT qua header 'Authorization' để JwtChannelInterceptor xác thực STOMP CONNECT
+    const headers = { Authorization: `Bearer ${token}` };
+
+    stompClient.connect(headers, function onConnect() {
+      wsConnected = true;
+      // Subscribe user destination: /user/queue/force-logout (server convertAndSendToUser(..., "/queue/force-logout", ...))
+      const sub = stompClient.subscribe('/user/queue/force-logout', async function(message) {
+        try {
+          const payload = JSON.parse(message.body);
+          if (payload?.type === 'FORCE_LOGOUT') {
+            // Gọi logout để hủy session ngay
+            await logout();
+          } else {
+            // fallback vẫn logout
+            await logout();
+          }
+        } catch (e) {
+          await logout();
+        }
+      });
+    }, function onError(err) {
+      wsConnected = false;
+      // thử reconnect sau 5s
+      if (!wsReconnectTimer) {
+        wsReconnectTimer = setTimeout(() => {
+          wsReconnectTimer = null;
+          initForceLogout();
+        }, 5000);
+      }
+    });
+  } catch (e) {
+    // thử reconnect sau 5s
+    if (!wsReconnectTimer) {
+      wsReconnectTimer = setTimeout(() => {
+        wsReconnectTimer = null;
+        initForceLogout();
+      }, 5000);
+    }
+  }
+}
+
+// Gọi init khi app khởi tạo (sau khi đã có token)
+document.addEventListener('DOMContentLoaded', () => {
+  initForceLogout();
+});
 
 /* =======================
    UI HELPERS (SweetAlert2)
@@ -154,6 +235,7 @@ window.AuthService = {
   register,
   getCurrentUser,
   logout,
+  initForceLogout,
   showToastSuccess,
   showErrorAlert
 };

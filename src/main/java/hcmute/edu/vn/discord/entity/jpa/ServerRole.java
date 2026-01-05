@@ -6,7 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -27,6 +26,7 @@ public class ServerRole {
     private Server server;
 
     private String name;
+    private String color;
     private Integer priority;
 
     @ManyToMany
@@ -36,5 +36,10 @@ public class ServerRole {
             inverseJoinColumns = @JoinColumn(name = "permission_id")
     )
     private Set<Permission> permissions = new HashSet<>();
+
+    @ManyToMany(mappedBy = "roles")
+    @lombok.EqualsAndHashCode.Exclude
+    @lombok.ToString.Exclude
+    private Set<ServerMember> members = new HashSet<>();
 }
 

@@ -1,4 +1,3 @@
-// login.js - chỉ gắn sự kiện cho trang đăng nhập
 document.addEventListener('DOMContentLoaded', () => {
     const loginForm = document.getElementById('loginForm');
     const btnLogin = document.getElementById('btn-login');
@@ -23,9 +22,17 @@ document.addEventListener('DOMContentLoaded', () => {
         btnLogin.disabled = true;
 
         try {
+            // 1) Đăng nhập → lưu token vào localStorage
             await AuthService.login(username, password);
             await AuthService.showToastSuccess('Đăng nhập thành công');
-            window.location.href = '/';
+
+            // 2) Lấy thông tin user để quyết định redirect theo role
+            const me = await AuthService.getCurrentUser();
+            const roles = (me?.roles || []).map(r => (typeof r === 'string' ? r : r.name));
+            const isAdmin = roles.includes('ADMIN') || roles.includes('MODERATOR');
+
+            // 3) Admin → /admin; người dùng thường → /home
+            window.location.href = isAdmin ? '/admin' : '/home';
         } catch (error) {
             if (passwordError) {
                 passwordError.textContent = error.message;

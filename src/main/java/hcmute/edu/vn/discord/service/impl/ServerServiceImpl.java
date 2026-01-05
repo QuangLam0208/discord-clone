@@ -1,14 +1,20 @@
 package hcmute.edu.vn.discord.service.impl;
 
 import hcmute.edu.vn.discord.dto.request.ServerRequest;
+import hcmute.edu.vn.discord.dto.request.TransferOwnerRequest;
+import hcmute.edu.vn.discord.dto.response.*;
 import hcmute.edu.vn.discord.entity.enums.ChannelType;
 import hcmute.edu.vn.discord.entity.enums.EPermission;
 import hcmute.edu.vn.discord.entity.enums.ServerStatus;
 import hcmute.edu.vn.discord.entity.jpa.*;
 import hcmute.edu.vn.discord.repository.*;
+import hcmute.edu.vn.discord.service.AuditLogService;
 import hcmute.edu.vn.discord.service.ServerService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.user.SimpUser;
+import org.springframework.messaging.simp.user.SimpUserRegistry;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +32,9 @@ public class ServerServiceImpl implements ServerService {
     private final ServerRoleRepository serverRoleRepository;
     private final ChannelRepository channelRepository;
     private final PermissionRepository permissionRepository;
+    private final CategoryRepository categoryRepository;
+    private final AuditLogService auditLogService;
+    private final SimpUserRegistry simpUserRegistry;
 
     @Override
     @Transactional
@@ -114,12 +123,42 @@ public class ServerServiceImpl implements ServerService {
     @Transactional
     public Server updateServer(Long serverId, ServerRequest request) {
         Server server = getServerById(serverId);
+
+        // Capture old values for audit log
+        String oldName = server.getName();
+        String oldDesc = server.getDescription();
+        String oldIcon = server.getIconUrl();
+
         server.setName(request.getName());
         server.setDescription(request.getDescription());
-        if (request.getIconUrl() != null) {
-            server.setIconUrl(request.getIconUrl());
+        server.setIconUrl(request.getIconUrl());
+        Server updated = serverRepository.save(server);
+
+        // Audit Log
+        try {
+            String username = SecurityContextHolder.getContext().getAuthentication().getName();
+            User actor = userRepository.findByUsername(username).orElse(null);
+
+            StringBuilder changes = new StringBuilder();
+            if (!Objects.equals(oldName, updated.getName())) {
+                changes.append("Tên: ").append(oldName).append(" -> ").append(updated.getName()).append("; ");
+            }
+            if (!Objects.equals(oldDesc, updated.getDescription())) {
+                changes.append("Mô tả: thay đổi; ");
+            }
+            if (!Objects.equals(oldIcon, updated.getIconUrl())) {
+                changes.append("Icon: thay đổi; ");
+            }
+
+            if (changes.length() > 0) {
+                auditLogService.logAction(updated, actor, hcmute.edu.vn.discord.common.AuditLogAction.SERVER_UPDATE,
+                        serverId.toString(), "SERVER", changes.toString());
+            }
+        } catch (Exception e) {
+            System.err.println("Error logging server update: " + e.getMessage());
         }
-        return serverRepository.save(server);
+
+        return updated;
     }
 
     @Override
@@ -144,12 +183,145 @@ public class ServerServiceImpl implements ServerService {
                 .orElseThrow(() -> new EntityNotFoundException("Server not found"));
     }
 
+    // Lấy servers theo username hiện tại, chỉ ACTIVE/FREEZE, kèm counts an toàn (không chạm LAZY)
+    @Override
+    @Transactional(readOnly = true)
+    public List<ServerResponse> getMyServersResponses() {
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        User u = userRepository.findByUsername(username).orElseThrow();
+
+        List<Server> servers = serverRepository.findDistinctByMembers_User_UsernameAndStatusIn(
+                u.getUsername(),
+                Set.of(ServerStatus.ACTIVE, ServerStatus.FREEZE)
+        );
+
+        return servers.stream()
+                .map(s -> ServerResponse.from(
+                        s,
+                        channelRepository.countByServerId(s.getId()),
+                        serverMemberRepository.countByServerId(s.getId())
+                ))
+                .toList();
+    }
+
     @Override
     @Transactional(readOnly = true)
     public List<Server> getServersByCurrentUsername() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        return serverMemberRepository.findByUserUsername(username).stream()
-                .map(ServerMember::getServer)
-                .toList();
+        User u = userRepository.findByUsername(username).orElseThrow();
+        // Tải sẵn owner, nhưng KHÔNG dùng ServerResponse.from(server) trực tiếp (tránh LAZY size())
+        return serverRepository.findDistinctByMembers_User_UsernameAndStatusIn(
+                u.getUsername(),
+                Set.of(ServerStatus.ACTIVE, ServerStatus.FREEZE)
+        );
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<AuditLog> getAuditLogs(Long serverId) {
+        return auditLogService.getAuditLogs(serverId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public int countOnlineMembers(Long serverId) {
+        // 1. Get all members of the server
+        List<ServerMember> members = serverMemberRepository.findByServerId(serverId);
+        if (members.isEmpty()) {
+            return 0;
+        }
+
+        // 2. Get list of usernames
+        Set<String> memberUsernames = new HashSet<>();
+        for (ServerMember member : members) {
+            if (member.getUser() != null) {
+                memberUsernames.add(member.getUser().getUsername());
+            }
+        }
+
+        // 3. Count matching online users
+        int onlineCount = 0;
+        for (String username : memberUsernames) {
+            SimpUser user = simpUserRegistry.getUser(username);
+            if (user != null && user.hasSessions()) {
+                onlineCount++;
+            }
+        }
+
+        return onlineCount;
+    }
+
+    @Override
+    public List<ServerMemberSummaryResponse> getMembersOfServer(Long serverId) {
+        Server server = serverRepository.findById(serverId)
+                .orElseThrow(() -> new EntityNotFoundException("Server not found: " + serverId));
+
+        List<ServerMember> members = serverMemberRepository.findWithUserAndRolesByServerId(serverId);
+
+        return members.stream().map(sm -> {
+            User u = sm.getUser();
+            boolean isOwner = server.getOwner() != null && server.getOwner().getId().equals(u.getId());
+            boolean isAdmin = sm.getRoles() != null && sm.getRoles().stream()
+                    .anyMatch(r -> "ADMIN".equalsIgnoreCase(r.getName()));
+            return new ServerMemberSummaryResponse(
+                    sm.getId(),
+                    u.getId(),
+                    u.getUsername(),
+                    u.getDisplayName(),
+                    u.getAvatarUrl(),
+                    isOwner,
+                    isAdmin
+            );
+        }).toList();
+    }
+
+    @Transactional
+    @Override
+    public void transferOwner(Long serverId, TransferOwnerRequest req) {
+        if (req == null || req.getNewOwnerMemberId() == null) {
+            throw new IllegalArgumentException("newOwnerMemberId is required");
+        }
+
+        Server server = serverRepository.findById(serverId)
+                .orElseThrow(() -> new EntityNotFoundException("Server not found: " + serverId));
+
+        ServerMember newOwnerMember = serverMemberRepository.findWithUserAndRolesById(req.getNewOwnerMemberId())
+                .orElseThrow(() -> new EntityNotFoundException("New owner member not found: " + req.getNewOwnerMemberId()));
+
+        if (!newOwnerMember.getServer().getId().equals(serverId)) {
+            throw new AccessDeniedException("User is not a member of this server");
+        }
+
+        User oldOwner = server.getOwner();
+        User newOwnerUser = newOwnerMember.getUser();
+
+        // Cập nhật owner
+        server.setOwner(newOwnerUser);
+        serverRepository.save(server);
+
+        // Role ADMIN trong server
+        ServerRole adminRole = serverRoleRepository.findByServerIdAndName(serverId, "ADMIN")
+                .orElse(null);
+
+        // Bỏ ADMIN khỏi owner cũ (nếu có và nếu khác owner mới)
+        if (oldOwner != null && !oldOwner.getId().equals(newOwnerUser.getId()) && adminRole != null) {
+            serverMemberRepository.findByServerIdAndUserId(serverId, oldOwner.getId())
+                    .ifPresent(oldMember -> {
+                        if (oldMember.getRoles() != null) {
+                            oldMember.getRoles().removeIf(r -> r.getId().equals(adminRole.getId()));
+                        }
+                        serverMemberRepository.save(oldMember);
+                    });
+        }
+
+        // Thêm ADMIN cho owner mới nếu chưa có
+        if (adminRole != null) {
+            boolean hasAdmin = newOwnerMember.getRoles() != null &&
+                    newOwnerMember.getRoles().stream().anyMatch(r -> r.getId().equals(adminRole.getId()));
+            if (!hasAdmin) {
+                newOwnerMember.getRoles().add(adminRole);
+                serverMemberRepository.save(newOwnerMember);
+            }
+        }
     }
 }

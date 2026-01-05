@@ -13,17 +13,21 @@ import java.util.stream.Collectors;
 public class ServerRoleResponse {
     Long id;
     String name;
+    String color;
     Integer priority;
     Set<String> permissionCodes;
+    Integer memberCount;
 
     public static ServerRoleResponse from(ServerRole role) {
         return ServerRoleResponse.builder()
                 .id(role.getId())
                 .name(role.getName())
+                .color(role.getColor())
                 .priority(role.getPriority())
                 .permissionCodes(role.getPermissions() != null
                         ? role.getPermissions().stream().map(Permission::getCode).collect(Collectors.toSet())
                         : Set.of())
+                .memberCount(role.getMembers() != null ? role.getMembers().size() : 0)
                 .build();
     }
 }

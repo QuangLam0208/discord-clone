@@ -2,6 +2,7 @@ package hcmute.edu.vn.discord.service.impl;
 
 import hcmute.edu.vn.discord.entity.jpa.*;
 import hcmute.edu.vn.discord.repository.InviteRepository;
+import hcmute.edu.vn.discord.repository.ServerBanRepository;
 import hcmute.edu.vn.discord.entity.jpa.ServerRole;
 import hcmute.edu.vn.discord.repository.ServerRoleRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -31,6 +32,7 @@ public class InviteServiceImpl implements InviteService {
     private final ServerMemberRepository serverMemberRepository;
     private final UserRepository userRepository;
     private final ServerRoleRepository serverRoleRepository;
+    private final ServerBanRepository serverBanRepository;
 
     @Override
     public Invite createInvite(Long serverId, Integer maxUses, Long expireSeconds) {
@@ -65,7 +67,7 @@ public class InviteServiceImpl implements InviteService {
 
     @Override
     @Transactional
-    public void joinServer(String code) {
+    public Long joinServer(String code) {
         // 1. Lấy User hiện tại
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userRepository.findByUsername(username)
@@ -80,6 +82,11 @@ public class InviteServiceImpl implements InviteService {
             throw new IllegalStateException("Bạn đã là thành viên của máy chủ này rồi!");
         }
 
+        // 3.1 [SECURITY] Check Ban
+        if (serverBanRepository.existsByServerIdAndUserId(invite.getServer().getId(), user.getId())) {
+            throw new IllegalStateException("Bạn đã bị cấm tham gia máy chủ này.");
+        }
+
         // 4. Kiểm tra và trừ lượt dùng
         if (!useInvite(code)) {
             throw new IllegalStateException("Mã mời không hợp lệ, đã hết hạn hoặc hết lượt sử dụng.");
@@ -87,7 +94,8 @@ public class InviteServiceImpl implements InviteService {
 
         // 5. Tìm Role mặc định (@everyone)
         ServerRole everyoneRole = serverRoleRepository.findByServerIdAndName(invite.getServer().getId(), "@everyone")
-                .orElse(null);
+                .orElseThrow(() -> new IllegalStateException(
+                        "Lỗi hệ thống: Không tìm thấy vai trò mặc định (@everyone) của server."));
 
         // 6. Tạo Member mới
         ServerMember member = new ServerMember();
@@ -97,23 +105,25 @@ public class InviteServiceImpl implements InviteService {
         member.setNickname(user.getDisplayName());
         member.setJoinedAt(LocalDateTime.now());
 
-        if (everyoneRole != null) {
-            member.setRoles(new HashSet<>(Set.of(everyoneRole)));
-        }
+        member.setRoles(new HashSet<>(Set.of(everyoneRole)));
 
         serverMemberRepository.save(member);
+
+        return invite.getServer().getId();
     }
 
     @Override
     public boolean useInvite(String code) {
         Optional<Invite> inviteOpt = inviteRepository.findByCode(code);
 
-        if (inviteOpt.isEmpty()) return false;
+        if (inviteOpt.isEmpty())
+            return false;
 
         Invite invite = inviteOpt.get();
 
         // 1. Kiểm tra đã bị thu hồi chưa
-        if (Boolean.TRUE.equals(invite.getRevoked())) return false;
+        if (Boolean.TRUE.equals(invite.getRevoked()))
+            return false;
 
         // 2. Kiểm tra hết hạn thời gian
         if (invite.getExpiresAt() != null && invite.getExpiresAt().before(new Date())) {

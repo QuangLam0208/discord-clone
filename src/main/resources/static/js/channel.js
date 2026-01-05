@@ -12,6 +12,11 @@ window.loadCategoriesAndChannels = async function (serverId) {
             Api.get(`/api/servers/${serverId}/channels`)
         ]);
 
+        // Ensure WebSocket is connected even if no channel is selected yet
+        if (window.connectChannelSocket) {
+            window.connectChannelSocket(null);
+        }
+
         const categoryMap = {};
         const nullCategoryChannels = [];
 
@@ -56,17 +61,6 @@ window.loadCategoriesAndChannels = async function (serverId) {
                 const catData = categoryMap[cat.id];
                 channelArea.appendChild(createCategoryElement(catData));
             });
-        }
-
-        // ADD CREATE CATEGORY BUTTON
-        if (state.currentServerId) {
-            const createCatBtn = document.createElement('div');
-            createCatBtn.className = 'channel-item';
-            createCatBtn.style.color = '#aaa';
-            createCatBtn.style.cursor = 'pointer';
-            createCatBtn.innerHTML = '<i class="fa-solid fa-folder-plus"></i> Tạo Category mới';
-            createCatBtn.onclick = createCategory;
-            channelArea.appendChild(createCatBtn);
         }
 
         // Auto Select First Channel
@@ -257,7 +251,6 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCreateCategorySubmit.onclick = async () => {
             const modal = document.getElementById('createCategoryModal');
             const nameInput = modal.querySelector('input[type="text"]');
-            const isPrivateInput = modal.querySelector('.switch input');
 
             const name = nameInput.value.trim();
             if (!name) {
@@ -368,19 +361,28 @@ document.addEventListener('DOMContentLoaded', () => {
                     const ownerId = parseInt(targetServer.dataset.ownerId);
                     const isOwner = state.currentUser && state.currentUser.id === ownerId;
 
-                    if (isOwner) {
+                    // Luôn cho phép tạo Category (hoặc check permission nếu cần)
+                    if (isOwner || true) { // Tạm thời cho phép all, hoặc check permission
                         ctxMenu.innerHTML += `
-                            <div class="menu-item" onclick="editServer('${serverId}')">
-                                <span>Sửa Server</span><i class="fa-solid fa-pen"></i>
+                            <div class="menu-item" onclick="createCategory()">
+                                <span>Tạo Category</span><i class="fa-solid fa-folder-plus"></i>
                             </div>
                             <div class="menu-separator"></div>
+                        `;
+                    }
+
+                    // Luôn hiển thị nút Cài đặt cho mọi người để xem danh sách thành viên
+                    ctxMenu.innerHTML += `
+                        <div class="menu-item" onclick="openServerSettings('${serverId}')">
+                            <span>Cài đặt</span><i class="fa-solid fa-gear"></i>
+                        </div>
+                        <div class="menu-separator"></div>`;
+
+                    // Chỉ chủ server mới được Xóa Server
+                    if (isOwner) {
+                        ctxMenu.innerHTML += `
                             <div class="menu-item logout" onclick="deleteServer('${serverId}')">
                                 <span>Xóa Server</span><i class="fa-solid fa-trash"></i>
-                            </div>`;
-                    } else {
-                        ctxMenu.innerHTML += `
-                             <div class="menu-item" style="cursor: default; color: #aaa;">
-                                <span>Chỉ chủ server mới được sửa/xóa</span>
                             </div>`;
                     }
                 }
@@ -401,10 +403,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 else if (targetChannel) {
                     const chanId = targetChannel.dataset.channelId;
                     ctxMenu.innerHTML += `
-                        <div class="menu-item" onclick="editChannel('${chanId}')">
-                            <span>Sửa Kênh</span><i class="fa-solid fa-pen"></i>
+                        <div class="menu-item" onclick="openChannelSettings('${chanId}')">
+                            <span>Cài đặt</span><i class="fa-solid fa-gear"></i>
                         </div>
-                        <div class="menu-item logout" onclick="deleteChannel('${chanId}')">
+                        <div class="menu-separator"></div>
+                        <div class="menu-item logout" onclick="openChannelSettings('${chanId}', 'delete')">
                             <span>Xóa Kênh</span><i class="fa-solid fa-trash"></i>
                         </div>`;
                 }
@@ -440,3 +443,151 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// Helper to get channel type from UI if missing in API response
+function getChannelTypeFromUI(channelId) {
+    const channelEl = document.querySelector(`.channel-item[data-channel-id="${channelId}"] i`);
+    if (channelEl) {
+        if (channelEl.classList.contains('fa-hashtag')) return 'TEXT';
+        if (channelEl.classList.contains('fa-volume-high')) return 'VOICE';
+    }
+    return 'TEXT'; // Default
+}
+
+// 6. CHANNEL SETTINGS MODAL LOGIC
+window.openChannelSettings = async function (channelId, initialTab = 'overview') {
+    // Hide Context Menu
+    const ctxMenu = document.getElementById('context-menu');
+    if (ctxMenu) ctxMenu.classList.remove('visible');
+
+    // Load Channel Details
+    try {
+        const channel = await Api.get(`/api/channels/${channelId}`);
+        state.editingChannel = channel;
+        state.editingChannelId = channelId;
+
+        // Ensure type is present
+        if (!state.editingChannel.type) {
+            state.editingChannel.type = getChannelTypeFromUI(channelId);
+        }
+
+        // Populate Fields
+        document.getElementById('nav-overview').click(); // Default UI state
+        document.getElementById('edit-channel-name').value = channel.name || '';
+        document.getElementById('edit-channel-desc').value = channel.description || '';
+        document.getElementById('edit-channel-private').checked = channel.isPrivate || false;
+
+        // Delete Tab info
+        document.getElementById('delete-channel-name-display').innerText = channel.name;
+
+        // Open Modal
+        switchSettingsTab(initialTab);
+        document.getElementById('channelSettingsModal').classList.add('active');
+
+        // Reset save bar
+        document.getElementById('channel-save-bar').classList.remove('visible');
+
+        // Watch for changes
+        watchForChanges();
+
+    } catch (e) {
+        console.error("Lỗi tải thông tin kênh:", e);
+        alert("Không thể tải thông tin kênh.");
+    }
+}
+
+window.switchSettingsTab = function (tabName) {
+    // Update Sidebar
+    document.querySelectorAll('.settings-nav-item').forEach(el => el.classList.remove('active'));
+    document.getElementById(`nav-${tabName}`).classList.add('active');
+
+    // Update Content
+    document.querySelectorAll('.settings-tab-content').forEach(el => el.classList.remove('active'));
+    document.getElementById(`tab-${tabName}`).classList.add('active');
+}
+
+function watchForChanges() {
+    const inputs = ['edit-channel-name', 'edit-channel-desc', 'edit-channel-private'];
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.oninput = () => showSaveBar();
+            el.onchange = () => showSaveBar();
+        }
+    });
+}
+
+function showSaveBar() {
+    document.getElementById('channel-save-bar').classList.add('visible');
+}
+
+window.resetChannelSettings = function () {
+    if (!state.editingChannel) return;
+    document.getElementById('edit-channel-name').value = state.editingChannel.name || '';
+    document.getElementById('edit-channel-desc').value = state.editingChannel.description || '';
+    document.getElementById('edit-channel-private').checked = state.editingChannel.isPrivate || false;
+    document.getElementById('channel-save-bar').classList.remove('visible');
+}
+
+window.saveChannelSettings = async function () {
+    const name = document.getElementById('edit-channel-name').value;
+    const desc = document.getElementById('edit-channel-desc').value;
+    const isPrivate = document.getElementById('edit-channel-private').checked;
+
+    try {
+        await Api.patch(`/api/channels/${state.editingChannelId}`, {
+            name: name,
+            description: desc,
+            isPrivate: isPrivate,
+            categoryId: state.editingChannel.categoryId,
+            type: state.editingChannel.type
+        });
+
+        // Success
+        document.getElementById('channel-save-bar').classList.remove('visible');
+        closeModal('channelSettingsModal'); // Đóng modal ngay lập tức
+        loadCategoriesAndChannels(state.currentServerId);
+
+        // Update local state to avoid "reset" reverting to old values
+        state.editingChannel.name = name;
+        state.editingChannel.description = desc;
+        state.editingChannel.isPrivate = isPrivate;
+
+        // Notification
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'success',
+                title: 'Thành công',
+                text: 'Cập nhật kênh thành công!',
+                timer: 1500,
+                showConfirmButton: false,
+                background: '#313338',
+                color: '#dbdee1'
+            });
+        }
+
+    } catch (e) {
+        console.error(e);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi',
+                text: e.message || 'Không thể lưu thay đổi',
+                background: '#313338',
+                color: '#dbdee1'
+            });
+        } else {
+            alert("Lỗi lưu thay đổi: " + e.message);
+        }
+    }
+}
+
+window.confirmDeleteChannel = async function () {
+    try {
+        await Api.delete(`/api/channels/${state.editingChannelId}`);
+        closeModal('channelSettingsModal');
+        loadCategoriesAndChannels(state.currentServerId);
+    } catch (e) {
+        alert("Lỗi xóa kênh: " + e.message);
+    }
+}

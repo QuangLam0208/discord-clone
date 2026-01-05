@@ -8,6 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
+import java.util.Map;
 
 public interface DirectMessageService {
 
@@ -19,11 +20,13 @@ public interface DirectMessageService {
 
     DirectMessageResponse editMessage(String messageId, Long userId, EditMessageRequest request);
 
-    void deleteMessage(String messageId, Long userId);
+    DirectMessageResponse deleteMessage(String messageId, Long userId);
 
     void addReaction(String messageId, Long userId, String emoji);
 
     void removeReaction(String messageId, Long userId);
 
     ConversationResponse getOrCreateConversation(Long senderId, Long receiverId);
+
+    List<Map<String, Object>> getConversationList(Long userId);
 }

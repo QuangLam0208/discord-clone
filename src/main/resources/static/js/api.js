@@ -1,30 +1,47 @@
-
+// Simple API wrapper: tự động kèm JWT cookie (credentials: 'include')
+// và header Authorization: Bearer {accessToken} nếu có.
+// Xử lý 401: chuyển về /login. Trả dữ liệu JSON (nếu có) cho các phương thức tiện ích.
 
 const Api = (function () {
-
     function getToken() {
         return localStorage.getItem('accessToken');
     }
 
-    // Hàm fetch wrapper chung (Thấy comment này của t thì rep t trên zalo hehe!)
-    async function request(endpoint, options = {}) {
-        // Đảm bảo endpoint bắt đầu đúng chuẩn
-        const headers = { ...options.headers };
+    function buildHeaders(customHeaders, hasBody) {
+        const headers = { ...(customHeaders || {}) };
         const token = getToken();
-
-        // Tự động gắn Bearer Token nếu có
-        if (token) {
+        if (token && !headers['Authorization']) {
             headers['Authorization'] = `Bearer ${token}`;
         }
+        if (hasBody && !headers['Content-Type']) {
+            headers['Content-Type'] = 'application/json';
+        }
+        return headers;
+    }
+
+    async function safeJson(response) {
+        try {
+            return await response.json();
+        } catch {
+            return null;
+        }
+    }
+
+    async function request(endpoint, options = {}) {
+        const hasBody = options.body !== undefined && options.body !== null;
+        const headers = buildHeaders(options.headers, hasBody);
 
         const config = {
-            ...options,
-            headers: headers
-        }
+            method: options.method || 'GET',
+            headers,
+            body: options.body,
+            credentials: 'include', // QUAN TRỌNG: gửi cookie jwt httpOnly
+        };
 
         try {
             const response = await fetch(endpoint, config);
 
+            // Hết phiên hoặc token không hợp lệ
             if (response.status === 401) {
                 console.warn('Hết phiên đăng nhập hoặc token không hợp lệ');
                 localStorage.removeItem('accessToken');
@@ -34,104 +51,75 @@ const Api = (function () {
             }
 
             return response;
-        }
-        catch (error) {
+        } catch (error) {
             console.error('Network/API error: ', error);
             throw error;
         }
-    };
+    }
 
-    // Get JSON
     async function getJSON(endpoint) {
-        const response = await request(endpoint, { method: 'GET' });
+        const r = await request(endpoint, { method: 'GET' });
+        if (!r) return null;
+        if (!r.ok) return null;
+        return await safeJson(r);
+    }
 
-        if (!response) return null;
-        if (!response.ok) {
-            console.error(`GET ${endpoint} failed:`, response.status);
-            return null;
-        }
-
-        return await response.json();
-    };
-
-    // Post JSON
     async function postJSON(endpoint, body) {
-        const response = await request(endpoint, {
+        const r = await request(endpoint, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(body)
-        })
-
-        if (!response) return null;
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            throw new Error(data.message || data.error || 'Lỗi khi gọi API POST');
-        }
-        return data;
-    };
-
-    // Post Multipart
-    async function postMultipart(endpoint, formData) {
-        // Lưu ý: Không set Content-Type header thủ công, để browser tự set boundary
-        const response = await request(endpoint, {
-            method: 'POST',
-            body: formData
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
         });
-
-        if (!response) return null;
-
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            throw new Error(data.message || 'Lỗi upload file');
-        }
+        if (!r) return null;
+        const data = await safeJson(r) ?? {};
+        if (!r.ok) throw new Error(data.message || data.error || 'Lỗi khi gọi API POST');
         return data;
     }
 
-    // Delete (Cho chức năng xóa Server/Channel)
-    async function deleteObj(endpoint) {
-        const response = await request(endpoint, { method: 'DELETE' });
-        if (!response) return false;
+    async function postMultipart(endpoint, formData) {
+        const r = await request(endpoint, { method: 'POST', body: formData });
+        if (!r) return null;
+        const data = await safeJson(r) ?? {};
+        if (!r.ok) throw new Error(data.message || 'Lỗi upload file');
+        return data;
+    }
 
-        if (!response.ok) {
-            const data = await response.json().catch(() => ({}));
+    async function deleteObj(endpoint) {
+        const r = await request(endpoint, { method: 'DELETE' });
+        if (!r) return false;
+        if (!r.ok) {
+            const data = await safeJson(r) ?? {};
             console.error('Delete failed:', data);
             return false;
         }
+        // 200/204 đều coi là thành công
         return true;
     }
 
-    // Put JSON
     async function putJSON(endpoint, body) {
-        const response = await request(endpoint, {
+        const r = await request(endpoint, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
         });
-
-        if (!response) return null;
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) {
-            throw new Error(data.message || 'Lỗi khi gọi API PUT');
-        }
+        if (!r) return null;
+        const data = await safeJson(r) ?? {};
+        if (!r.ok) throw new Error(data.message || 'Lỗi khi gọi API PUT');
         return data;
     }
 
-    // Patch JSON
     async function patchJSON(endpoint, body) {
-        const response = await request(endpoint, {
+        const r = await request(endpoint, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
+            body: JSON.stringify(body),
         });
-        if (!response) return null;
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.message || 'Lỗi khi gọi API PATCH');
+        if (!r) return null;
+        const data = await safeJson(r) ?? {};
+        if (!r.ok) throw new Error(data.message || 'Lỗi khi gọi API PATCH');
         return data;
     }
 
-    // Public các hàm ra ngoài
     return {
         get: getJSON,
         post: postJSON,
@@ -139,9 +127,8 @@ const Api = (function () {
         patch: patchJSON,
         upload: postMultipart,
         delete: deleteObj,
-        fetch: request
-    }
+        fetch: request,
+        getToken,
+    };
 })();
-
-// Gán vào window để dùng toàn cục
 window.Api = Api;

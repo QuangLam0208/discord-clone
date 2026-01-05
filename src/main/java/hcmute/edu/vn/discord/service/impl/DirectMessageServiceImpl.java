@@ -4,10 +4,14 @@ import hcmute.edu.vn.discord.dto.request.DirectMessageRequest;
 import hcmute.edu.vn.discord.dto.request.EditMessageRequest;
 import hcmute.edu.vn.discord.dto.response.ConversationResponse;
 import hcmute.edu.vn.discord.dto.response.DirectMessageResponse;
+import hcmute.edu.vn.discord.entity.enums.FriendStatus;
+import hcmute.edu.vn.discord.entity.jpa.Friend;
+import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.entity.mongo.DirectMessage;
 import hcmute.edu.vn.discord.entity.mongo.Conversation;
 import hcmute.edu.vn.discord.repository.ConversationRepository;
 import hcmute.edu.vn.discord.repository.DirectMessageRepository;
+import hcmute.edu.vn.discord.repository.FriendRepository;
 import hcmute.edu.vn.discord.repository.UserRepository;
 import hcmute.edu.vn.discord.service.DirectMessageService;
 import jakarta.persistence.EntityNotFoundException;
@@ -18,10 +22,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,22 +35,46 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     private final ConversationRepository conversationRepo;
     private final DirectMessageRepository messageRepo;
     private final UserRepository userRepo;
+    private final FriendRepository friendRepository;
 
     @Override
     @Transactional
     public DirectMessageResponse sendMessage(Long senderId, DirectMessageRequest request) {
-        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
-            throw new IllegalArgumentException("Message content cannot be empty");
+        boolean hasContent = request.getContent() != null && !request.getContent().trim().isEmpty();
+        boolean hasAttachment = request.getAttachments() != null && !request.getAttachments().isEmpty();
+
+        if (!hasContent && !hasAttachment) {
+            throw new IllegalArgumentException("Tin nhắn phải có nội dung hoặc tệp đính kèm");
+        }
+
+        if (hasContent && request.getContent().length() > 2000) {
+            throw new IllegalArgumentException("Nội dung quá dài (tối đa 2000 ký tự)");
         }
 
         if (!userRepo.existsById(senderId) || !userRepo.existsById(request.getReceiverId())) {
-            throw new EntityNotFoundException("User not found");
+            throw new EntityNotFoundException("Không tìm thấy người dùng");
         }
 
         if (senderId.equals(request.getReceiverId())) {
-            throw new IllegalArgumentException("Cannot message yourself");
+            throw new IllegalArgumentException("Không thể tự nhắn tin cho chính mình");
         }
 
+        User sender = userRepo.findById(senderId).get();
+        User receiver = userRepo.findById(request.getReceiverId()).get();
+
+        var friendRel = friendRepository.findByRequesterAndReceiverOrRequesterAndReceiver(sender, receiver, receiver, sender);
+
+        if (friendRel.isPresent()) {
+            Friend f = friendRel.get();
+            if (f.getStatus() == FriendStatus.BLOCKED) {
+                boolean blockedBySender = f.getRequester().getId().equals(senderId);
+                if (blockedBySender) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Bạn đang chặn người dùng này. Bỏ chặn để gửi tin nhắn.");
+                } else {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Không thể gửi tin nhắn. Bạn đã bị người dùng này chặn.");
+                }
+            }
+        }
         Conversation conversation = findOrCreateConversation(senderId, request.getReceiverId());
 
         DirectMessage message = messageRepo.save(
@@ -54,12 +83,18 @@ public class DirectMessageServiceImpl implements DirectMessageService {
                         .senderId(senderId)
                         .receiverId(request.getReceiverId())
                         .content(request.getContent())
+                        .attachments(request.getAttachments() != null ? request.getAttachments() : new ArrayList<>())
+                        .replyToId(request.getReplyToId())
+                        .isRead(false)
                         .deleted(false)
                         .edited(false)
                         .reactions(new HashMap<>())
                         .createdAt(new Date())
                         .updatedAt(new Date())
                         .build());
+
+        conversation.setUpdatedAt(new Date());
+        conversationRepo.save(conversation);
 
         return toResponse(message);
     }
@@ -68,7 +103,6 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     public Page<DirectMessageResponse> getMessages(String conversationId, Long userId, Pageable pageable) {
         Conversation conversation = conversationRepo.findById(conversationId)
                 .orElseThrow(() -> new EntityNotFoundException("Conversation not found"));
-
         if (!conversation.getUser1Id().equals(userId) && !conversation.getUser2Id().equals(userId)) {
             throw new AccessDeniedException("Access denied");
         }
@@ -76,122 +110,159 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         Page<DirectMessage> messages = messageRepo
                 .findByConversationIdAndDeletedFalseOrderByCreatedAtDesc(conversationId, pageable);
 
+        // Xử lý "Đã đọc"
+        List<DirectMessage> unreadMessages = messages.getContent().stream()
+                .filter(m -> m.getReceiverId().equals(userId) && !m.isRead())
+                .collect(Collectors.toList());
+
+        if (!unreadMessages.isEmpty()) {
+            unreadMessages.forEach(m -> m.setRead(true));
+            messageRepo.saveAll(unreadMessages);
+        }
+
         return messages.map(this::toResponse);
     }
 
-    // Updated the getMessages method to return the first 50 messages by default.
     @Override
     public List<DirectMessageResponse> getMessages(String conversationId, Long userId) {
         return getMessages(conversationId, userId, PageRequest.of(0, 50)).getContent();
     }
 
-    // Implemented the editMessage and deleteMessage methods.
     @Override
     @Transactional
     public DirectMessageResponse editMessage(String messageId, Long userId, EditMessageRequest request) {
         DirectMessage message = messageRepo.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("Message not found"));
-
-        // Check ownership
         if (!message.getSenderId().equals(userId)) {
             throw new AccessDeniedException("Not your message");
         }
-
-        // Check if deleted
         if (message.isDeleted()) {
             throw new IllegalStateException("Cannot edit deleted message");
         }
-
-        // Check time limit (48 hours)
         long hoursSinceCreation = (new Date().getTime() - message.getCreatedAt().getTime()) / (1000 * 60 * 60);
         if (hoursSinceCreation > 48) {
             throw new IllegalStateException("Edit time limit exceeded (48 hours)");
         }
-
-        // Validate new content (must not be null or blank)
         if (request.getContent() == null || request.getContent().trim().isEmpty()) {
             throw new IllegalArgumentException("Message content cannot be empty");
         }
         message.setContent(request.getContent());
         message.setEdited(true);
         message.setUpdatedAt(new Date());
-
         return toResponse(messageRepo.save(message));
     }
 
     @Override
     @Transactional
-    public void deleteMessage(String messageId, Long userId) {
+    public DirectMessageResponse deleteMessage(String messageId, Long userId) {
         DirectMessage message = messageRepo.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("Message not found"));
-
         if (!message.getSenderId().equals(userId)) {
             throw new AccessDeniedException("Not your message");
         }
+        if (message.isDeleted()) return toResponse(message);
 
-        if (message.isDeleted()) {
-            return; // Idempotent
-        }
-
-        // Soft delete: mark as deleted and clear sensitive data
         message.setDeleted(true);
-        message.setContent("[Message deleted]"); // Clear content for privacy
-        message.setReactions(new HashMap<>()); // Clear reactions
+        message.setContent("");
+        message.setAttachments(new ArrayList<>());
+        message.setReactions(new HashMap<>());
         message.setUpdatedAt(new Date());
-        messageRepo.save(message);
+
+        DirectMessage saved = messageRepo.save(message);
+        return toResponse(saved);
     }
 
-    // Added @Transactional annotation to ensure database consistency.
+    // G. Thả cảm xúc
     @Override
     @Transactional
     public void addReaction(String messageId, Long userId, String emoji) {
         DirectMessage message = messageRepo.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("Message not found"));
-
         Conversation conversation = conversationRepo.findById(message.getConversationId())
                 .orElseThrow(() -> new EntityNotFoundException("Conversation not found"));
-
-        // Check if the user is part of the conversation
         if (!conversation.getUser1Id().equals(userId) && !conversation.getUser2Id().equals(userId)) {
             throw new AccessDeniedException("User does not have permission to react to this message");
         }
 
-        message.getReactions().put(userId, emoji);
+        Map<String, Set<Long>> reactions = message.getReactions();
+        if (reactions == null) reactions = new HashMap<>();
+
+        Set<Long> users = reactions.computeIfAbsent(emoji, k -> new HashSet<>());
+        users.add(userId);
+
+        message.setReactions(reactions);
         message.setUpdatedAt(new Date());
         messageRepo.save(message);
     }
 
-    // Fixed security issue in removeReaction() by adding access control checks and
-    // optimizing database queries.
     @Override
     @Transactional
     public void removeReaction(String messageId, Long userId) {
         DirectMessage message = messageRepo.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("Message not found"));
-
-        Conversation conversation = conversationRepo.findById(message.getConversationId())
-                .orElseThrow(() -> new EntityNotFoundException("Conversation not found"));
-
-        // Check if the user is part of the conversation
-        if (!conversation.getUser1Id().equals(userId) && !conversation.getUser2Id().equals(userId)) {
-            throw new AccessDeniedException("User does not have permission to remove reactions from this message");
-        }
-
-        // Check if the reaction exists before updating the database
-        if (message.getReactions().containsKey(userId)) {
-            message.getReactions().remove(userId);
+        Map<String, Set<Long>> reactions = message.getReactions();
+        if (reactions != null) {
+            for (Set<Long> users : reactions.values()) {
+                users.remove(userId);
+            }
+            reactions.entrySet().removeIf(entry -> entry.getValue().isEmpty());
             message.setUpdatedAt(new Date());
             messageRepo.save(message);
         }
     }
 
+    // --- Lấy danh sách hội thoại ---
+    @Override
+    public List<Map<String, Object>> getConversationList(Long userId) {
+        List<Conversation> conversations = conversationRepo.findByUser1IdOrUser2Id(userId, userId);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Conversation c : conversations) {
+            Long otherUserId = c.getUser1Id().equals(userId) ? c.getUser2Id() : c.getUser1Id();
+            Optional<User> otherUserOpt = userRepo.findById(otherUserId);
+            if (otherUserOpt.isPresent()) {
+                User u = otherUserOpt.get();
+                Map<String, Object> map = new HashMap<>();
+                map.put("conversationId", c.getId());
+                map.put("friendUserId", u.getId());
+                String actualDisplayName = u.getDisplayName();
+                if (actualDisplayName == null || actualDisplayName.trim().isEmpty()) {
+                    actualDisplayName = u.getUsername();
+                }
+                map.put("displayName", actualDisplayName);
+                map.put("friendUsername", u.getUsername());
+                map.put("avatarUrl", u.getAvatarUrl());
+                map.put("updatedAt", c.getUpdatedAt());
+                result.add(map);
+            }
+        }
+        result.sort((a, b) -> ((Date)b.get("updatedAt")).compareTo((Date)a.get("updatedAt")));
+        return result;
+    }
+
     private DirectMessageResponse toResponse(DirectMessage m) {
+        DirectMessageResponse replyRes = null;
+        if (m.getReplyToId() != null) {
+            Optional<DirectMessage> origin = messageRepo.findById(m.getReplyToId());
+            if(origin.isPresent()) {
+                replyRes = DirectMessageResponse.builder()
+                        .id(origin.get().getId())
+                        .content(origin.get().isDeleted() ? "Tin nhắn đã xóa" : origin.get().getContent())
+                        .senderId(origin.get().getSenderId())
+                        .attachments(origin.get().getAttachments())
+                        .build();
+            }
+        }
+
         return DirectMessageResponse.builder()
                 .id(m.getId())
                 .conversationId(m.getConversationId())
                 .senderId(m.getSenderId())
                 .receiverId(m.getReceiverId())
-                .content(m.getContent())
+                .content(m.isDeleted() ? "" : m.getContent())
+                .attachments(m.getAttachments())
+                .replyToId(m.getReplyToId())
+                .replyToMessage(replyRes)
+                .isRead(m.isRead())
                 .createdAt(m.getCreatedAt())
                 .edited(m.isEdited())
                 .deleted(m.isDeleted())
@@ -201,8 +272,7 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     }
 
     @Override
-    public ConversationResponse getOrCreateConversation(Long senderId,
-                                                        Long receiverId) {
+    public ConversationResponse getOrCreateConversation(Long senderId, Long receiverId) {
         Conversation conversation = findOrCreateConversation(senderId, receiverId);
         return new ConversationResponse(
                 conversation.getId(),
@@ -214,7 +284,6 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     private Conversation findOrCreateConversation(Long u1, Long u2) {
         Long user1 = Math.min(u1, u2);
         Long user2 = Math.max(u1, u2);
-
         return conversationRepo
                 .findByUser1IdAndUser2Id(user1, user2)
                 .orElseGet(() -> conversationRepo.save(

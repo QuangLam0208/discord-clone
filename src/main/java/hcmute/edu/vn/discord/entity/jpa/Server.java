@@ -46,5 +46,10 @@ public class Server {
     @OneToMany(mappedBy = "server", cascade = CascadeType.ALL, orphanRemoval = true)
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
+    private Set<Category> categories = new java.util.HashSet<>();
+
+    @OneToMany(mappedBy = "server", cascade = CascadeType.ALL, orphanRemoval = true)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
     private Set<ServerRole> roles = new HashSet<>();
 }

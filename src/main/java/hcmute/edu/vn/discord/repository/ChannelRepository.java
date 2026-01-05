@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+import org.springframework.data.jpa.repository.Modifying;
+
+import jakarta.transaction.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,4 +24,24 @@ public interface ChannelRepository extends JpaRepository<Channel, Long> {
     Optional<Long> findServerIdByChannelId(Long channelId);
 
     List<Channel> findByServerIdAndType(Long serverId, ChannelType type);
+
+    // Đếm channel theo server để map DTO không đụng LAZY
+    int countByServerId(Long serverId);
+
+    // Các hàm phục vụ xóa server có category
+    @Modifying
+    @Transactional
+    @Query("update Channel c set c.category = null where c.server.id = :serverId")
+    int unsetCategoryByServerId(Long serverId);
+
+    @Modifying
+    @Transactional
+    @Query("delete from Channel c where c.server.id = :serverId")
+    int deleteByServerId(Long serverId);
+
+    @EntityGraph(attributePaths = {"server", "allowedMembers", "allowedRoles"})
+    Optional<Channel> findWithAccessListsById(Long id);
+
+    List<Channel> findByServerId(Long serverId);
+    List<Channel> findByServerIdAndCategoryIsNullOrderByNameAsc(Long serverId);
 }

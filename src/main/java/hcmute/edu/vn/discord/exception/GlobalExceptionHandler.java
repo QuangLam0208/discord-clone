@@ -25,13 +25,15 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.NoHandlerFoundException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.validation.FieldError;
+import org.springframework.validation.BindException;
+import org.springframework.web.multipart.MultipartException;
+import org.springframework.dao.DuplicateKeyException;
 
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
@@ -144,6 +146,20 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.BAD_REQUEST, msg, request);
     }
 
+    @ExceptionHandler(BindException.class)
+    public ResponseEntity<ErrorResponse> handleBind(BindException ex, HttpServletRequest request) {
+        String msg = ex.getBindingResult().getAllErrors().stream()
+                .map(err -> {
+                    if (err instanceof FieldError fe) {
+                        return fe.getField() + ": " + fe.getDefaultMessage();
+                    }
+                    return err.getObjectName() + ": " + err.getDefaultMessage();
+                })
+                .collect(Collectors.joining("; "));
+        if (msg.isBlank()) msg = "Dữ liệu không hợp lệ";
+        return buildError(HttpStatus.BAD_REQUEST, msg, request);
+    }
+
     // ===== 401 UNAUTHORIZED =====
 
     @ExceptionHandler(BadCredentialsException.class)
@@ -238,7 +254,7 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.NOT_ACCEPTABLE, "Định dạng phản hồi không được chấp nhận", request);
     }
 
-    // ===== 409 CONFLICT =====
+    // ===== 409 CONFLICT (MongoDB) =====
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleConflict(DataIntegrityViolationException ex,
@@ -249,16 +265,21 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.CONFLICT, msg, request);
     }
 
+    @ExceptionHandler(DuplicateKeyException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateKey(DuplicateKeyException ex,
+                                                            HttpServletRequest request) {
+        String base = "Dữ liệu bị trùng (Duplicate key)";
+        String cause = rootMessage(ex);
+        String msg = base + (cause != null && !cause.isBlank() ? (": " + cause) : "");
+        return buildError(HttpStatus.CONFLICT, msg, request);
+    }
+
     // ===== 413 PAYLOAD TOO LARGE =====
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    @ResponseStatus(HttpStatus.PAYLOAD_TOO_LARGE)
-    public ErrorResponse handleMaxSize(MaxUploadSizeExceededException ex) {
-        return new ErrorResponse(LocalDateTime.now(),
-                HttpStatus.PAYLOAD_TOO_LARGE.value(),
-                HttpStatus.PAYLOAD_TOO_LARGE.getReasonPhrase(),
-                "Kích thước file vượt quá giới hạn cấu hình",
-                "/api/upload");
+    public ResponseEntity<ErrorResponse> handleMaxSize(MaxUploadSizeExceededException ex,
+                                                       HttpServletRequest request) {
+        return buildError(HttpStatus.PAYLOAD_TOO_LARGE, "Kích thước file vượt quá giới hạn cấu hình", request);
     }
 
     // ===== 415 UNSUPPORTED MEDIA TYPE =====
@@ -268,6 +289,12 @@ public class GlobalExceptionHandler {
             HttpServletRequest request) {
         String supported = ex.getSupportedMediaTypes().toString();
         String msg = "Content-Type không được hỗ trợ" + (supported.isEmpty() ? "" : ". Hỗ trợ: " + supported);
+        return buildError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, msg, request);
+    }
+
+    @ExceptionHandler(MultipartException.class)
+    public ResponseEntity<ErrorResponse> handleMultipart(MultipartException ex, HttpServletRequest request) {
+        String msg = "Lỗi xử lý multipart: " + (rootMessage(ex) != null ? rootMessage(ex) : "Không hợp lệ");
         return buildError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, msg, request);
     }
 
