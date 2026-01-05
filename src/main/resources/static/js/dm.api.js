@@ -29,7 +29,6 @@ const DMApi = (() => {
     return res.json();
   }
 
-  // API Lấy danh sách hội thoại
   async function fetchAllConversations() {
     const res = await fetch('/api/direct-messages/conversations', { headers: authHeaders(false), credentials: 'include' });
     handleResponse(res);
@@ -53,15 +52,34 @@ const DMApi = (() => {
     return pageData?.content || [];
   }
 
-  async function sendMessage(receiverId, content) {
+  async function sendMessage(receiverId, content, attachments = [], replyToId = null) {
+    const body = { receiverId, content, attachments, replyToId };
     const res = await fetch('/api/direct-messages', {
       method: 'POST',
       headers: authHeaders(true),
       credentials: 'include',
-      body: JSON.stringify({ receiverId, content })
+      body: JSON.stringify(body)
     });
     handleResponse(res);
     return res.json();
+  }
+
+  async function editMessage(messageId, content) {
+      const res = await fetch(`/api/direct-messages/${messageId}`, {
+          method: 'PUT',
+          headers: authHeaders(true),
+          body: JSON.stringify({ content })
+      });
+      handleResponse(res);
+      return res.json();
+  }
+
+  async function deleteMessage(messageId) {
+      const res = await fetch(`/api/direct-messages/${messageId}`, {
+          method: 'DELETE',
+          headers: authHeaders(false)
+      });
+      if (!res.ok) throw new Error("Delete failed");
   }
 
   async function listInboundRequests() {
@@ -86,7 +104,6 @@ const DMApi = (() => {
       return sendFriendRequestById(u.id);
   }
 
-  // Gửi request bằng ID (dùng cho nút Thêm bạn)
   async function sendFriendRequestById(id) {
       const res = await fetch('/api/friends/requests', {
         method: 'POST',
@@ -122,7 +139,6 @@ const DMApi = (() => {
       handleResponse(res);
   }
 
-  // Unblock
   async function unblockUser(targetUserId) {
       const res = await fetch(`/api/friends/unblock/${targetUserId}`, {
         method: 'POST', headers: authHeaders(true), credentials: 'include'
@@ -130,12 +146,17 @@ const DMApi = (() => {
       handleResponse(res);
   }
 
-  // Unfriend
   async function unfriend(targetUserId) {
       const res = await fetch(`/api/friends/${targetUserId}`, {
         method: 'DELETE', headers: authHeaders(true), credentials: 'include'
       });
       handleResponse(res);
+  }
+
+  async function fetchBlockedUsers() {
+    const res = await fetch('/api/friends/blocked', { headers: authHeaders(false), credentials: 'include' });
+    handleResponse(res);
+    return res.json();
   }
 
   async function reportUser(targetUserId, type = 'SPAM') {
@@ -146,11 +167,11 @@ const DMApi = (() => {
       handleResponse(res);
   }
 
-  async function fetchBlockedUsers() {
-      const res = await fetch('/api/friends/blocked', { headers: authHeaders(false), credentials: 'include' });
+  async function getMe() {
+      const res = await fetch('/api/users/me', { headers: authHeaders(false) });
       handleResponse(res);
       return res.json();
-    }
+  }
 
   return {
     getToken,
@@ -171,6 +192,9 @@ const DMApi = (() => {
     unblockUser,
     unfriend,
     reportUser,
-    fetchBlockedUsers
+    fetchBlockedUsers,
+    editMessage,
+    deleteMessage,
+    getMe
   };
 })();

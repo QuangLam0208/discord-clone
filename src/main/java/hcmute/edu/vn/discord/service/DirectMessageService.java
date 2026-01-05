@@ -20,7 +20,7 @@ public interface DirectMessageService {
 
     DirectMessageResponse editMessage(String messageId, Long userId, EditMessageRequest request);
 
-    void deleteMessage(String messageId, Long userId);
+    DirectMessageResponse deleteMessage(String messageId, Long userId);
 
     void addReaction(String messageId, Long userId, String emoji);
 

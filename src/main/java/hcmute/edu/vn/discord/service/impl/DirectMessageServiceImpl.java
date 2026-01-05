@@ -28,6 +28,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -43,8 +44,15 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     @Override
     @Transactional
     public DirectMessageResponse sendMessage(Long senderId, DirectMessageRequest request) {
-        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
-            throw new IllegalArgumentException("Nội dung tin nhắn không được để trống");
+        boolean hasContent = request.getContent() != null && !request.getContent().trim().isEmpty();
+        boolean hasAttachment = request.getAttachments() != null && !request.getAttachments().isEmpty();
+
+        if (!hasContent && !hasAttachment) {
+            throw new IllegalArgumentException("Tin nhắn phải có nội dung hoặc tệp đính kèm");
+        }
+
+        if (hasContent && request.getContent().length() > 2000) {
+            throw new IllegalArgumentException("Nội dung quá dài (tối đa 2000 ký tự)");
         }
 
         if (!userRepo.existsById(senderId) || !userRepo.existsById(request.getReceiverId())) {
@@ -78,12 +86,18 @@ public class DirectMessageServiceImpl implements DirectMessageService {
                         .senderId(senderId)
                         .receiverId(request.getReceiverId())
                         .content(request.getContent())
+                        .attachments(request.getAttachments() != null ? request.getAttachments() : new ArrayList<>())
+                        .replyToId(request.getReplyToId())
+                        .isRead(false)
                         .deleted(false)
                         .edited(false)
                         .reactions(new HashMap<>())
                         .createdAt(new Date())
                         .updatedAt(new Date())
                         .build());
+
+        conversation.setUpdatedAt(new Date());
+        conversationRepo.save(conversation);
 
         try {
             AdminDirectMessageItemResponse adminDto = convertToAdminDto(message, sender, receiver, conversation);
@@ -104,6 +118,17 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         }
         Page<DirectMessage> messages = messageRepo
                 .findByConversationIdAndDeletedFalseOrderByCreatedAtDesc(conversationId, pageable);
+
+        // Xử lý "Đã đọc"
+        List<DirectMessage> unreadMessages = messages.getContent().stream()
+                .filter(m -> m.getReceiverId().equals(userId) && !m.isRead())
+                .collect(Collectors.toList());
+
+        if (!unreadMessages.isEmpty()) {
+            unreadMessages.forEach(m -> m.setRead(true));
+            messageRepo.saveAll(unreadMessages);
+        }
+
         return messages.map(this::toResponse);
     }
 
@@ -138,20 +163,25 @@ public class DirectMessageServiceImpl implements DirectMessageService {
 
     @Override
     @Transactional
-    public void deleteMessage(String messageId, Long userId) {
+    public DirectMessageResponse deleteMessage(String messageId, Long userId) {
         DirectMessage message = messageRepo.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("Message not found"));
         if (!message.getSenderId().equals(userId)) {
             throw new AccessDeniedException("Not your message");
         }
-        if (message.isDeleted()) return;
+        if (message.isDeleted()) return toResponse(message);
+
         message.setDeleted(true);
-        message.setContent("[Message deleted]");
+        message.setContent("");
+        message.setAttachments(new ArrayList<>());
         message.setReactions(new HashMap<>());
         message.setUpdatedAt(new Date());
-        messageRepo.save(message);
+
+        DirectMessage saved = messageRepo.save(message);
+        return toResponse(saved);
     }
 
+    // G. Thả cảm xúc
     @Override
     @Transactional
     public void addReaction(String messageId, Long userId, String emoji) {
@@ -162,7 +192,14 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         if (!conversation.getUser1Id().equals(userId) && !conversation.getUser2Id().equals(userId)) {
             throw new AccessDeniedException("User does not have permission to react to this message");
         }
-        message.getReactions().put(userId, emoji);
+
+        Map<String, Set<Long>> reactions = message.getReactions();
+        if (reactions == null) reactions = new HashMap<>();
+
+        Set<Long> users = reactions.computeIfAbsent(emoji, k -> new HashSet<>());
+        users.add(userId);
+
+        message.setReactions(reactions);
         message.setUpdatedAt(new Date());
         messageRepo.save(message);
     }
@@ -172,13 +209,12 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     public void removeReaction(String messageId, Long userId) {
         DirectMessage message = messageRepo.findById(messageId)
                 .orElseThrow(() -> new EntityNotFoundException("Message not found"));
-        Conversation conversation = conversationRepo.findById(message.getConversationId())
-                .orElseThrow(() -> new EntityNotFoundException("Conversation not found"));
-        if (!conversation.getUser1Id().equals(userId) && !conversation.getUser2Id().equals(userId)) {
-            throw new AccessDeniedException("User does not have permission to remove reactions from this message");
-        }
-        if (message.getReactions().containsKey(userId)) {
-            message.getReactions().remove(userId);
+        Map<String, Set<Long>> reactions = message.getReactions();
+        if (reactions != null) {
+            for (Set<Long> users : reactions.values()) {
+                users.remove(userId);
+            }
+            reactions.entrySet().removeIf(entry -> entry.getValue().isEmpty());
             message.setUpdatedAt(new Date());
             messageRepo.save(message);
         }
@@ -213,12 +249,29 @@ public class DirectMessageServiceImpl implements DirectMessageService {
     }
 
     private DirectMessageResponse toResponse(DirectMessage m) {
+        DirectMessageResponse replyRes = null;
+        if (m.getReplyToId() != null) {
+            Optional<DirectMessage> origin = messageRepo.findById(m.getReplyToId());
+            if(origin.isPresent()) {
+                replyRes = DirectMessageResponse.builder()
+                        .id(origin.get().getId())
+                        .content(origin.get().isDeleted() ? "Tin nhắn đã xóa" : origin.get().getContent())
+                        .senderId(origin.get().getSenderId())
+                        .attachments(origin.get().getAttachments())
+                        .build();
+            }
+        }
+
         return DirectMessageResponse.builder()
                 .id(m.getId())
                 .conversationId(m.getConversationId())
                 .senderId(m.getSenderId())
                 .receiverId(m.getReceiverId())
-                .content(m.getContent())
+                .content(m.isDeleted() ? "" : m.getContent())
+                .attachments(m.getAttachments())
+                .replyToId(m.getReplyToId())
+                .replyToMessage(replyRes)
+                .isRead(m.isRead())
                 .createdAt(m.getCreatedAt())
                 .edited(m.isEdited())
                 .deleted(m.isDeleted())
