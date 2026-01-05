@@ -14,6 +14,8 @@ public interface UserService {
 
     Optional<User> findByUsername(String username);
 
+    Optional<User> findByEmail(String email);
+
     Optional<User> findById(Long id);
 
     boolean existsByEmail(String email);
@@ -21,4 +23,7 @@ public interface UserService {
     UserDetailResponse getUserDetail(Long userId);
 
     User updateProfile(String username, String displayName, String bio, MultipartFile file);
+
+    // Change user password (encoded)
+    void changePassword(Long userId, String newPassword);
 }
