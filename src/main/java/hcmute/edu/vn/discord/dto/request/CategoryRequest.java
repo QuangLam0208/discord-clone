@@ -1,7 +1,6 @@
 package hcmute.edu.vn.discord.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,8 +11,10 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class CategoryRequest {
 
-    // Tạo Category cần serverId, cập nhật chỉ cần name
-    @NotNull(message = "serverId là bắt buộc khi tạo category")
+    // Tạo Category cần serverId (check manual in service if needed), cập nhật không
+    // cần
+    // @NotNull(message = "serverId là bắt buộc khi tạo category") -> Removed to
+    // allow Update without serverId
     private Long serverId;
 
     @NotBlank(message = "Tên category không được để trống")

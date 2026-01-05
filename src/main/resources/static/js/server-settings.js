@@ -35,7 +35,8 @@ window.openServerSettings = async function (serverId) {
         state.editingServerData = {
             name: server.name,
             description: server.description || '',
-            iconUrl: server.iconUrl
+            iconUrl: server.iconUrl,
+            ownerId: server.ownerId
         };
         state.tempServerIcon = null;
 

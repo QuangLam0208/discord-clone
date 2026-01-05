@@ -55,7 +55,8 @@ public class ServerAuth {
     public boolean has(Long serverId, String username, Set<String> codes) {
         Set<String> userPerms = serverMemberRepository.findPermissionCodesByServerIdAndUsername(serverId, username);
         for (String c : userPerms) {
-            if (codes.contains(c)) return true;
+            if (codes.contains(c))
+                return true;
         }
         return false;
     }
@@ -99,7 +100,8 @@ public class ServerAuth {
         }
 
         boolean isAdmin = isServerAdmin(serverId, username);
-        if (isAdmin) return true;
+        if (isAdmin)
+            return true;
 
         boolean userAllowed = channel.getAllowedMembers() != null && channel.getAllowedMembers().contains(member);
         boolean roleAllowed = channel.getAllowedRoles() != null && member.getRoles().stream()
@@ -188,8 +190,10 @@ public class ServerAuth {
     public boolean canCreateInvite(Long serverId, String username) {
         if (!isMember(serverId, username))
             return false;
+        if (isOwner(serverId, username))
+            return true;
         if (isServerFrozen(serverId)) {
-            return isOwner(serverId, username) || isServerAdmin(serverId, username);
+            return isServerAdmin(serverId, username);
         }
         return has(serverId, username, Set.of(EPermission.CREATE_INVITE.getCode(), EPermission.ADMIN.getCode()));
     }
@@ -209,7 +213,14 @@ public class ServerAuth {
         if (isServerFrozen(serverId)) {
             return isOwner(serverId, username) || isServerAdmin(serverId, username);
         }
-        return has(serverId, username, Set.of(EPermission.MENTION_EVERYONE_HERE_ALLROLES.getCode(), EPermission.ADMIN.getCode()));
+        return has(serverId, username,
+                Set.of(EPermission.MENTION_EVERYONE_HERE_ALLROLES.getCode(), EPermission.ADMIN.getCode()));
+    }
+
+    public Long serverIdOfCategory(Long categoryId) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new EntityNotFoundException("Category not found"));
+        return category.getServer().getId();
     }
 
     public Long serverIdOfChannel(Long channelId) {
@@ -235,20 +246,26 @@ public class ServerAuth {
 
     // Quản lý kênh/role/member giữ nguyên logic FREEZE: admin/owner mới được
     public boolean canManageChannels(Long serverId, String username) {
-        if (isServerFrozen(serverId) && !isServerAdmin(serverId, username) && !isOwner(serverId, username)) return false;
-        if (isOwner(serverId, username)) return true;
+        if (isServerFrozen(serverId) && !isServerAdmin(serverId, username) && !isOwner(serverId, username))
+            return false;
+        if (isOwner(serverId, username))
+            return true;
         return has(serverId, username, Set.of(EPermission.ADMIN.getCode(), EPermission.MANAGE_CHANNELS.getCode()));
     }
 
     public boolean canManageRole(Long serverId, String username) {
-        if (isServerFrozen(serverId) && !isServerAdmin(serverId, username) && !isOwner(serverId, username)) return false;
-        if (isOwner(serverId, username)) return true;
+        if (isServerFrozen(serverId) && !isServerAdmin(serverId, username) && !isOwner(serverId, username))
+            return false;
+        if (isOwner(serverId, username))
+            return true;
         return has(serverId, username, Set.of(EPermission.ADMIN.getCode(), EPermission.MANAGE_ROLES.getCode()));
     }
 
     public boolean canManageMembers(Long serverId, String username) {
-        if (isServerFrozen(serverId) && !isServerAdmin(serverId, username) && !isOwner(serverId, username)) return false;
-        if (isOwner(serverId, username)) return true;
+        if (isServerFrozen(serverId) && !isServerAdmin(serverId, username) && !isOwner(serverId, username))
+            return false;
+        if (isOwner(serverId, username))
+            return true;
         return has(serverId, username, Set.of(
                 EPermission.ADMIN.getCode(),
                 EPermission.MANAGE_SERVER.getCode(),

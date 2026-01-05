@@ -29,7 +29,10 @@ const Api = (function () {
 
     async function request(endpoint, options = {}) {
         const hasBody = options.body !== undefined && options.body !== null;
-        const headers = buildHeaders(options.headers, hasBody);
+        const isFormData = (typeof FormData !== 'undefined') && (options.body instanceof FormData);
+
+        // Chỉ thêm application/json nếu có body VÀ KHÔNG PHẢI là FormData
+        const headers = buildHeaders(options.headers, hasBody && !isFormData);
 
         const config = {
             method: options.method || 'GET',
@@ -90,7 +93,7 @@ const Api = (function () {
         if (!r.ok) {
             const data = await safeJson(r) ?? {};
             console.error('Delete failed:', data);
-            return false;
+            throw new Error(data.message || data.error || 'Lỗi khi xóa');
         }
         // 200/204 đều coi là thành công
         return true;

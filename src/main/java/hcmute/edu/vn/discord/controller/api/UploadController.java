@@ -33,7 +33,7 @@ public class UploadController {
     private static final long MAX_FILE_SIZE = 10 * 1024 * 1024;
 
     private static final String TYPE_JPEG = "image/jpeg";
-    private static final String TYPE_PNG  = "image/png";
+    private static final String TYPE_PNG = "image/png";
     private static final String TYPE_WEBP = "image/webp";
 
     private static final Set<String> ALLOWED_TYPES = Set.of(TYPE_JPEG, TYPE_PNG, TYPE_WEBP);
@@ -48,11 +48,12 @@ public class UploadController {
 
     @PostMapping
     @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> uploadFile( @RequestParam("file") MultipartFile file,
-                                         Authentication authentication) {
+    public ResponseEntity<?> uploadFile(@RequestParam("file") MultipartFile file,
+            Authentication authentication) {
         try {
             String username = authentication != null ? authentication.getName() : "anonymous";
-            log.info("Yêu cầu upload từ user={} fileName={} size={}", username, file.getOriginalFilename(), file.getSize());
+            log.info("Yêu cầu upload từ user={} fileName={} size={}", username, file.getOriginalFilename(),
+                    file.getSize());
 
             if (file.isEmpty()) {
                 return buildErrorResponse(HttpStatus.BAD_REQUEST, "File rỗng");
@@ -70,13 +71,27 @@ public class UploadController {
             String detected = fileValidationService.detectContentType(fileBytes);
 
             // Chấp nhận nếu detected ∈ whitelist (ưu tiên security)
-            if (!ALLOWED_TYPES.contains(detected)) {
-                return buildErrorResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-                        "Chỉ cho phép JPEG/PNG/WebP");
+            boolean isAllowed = ALLOWED_TYPES.contains(detected);
+
+            // Fallback: Nếu Tika không nhận diện được (octet-stream/text), tin tưởng
+            // declared type
+            if (!isAllowed) {
+                if (ALLOWED_TYPES.contains(declared) &&
+                        ("application/octet-stream".equals(detected) || "text/plain".equals(detected))) {
+                    log.warn("Tika failed (detected={}), falling back to declared={}", detected, declared);
+                    detected = declared; // Trust declared
+                    isAllowed = true;
+                }
             }
 
-            // Nếu declared khác detected, vẫn cho qua nhưng log cảnh báo
-            if (declared == null || !declared.equals(detected)) {
+            if (!isAllowed) {
+                return buildErrorResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
+                        "Chỉ cho phép JPEG/PNG/WebP (Detected: " + detected + ")");
+            }
+
+            // Nếu declared khác detected (và cả 2 đều hợp lệ), vẫn cho qua nhưng log cảnh
+            // báo
+            if (declared != null && !declared.equals(detected)) {
                 log.warn("Declared content type '{}' không khớp với detected '{}'", declared, detected);
             }
 
@@ -90,14 +105,15 @@ public class UploadController {
             // Xác định phần mở rộng từ loại nội dung
             String extension = switch (detected) {
                 case TYPE_JPEG -> ".jpg";
-                case TYPE_PNG  -> ".png";
+                case TYPE_PNG -> ".png";
                 case TYPE_WEBP -> ".webp";
                 default -> ".bin";
             };
 
             // Tạo đường dẫn thư mục theo ngày
             LocalDate today = LocalDate.now();
-            String datePath = String.format("%d/%02d/%02d", today.getYear(), today.getMonthValue(), today.getDayOfMonth());
+            String datePath = String.format("%d/%02d/%02d", today.getYear(), today.getMonthValue(),
+                    today.getDayOfMonth());
 
             // Sử dụng ĐƯỜNG DẪN TUYỆT ĐỐI và BÌNH THƯỜNG HÓA
             Path baseUploadPath = Paths.get(uploadDir).toAbsolutePath().normalize();
@@ -152,15 +168,19 @@ public class UploadController {
     }
 
     private String canonicalizeContentType(String contentType) {
-        if (contentType == null) return null;
+        if (contentType == null)
+            return null;
         String ct = contentType.trim().toLowerCase();
-        if (ct.equals("image/jpg")) return TYPE_JPEG;
-        if (ct.equals("image/x-png")) return TYPE_PNG; // một số trình duyệt cũ
+        if (ct.equals("image/jpg"))
+            return TYPE_JPEG;
+        if (ct.equals("image/x-png"))
+            return TYPE_PNG; // một số trình duyệt cũ
         return ct;
     }
 
     private ResponseEntity<ErrorResponse> buildErrorResponse(HttpStatus status, String message) {
-        ErrorResponse error = new ErrorResponse(LocalDateTime.now(), status.value(), status.getReasonPhrase(), message, "/api/upload");
+        ErrorResponse error = new ErrorResponse(LocalDateTime.now(), status.value(), status.getReasonPhrase(), message,
+                "/api/upload");
         return ResponseEntity.status(status).body(error);
     }
 }
