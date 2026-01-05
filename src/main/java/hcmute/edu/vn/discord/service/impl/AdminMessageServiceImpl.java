@@ -233,7 +233,7 @@ public class AdminMessageServiceImpl implements AdminMessageService {
                 .attachments(msg.getAttachments())
                 .reactions(msg.getReactions())
                 .deleted(false)
-                .isEdited(Boolean.TRUE.equals(msg.getIsEdited()))
+                .edited(Boolean.TRUE.equals(msg.getIsEdited()))
                 .build();
     }
 }

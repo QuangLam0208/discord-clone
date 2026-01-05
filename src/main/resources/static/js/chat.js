@@ -114,7 +114,7 @@ function createMessageElement(msg) {
             </div>
             <div class="msg-content" id="msg-content-${msg.id}">
                 ${msg.deleted ? '<em style="color: #72767d;">Tin nhắn đã bị xóa.</em>' : (msg.content || '')}
-                ${(msg.isEdited && !msg.deleted) ? '<span style="font-size: 10px; color: #72767d; margin-left: 4px;">(đã chỉnh sửa)</span>' : ''}
+                ${(msg.edited && !msg.deleted) ? '<span style="font-size: 10px; color: #72767d; margin-left: 4px;">(đã chỉnh sửa)</span>' : ''}
             </div>
             ${attachmentsHtml}
         </div>
