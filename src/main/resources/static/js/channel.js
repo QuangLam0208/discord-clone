@@ -377,14 +377,6 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span>Cài đặt</span><i class="fa-solid fa-gear"></i>
                         </div>
                         <div class="menu-separator"></div>`;
-
-                    // Chỉ chủ server mới được Xóa Server
-                    if (isOwner) {
-                        ctxMenu.innerHTML += `
-                            <div class="menu-item logout" onclick="deleteServer('${serverId}')">
-                                <span>Xóa Server</span><i class="fa-solid fa-trash"></i>
-                            </div>`;
-                    }
                 }
 
                 // 2. CATEGORY MENU
