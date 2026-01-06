@@ -38,10 +38,10 @@ const DMUI = (() => {
       dmSidebarSearch: document.getElementById('dm-sidebar-search'),
       dmSearchResults: document.getElementById('dm-search-results'),
 
-      // Center Search
       dmSearch: document.getElementById('dm-center-search'),
       dmSearchContainer: document.getElementById('dm-search-container'),
       dmAttachmentPreview: document.getElementById('dm-attachment-preview'),
+      dmActiveList: document.getElementById('dm-active-list'),
     };
   }
 
@@ -165,11 +165,17 @@ const DMUI = (() => {
     const color = isUnread ? '#ffffff' : '#96989d';
     const weight = isUnread ? '700' : '500';
 
+    const statusColor = f.online ? '#23a559' : '#747f8d';
+    const statusDot = `<div style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; background:${statusColor}; border-radius:50%; border:3px solid #2f3136;"></div>`;
+
     return `
       <div class="channel-item dm-item" id="dm-item-${f.friendUserId}" data-friend-id="${f.friendUserId}" data-friend-name="${name}">
         <div style="display:flex; align-items:center; gap:12px; flex:1; overflow:hidden;">
-          <div style="width:32px; height:32px; border-radius:50%; background:#3f4147; color:#cfd1d5; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0;">
-            ${avatar}
+          <div style="position:relative; width:32px; height:32px;">
+              <div style="width:100%; height:100%; border-radius:50%; background:#3f4147; color:#cfd1d5; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; overflow:hidden;">
+                ${avatar}
+              </div>
+              ${statusDot}
           </div>
           <div class="dm-name-container" style="display:flex; flex-direction:column; overflow:hidden;">
             <span class="dm-name-text" style="color:${color}; font-weight:${weight}; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; font-size:15px;">
@@ -211,16 +217,66 @@ const DMUI = (() => {
       ? `<img src="${f.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
       : initials;
 
+    const statusColor = f.online ? '#23a559' : '#747f8d';
+    const statusDot = `<div style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; background:${statusColor}; border-radius:50%; border:3px solid #36393f;"></div>`;
+
     return `
       <div class="dm-center-item dm-header-item" data-friend-id="${f.friendUserId}" data-friend-name="${name}" style="display:flex; align-items:center; gap:12px; border-radius:8px;">
-        <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:#5865F2;display:flex;align-items:center;justify-content:center;color:#fff;overflow:hidden;">
-            ${avatar}
+        <div style="position: relative; width: 32px; height: 32px;">
+            <div class="user-avatar" style="width:100%;height:100%;border-radius:50%;background:#5865F2;display:flex;align-items:center;justify-content:center;color:#fff;overflow:hidden;">
+                ${avatar}
+            </div>
+            ${statusDot}
         </div>
         <div style="display:flex; flex-direction:column;">
           <span style="color:#fff;">${name}</span>
-          <small style="color:#b5bac1;">Online</small>
+          <small style="color:#b5bac1;">${f.online ? 'Online' : 'Offline'}</small>
         </div>
       </div>`;
+  }
+
+  function renderActiveNow(friends, onSelectFriendCallback) {
+    const { dmActiveList } = els();
+    if (!dmActiveList) return;
+
+    const onlineFriends = friends.filter(f => f.online);
+
+    if (onlineFriends.length === 0) {
+      dmActiveList.innerHTML = `
+            <div class="empty-active-state">
+                <div class="empty-text-bold">Hiện không có ai đang hoạt động</div>
+            </div>`;
+      return;
+    }
+
+    dmActiveList.innerHTML = onlineFriends.map(f => activeListItem(f)).join('');
+
+    dmActiveList.querySelectorAll('.active-now-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const friendId = Number(item.getAttribute('data-id'));
+        const name = item.getAttribute('data-name');
+        onSelectFriendCallback(friendId, name);
+      });
+    });
+  }
+
+  function activeListItem(f) {
+    const name = f.displayName || f.friendUsername || ('User ' + f.friendUserId);
+    const avatar = f.avatarUrl
+      ? `<img src="${f.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+      : `<div style="width:100%;height:100%;background:#5865F2;color:#fff;display:flex;align-items:center;justify-content:center;">${name.charAt(0)}</div>`;
+
+    return `
+        <div class="active-now-item" data-id="${f.friendUserId}" data-name="${name}" style="display:flex; align-items:center; gap:12px; padding:10px; border-radius:8px; cursor:pointer;" onmouseover="this.style.backgroundColor='#35373c'" onmouseout="this.style.backgroundColor='transparent'">
+            <div style="position:relative; width:32px; height:32px;">
+                <div style="width:100%; height:100%; border-radius:50%; overflow:hidden;">${avatar}</div>
+                <div style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; background:#23a559; border-radius:50%; border:3px solid #2f3136;"></div>
+            </div>
+            <div style="font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                ${name}
+            </div>
+        </div>
+     `;
   }
 
   function isNearBottom() {
@@ -623,7 +679,10 @@ const DMUI = (() => {
   function initFriendsDashboard({ friends, onSelectFriend }) {
     onSelectFriendRef = onSelectFriend;
     setActiveTab('all');
+    onSelectFriendRef = onSelectFriend;
+    setActiveTab('all');
     renderFriendsCenter(friends, onSelectFriend);
+    renderActiveNow(friends, onSelectFriend);
 
     const { dmSearch } = els();
     dmSearch?.addEventListener('input', (e) => {
@@ -684,6 +743,6 @@ const DMUI = (() => {
     els, showDashboard, showConversation, setActiveFriendName, renderFriendsSidebar, updateSidebarItem,
     renderFriendsCenter, renderMessages, appendMessage, replaceTempMessage, markMessageError,
     scrollToBottom, resetActiveItems, highlightFriendsButton, initFriendsDashboard, setActiveTab,
-    renderPending, reloadFriends, removeMessageElement, renderAttachmentPreview
+    renderPending, reloadFriends, removeMessageElement, renderAttachmentPreview, renderActiveNow
   };
 })();

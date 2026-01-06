@@ -629,9 +629,37 @@ const DM = (() => {
             console.log('[Friend Event]', evt);
             const type = evt?.type;
             const data = evt?.data;
+
+            if (type === 'USER_ONLINE' || type === 'USER_OFFLINE') {
+                const userId = evt.userId;
+                const isOnline = (type === 'USER_ONLINE');
+
+                const fIndex = st.friends.findIndex(f => String(f.friendUserId) === String(userId));
+                if (fIndex !== -1) {
+                    st.friends[fIndex].online = isOnline;
+
+                    if (document.getElementById('dm-all-view').style.display !== 'none') {
+                        DMUI.renderFriendsCenter(st.friends, onSelectFriend);
+                    }
+                    DMUI.renderActiveNow(st.friends, onSelectFriend);
+                }
+
+                // 2. Update Sidebar List (Conversations)
+                const cIndex = st.conversations.findIndex(c => String(c.friendUserId) === String(userId));
+                if (cIndex !== -1) {
+                    st.conversations[cIndex].online = isOnline;
+                    DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
+                }
+
+                return;
+            }
+
             st.friends = await DMApi.fetchFriends();
             try { st.blockedUsers = await DMApi.fetchBlockedUsers(); } catch (e) { }
             st.conversations = await DMApi.fetchAllConversations();
+
+            // Sync online status from friends to conversations
+            syncConversationsWithFriends();
 
             // Re-render
             DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
@@ -851,6 +879,7 @@ const DM = (() => {
             if (homeLogo) { const newHomeLogo = homeLogo.cloneNode(true); homeLogo.parentNode.replaceChild(newHomeLogo, homeLogo); newHomeLogo.addEventListener('click', () => { window.switchToDM && window.switchToDM(); goHome(); }); }
             const [convos, friends, blocked] = await Promise.all([DMApi.fetchAllConversations(), DMApi.fetchFriends(), DMApi.fetchBlockedUsers().catch(() => [])]);
             st.conversations = convos; st.friends = friends; st.blockedUsers = blocked;
+            syncConversationsWithFriends();
             DMUI.renderFriendsSidebar(st.conversations, onSelectFriend); DMUI.initFriendsDashboard({ friends: st.friends, onSelectFriend });
             initSearchBar(); goHome(); DMWS.connectWS(onIncomingMessage, onFriendEvent);
 
@@ -865,6 +894,15 @@ const DM = (() => {
 
         } catch (err) { console.error('[DM.init Error]', err); }
     }
+    function syncConversationsWithFriends() {
+        st.conversations.forEach(c => {
+            const f = st.friends.find(fr => String(fr.friendUserId) === String(c.friendUserId));
+            if (f) {
+                c.online = f.online;
+            }
+        });
+    }
+
     function reset() { console.log('DM reset'); }
-    return { init, goHome, retryMessage, reset, handleBlock, handleUnblock, handleUnfriend, handleAddFriend, handleSpam, handleAcceptRequest, handleDeclineRequest, prepareReply, cancelReply, enterEditMode, cancelEdit, finishEdit, toggleMenu, deleteMessageConfirm };
+    return { init, goHome, retryMessage, reset, handleBlock, handleUnblock, handleUnfriend, handleAddFriend, handleSpam, handleAcceptRequest, handleDeclineRequest, prepareReply, cancelReply, enterEditMode, cancelEdit, finishEdit, toggleMenu, deleteMessageConfirm, syncConversationsWithFriends };
 })();

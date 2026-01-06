@@ -8,6 +8,7 @@ import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.repository.FriendRepository;
 import hcmute.edu.vn.discord.repository.UserRepository;
 import hcmute.edu.vn.discord.service.FriendService;
+import hcmute.edu.vn.discord.service.UserPresenceService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -28,6 +29,7 @@ public class FriendServiceImpl implements FriendService {
     private final FriendRepository friendRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final UserPresenceService userPresenceService;
 
     private void sendWsNotification(String username, String type, FriendRequestResponse data) {
         if (username != null) {
@@ -40,7 +42,7 @@ public class FriendServiceImpl implements FriendService {
 
     @Override
     @Transactional
-    public FriendRequestResponse sendRequest(Long senderId, Long recipientId){
+    public FriendRequestResponse sendRequest(Long senderId, Long recipientId) {
         if (senderId.equals(recipientId)) {
             throw new IllegalArgumentException("Không thể gửi lời mời kết bạn cho chính mình");
         }
@@ -99,7 +101,7 @@ public class FriendServiceImpl implements FriendService {
 
     @Transactional
     @Override
-    public FriendRequestResponse acceptRequest(Long requestId, Long currentUserId){
+    public FriendRequestResponse acceptRequest(Long requestId, Long currentUserId) {
         Friend friend = friendRepository.findById(requestId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy yêu cầu kết bạn"));
 
@@ -127,7 +129,7 @@ public class FriendServiceImpl implements FriendService {
 
     @Override
     @Transactional
-    public FriendRequestResponse declineRequest(Long requestId, Long currentUserId){
+    public FriendRequestResponse declineRequest(Long requestId, Long currentUserId) {
         Friend friend = friendRepository.findById(requestId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy yêu cầu kết bạn"));
 
@@ -187,6 +189,7 @@ public class FriendServiceImpl implements FriendService {
                     .displayName(other.getDisplayName())
                     .avatarUrl(other.getAvatarUrl())
                     .since(f.getRespondedAt())
+                    .online(userPresenceService.isUserOnline(other.getId()))
                     .build();
         }).collect(Collectors.toList());
     }
@@ -213,7 +216,8 @@ public class FriendServiceImpl implements FriendService {
         User other = userRepository.findById(friendUserId)
                 .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy người dùng"));
 
-        Friend friend = friendRepository.findByRequesterAndReceiverOrRequesterAndReceiver(current, other, other, current)
+        Friend friend = friendRepository
+                .findByRequesterAndReceiverOrRequesterAndReceiver(current, other, other, current)
                 .orElseThrow(() -> new EntityNotFoundException("Quan hệ bạn bè không tồn tại"));
 
         if (friend.getStatus() != FriendStatus.ACCEPTED) {

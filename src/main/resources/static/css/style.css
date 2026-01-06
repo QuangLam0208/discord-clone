@@ -458,7 +458,7 @@ button:hover {
    position: relative;
 }
 
-.user-avatar::after {
+.user-wrapper .user-avatar::after {
    content: '';
    position: absolute;
    bottom: -2px;
@@ -3389,10 +3389,12 @@ input:checked+.slider:before {
 .btn-discord-danger:hover {
    background-color: #ed4245;
    color: white;
-}/* Popup Separator - Full Width */
+}
+
+/* Popup Separator - Full Width */
 .popup-separator {
-    height: 1px;
-    background-color: #3f4147;
-    margin: 4px -6px;
-    /* Negative margin to span full width over parent padding */
+   height: 1px;
+   background-color: #3f4147;
+   margin: 4px -6px;
+   /* Negative margin to span full width over parent padding */
 }
