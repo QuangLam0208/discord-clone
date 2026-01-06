@@ -12,4 +12,14 @@ public class ViewController {
     public String changeEmail() {
         return "change-email";
     }
+
+    @GetMapping("/forgot-password")
+    public String forgotPassword() {
+        return "forgot-password";
+    }
+
+    @GetMapping("/reset-password")
+    public String resetPassword() {
+        return "reset-password";
+    }
 }

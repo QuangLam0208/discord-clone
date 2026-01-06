@@ -58,6 +58,7 @@ public class SecurityConfig {
                                                 // Cho phép render các trang view (SSR khung) và static assets
                                                 .requestMatchers(
                                                                 "/", "/login", "/register",
+                                                                "/forgot-password", "/reset-password",
                                                                 "/error", "/favicon.ico",
                                                                 "/css/**", "/js/**", "/images/**", "/fonts/**",
                                                                 "/webjars/**",

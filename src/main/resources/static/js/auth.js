@@ -88,7 +88,7 @@ async function register(username, email, password, displayName) {
 }
 
 
-   // SEND OTP
+// SEND OTP
 
 async function sendOtp(email) {
   try {
@@ -111,12 +111,12 @@ async function sendOtp(email) {
 }
 
 
-   // REGISTER WITH OTP
+// REGISTER WITH OTP
 async function registerWithOtp(username, email, password, displayName, otpCode) {
   try {
     const response = await fetch(`${API_AUTH}/register/verify-otp`, {
       method: 'POST',
-      headers: { 'Content-Type':  'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify({ username, email, password, displayName, otpCode })
     });
@@ -135,6 +135,52 @@ async function registerWithOtp(username, email, password, displayName, otpCode) 
     return data;
   } catch (error) {
     console.error('Register with OTP error:', error);
+    throw error;
+  }
+}
+
+/* =======================
+   FORGOT PASSWORD
+======================= */
+async function forgotPassword(email) {
+  try {
+    const response = await fetch(`${API_AUTH}/forgot-password?email=${encodeURIComponent(email)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' }
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Không thể gửi yêu cầu');
+    }
+    return data;
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    throw error;
+  }
+}
+
+async function resetPassword(email, otpCode, newPassword) {
+  try {
+    const response = await fetch(`${API_AUTH}/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      // Backend uses @RequestParam, so form-urlencoded is safer, 
+      // OR query params. Let's use form params for POST.
+      // The Controller uses @RequestParam without @RequestBody, so it expects query params or form data.
+      // Let's stick to query params like the controller signature implies or form-urlencoded.
+      // Controller: @RequestParam String email...
+      // fetch body with URLSearchParams works for @RequestParam
+      body: new URLSearchParams({ email, otpCode, newPassword })
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.message || 'Đặt lại mật khẩu thất bại');
+    }
+    return data;
+  } catch (error) {
+    console.error('Reset password error:', error);
     throw error;
   }
 }
@@ -213,7 +259,7 @@ function initForceLogout() {
     stompClient.connect(headers, function onConnect() {
       wsConnected = true;
       // Subscribe user destination: /user/queue/force-logout (server convertAndSendToUser(..., "/queue/force-logout", ...))
-      const sub = stompClient.subscribe('/user/queue/force-logout', async function(message) {
+      const sub = stompClient.subscribe('/user/queue/force-logout', async function (message) {
         try {
           const payload = JSON.parse(message.body);
           if (payload?.type === 'FORCE_LOGOUT') {
@@ -285,8 +331,11 @@ function showErrorAlert(message, title = 'Có lỗi xảy ra') {
 window.AuthService = {
   login,
   register,
+  register,
   sendOtp,
   registerWithOtp,
+  forgotPassword,
+  resetPassword,
   getCurrentUser,
   logout,
   initForceLogout,
