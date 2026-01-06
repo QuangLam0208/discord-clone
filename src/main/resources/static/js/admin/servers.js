@@ -45,7 +45,7 @@
             renderTransferMemberList(members || []);
         } catch (e) {
             document.getElementById('transferMemberList').innerHTML =
-                `<div class="muted" style="padding:12px;color:#ed4245">Không tải được danh sách: ${escapeHtml(e.message||'Error')}</div>`;
+                `<div class="muted" style="padding:12px;color:#ed4245">Không tải được danh sách: ${escapeHtml(e.message || 'Error')}</div>`;
         }
     }
 
@@ -73,17 +73,17 @@
         <div class="transfer-member-row"
              data-member-id="${m.memberId}"
              data-username="${escapeHtml(username)}"
-             data-display="${escapeHtml(m.displayName||'')}"
+             data-display="${escapeHtml(m.displayName || '')}"
              data-owner="${isOwner ? '1' : '0'}"
              ${disabledAttr}
              style="display:flex;align-items:center;gap:10px;padding:8px;cursor:pointer;border-bottom:1px solid #2b2d31;">
-          <img src="${escapeHtml(m.avatarUrl||'/images/default.png')}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">
+          <img src="${escapeHtml(m.avatarUrl || '/images/default.png')}" style="width:28px;height:28px;border-radius:50%;object-fit:cover;">
           <div style="flex:1;">
             <div style="color:#fff;font-weight:600;display:flex;align-items:center;gap:6px;">
               ${escapeHtml(username)}
               ${ownerChip}
             </div>
-            <div style="color:#b5bac1;font-size:12px;">${escapeHtml(m.displayName||'')}</div>
+            <div style="color:#b5bac1;font-size:12px;">${escapeHtml(m.displayName || '')}</div>
           </div>
           ${adminBadge}
         </div>
@@ -199,7 +199,7 @@
 
     async function updateServerStatus(serverId, status) {
         try {
-            if (status !== 'ACTIVE' && status !== 'FREEZE') return;
+            if (status !== 'ACTIVE' && status !== 'FREEZE' && status !== 'SHADOW') return;
 
             await Api.patch(`/api/admin/servers/${serverId}/status`, { status });
 
@@ -207,6 +207,7 @@
             if (cell) {
                 if (status === 'ACTIVE') cell.innerHTML = '<span class="badge-status active">Active</span>';
                 else if (status === 'FREEZE') cell.innerHTML = '<span class="badge-status freeze">Freeze</span>';
+                else if (status === 'SHADOW') cell.innerHTML = '<span class="badge-status shadow" style="background:#555;color:#bbb">Shadow</span>';
             }
 
             const menu = document.getElementById(`status-menu-${serverId}`);

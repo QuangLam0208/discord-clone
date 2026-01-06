@@ -109,8 +109,9 @@ public class AdminServerController {
 
         // Chỉ cho phép ACTIVE hoặc FREEZE theo yêu cầu mới
         ServerStatus newStatus = req.getStatus();
-        if (newStatus != ServerStatus.ACTIVE && newStatus != ServerStatus.FREEZE) {
-            throw new IllegalArgumentException("Invalid status. Only ACTIVE or FREEZE are allowed.");
+        if (newStatus != ServerStatus.ACTIVE && newStatus != ServerStatus.FREEZE
+                && newStatus != ServerStatus.SHADOW) {
+            throw new IllegalArgumentException("Invalid status. Only ACTIVE, FREEZE or SHADOW are allowed.");
         }
 
         s.setStatus(newStatus);

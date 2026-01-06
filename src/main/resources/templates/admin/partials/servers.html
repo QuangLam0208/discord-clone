@@ -47,6 +47,8 @@
                                 class="badge-status active">Active</span>
                             <span th:case="${T(hcmute.edu.vn.discord.entity.enums.ServerStatus).FREEZE}"
                                 class="badge-status freeze">Freeze</span>
+                            <span th:case="${T(hcmute.edu.vn.discord.entity.enums.ServerStatus).SHADOW}"
+                                class="badge-status shadow" style="background:#555;color:#bbb">Shadow</span>
                             <span th:case="*" class="badge-status active">Active</span>
                         </span>
                     </td>
@@ -74,6 +76,11 @@
                                 <button type="button" class="status-item freeze" data-status="FREEZE"
                                     onclick="updateServerStatus(this.closest('[data-server-row]').getAttribute('data-server-row'), this.getAttribute('data-status'))">
                                     <i class="fas fa-snowflake"></i> FREEZE
+                                </button>
+                                <button type="button" class="status-item shadow" data-status="SHADOW"
+                                    style="color:#aaa;"
+                                    onclick="updateServerStatus(this.closest('[data-server-row]').getAttribute('data-server-row'), this.getAttribute('data-status'))">
+                                    <i class="fas fa-ghost"></i> SHADOW
                                 </button>
                             </div>
                         </div>
