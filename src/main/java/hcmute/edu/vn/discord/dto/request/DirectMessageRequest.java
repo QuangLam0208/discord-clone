@@ -12,7 +12,6 @@ public class DirectMessageRequest {
     @NotNull
     private Long receiverId;
 
-    @NotBlank
     private String content;
 
     private List<String> attachments;

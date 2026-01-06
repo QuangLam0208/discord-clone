@@ -1,40 +1,40 @@
 const DM = (() => {
-  const st = {
-    currentUserId: null,
-    currentUser: null,
-    friends: [],
-    blockedUsers: [],
-    conversations: [],
-    activeFriendId: null,
-    activeFriendName: '',
-    activeFriendAvatar: null,
-    conversationId: null,
-    displayedMsgIds: new Set(),
-    unreadCounts: new Map(),
-    pendingRetries: new Map(),
+    const st = {
+        currentUserId: null,
+        currentUser: null,
+        friends: [],
+        blockedUsers: [],
+        conversations: [],
+        activeFriendId: null,
+        activeFriendName: '',
+        activeFriendAvatar: null,
+        conversationId: null,
+        displayedMsgIds: new Set(),
+        unreadCounts: new Map(),
+        pendingRetries: new Map(),
 
-    replyingToId: null,
-    filesToUpload: []
-  };
+        replyingToId: null,
+        filesToUpload: []
+    };
 
-  function highlightServerLogo() {
-    document.querySelectorAll('.sidebar .sidebar-item').forEach(e => e.classList.remove('active'));
-    const homeLogo = document.querySelector('.sidebar .sidebar-item[onclick*="switchToDM"]');
-    if (homeLogo) homeLogo.classList.add('active');
-  }
+    function highlightServerLogo() {
+        document.querySelectorAll('.sidebar .sidebar-item').forEach(e => e.classList.remove('active'));
+        const homeLogo = document.querySelector('.sidebar .sidebar-item[onclick*="switchToDM"]');
+        if (homeLogo) homeLogo.classList.add('active');
+    }
 
-  function goHome() {
-    st.activeFriendId = null;
-    st.activeFriendName = '';
-    st.activeFriendAvatar = null;
-    st.conversationId = null;
+    function goHome() {
+        st.activeFriendId = null;
+        st.activeFriendName = '';
+        st.activeFriendAvatar = null;
+        st.conversationId = null;
 
-    DMUI.showDashboard();
-    DMUI.highlightFriendsButton();
-    highlightServerLogo();
+        DMUI.showDashboard();
+        DMUI.highlightFriendsButton();
+        highlightServerLogo();
 
-    console.log('[DM] Switched to Dashboard');
-  }
+        console.log('[DM] Switched to Dashboard');
+    }
 
     async function onSelectFriend(friendId, friendName, friendAvatar = null) {
         st.activeFriendId = friendId;
@@ -159,7 +159,7 @@ const DM = (() => {
             if (existingEl) {
                 const contentDiv = existingEl.querySelector('div[style*="white-space"]');
                 if (contentDiv) {
-                    contentDiv.innerHTML = (payload.content || '').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+                    contentDiv.innerHTML = (payload.content || '').replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
                 }
                 const metaDiv = existingEl.querySelector('div[style*="font-size:12px"]');
                 if (metaDiv && !metaDiv.innerHTML.includes('(đã chỉnh sửa)') && payload.edited) {
@@ -178,7 +178,7 @@ const DM = (() => {
         if (replyPreview) {
             replyPreview.style.display = 'flex';
             const replyText = document.getElementById('reply-to-user');
-            if(replyText) replyText.textContent = content.substring(0, 30) + (content.length > 30 ? '...' : '');
+            if (replyText) replyText.textContent = content.substring(0, 30) + (content.length > 30 ? '...' : '');
         }
         dmInput.focus();
     }
@@ -190,37 +190,66 @@ const DM = (() => {
     }
 
     async function onSend() {
-        const { dmInput, dmFileInput } = DMUI.els();
-        if (!dmInput || !st.activeFriendId) return;
+        try {
+            const { dmInput } = DMUI.els();
+            if (!dmInput || !st.activeFriendId) return;
 
-        const content = dmInput.value.trim();
-        const files = dmFileInput ? dmFileInput.files : [];
+            let content = dmInput.value.trim();
+            const filesToProcess = [...st.filesToUpload]; // Snapshot
 
-        if (!content && files.length === 0) return;
+            if (!content && filesToProcess.length === 0) return;
 
-        let attachments = [];
-        if (files.length > 0) {
-            for (let i = 0; i < files.length; i++) {
-                try {
-                    const formData = new FormData();
-                    formData.append('file', files[i]);
-                    const res = await fetch('/api/upload', {
-                        method: 'POST',
-                        headers: { 'Authorization': `Bearer ${DMApi.getToken()}` },
-                        body: formData
-                    });
-                    if(res.ok) {
-                        const data = await res.json();
-                        if(data.url) attachments.push(data.url);
+            let attachments = [];
+            let uploadFailed = false;
+
+            if (filesToProcess.length > 0) {
+                for (let i = 0; i < filesToProcess.length; i++) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('file', filesToProcess[i]);
+                        const res = await fetch('/api/upload', {
+                            method: 'POST',
+                            headers: { 'Authorization': `Bearer ${DMApi.getToken()}` },
+                            body: formData
+                        });
+                        if (res.ok) {
+                            const data = await res.json();
+                            if (data.url) attachments.push(data.url);
+                        } else {
+                            console.error('Upload failed status:', res.status);
+                            uploadFailed = true;
+                        }
+                    } catch (e) {
+                        console.error("Upload exception", e);
+                        uploadFailed = true;
                     }
-                } catch(e) { console.error("Upload fail", e); }
-            }
-            dmFileInput.value = '';
-        }
+                }
 
-        dmInput.value = '';
-        await executeSendMessage(st.activeFriendId, content, attachments, st.replyingToId);
-        cancelReply();
+                if (uploadFailed) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Lỗi tải tệp',
+                        text: 'Một số tệp không thể tải lên.',
+                        background: '#36393f',
+                        color: '#fff'
+                    });
+                    if (!content && attachments.length === 0) return;
+                }
+
+                st.filesToUpload = [];
+                DMUI.renderAttachmentPreview([]);
+            }
+
+            dmInput.value = '';
+            dmInput.focus();
+
+            await executeSendMessage(st.activeFriendId, content, attachments, st.replyingToId);
+            cancelReply();
+
+        } catch (err) {
+            console.error('[onSend] Critical error:', err);
+            Swal.fire({ title: 'Lỗi', text: 'Không thể gửi tin nhắn: ' + err.message, icon: 'error', background: '#36393f', color: '#fff' });
+        }
     }
 
     async function executeSendMessage(receiverId, content, attachments = [], replyToId = null, existingTempId = null) {
@@ -255,7 +284,7 @@ const DM = (() => {
                 body: JSON.stringify({ receiverId, content, attachments, replyToId })
             });
 
-            if(!res.ok) throw new Error("Send failed");
+            if (!res.ok) throw new Error("Send failed");
             const sent = await res.json();
 
             DMUI.replaceTempMessage(tempId, sent, st.currentUserId, avatarMap, st.activeFriendName);
@@ -281,7 +310,7 @@ const DM = (() => {
                     st.conversations.unshift(newConvoItem);
                     DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
                     const newItemDom = document.getElementById(`dm-item-${receiverId}`);
-                    if(newItemDom) {
+                    if (newItemDom) {
                         newItemDom.classList.add('active');
                         DMUI.updateSidebarItem(receiverId, false);
                     }
@@ -295,131 +324,154 @@ const DM = (() => {
         }
     }
 
-  function retryMessage(tempId) {
-    const data = st.pendingRetries.get(tempId);
-    if (data) {
-      const tempEl = document.getElementById(`msg-${tempId}`);
-      if (tempEl) tempEl.style.opacity = '0.5';
-      executeSendMessage(data.receiverId, data.content, data.attachments, data.replyToId, tempId);
+    function retryMessage(tempId) {
+        const data = st.pendingRetries.get(tempId);
+        if (data) {
+            const tempEl = document.getElementById(`msg-${tempId}`);
+            if (tempEl) tempEl.style.opacity = '0.5';
+            executeSendMessage(data.receiverId, data.content, data.attachments, data.replyToId, tempId);
+        }
     }
-  }
 
-  // --- HÀM REAL-TIME (UPDATE MỚI NHẤT) ---
-  async function onIncomingMessage(msg) {
-      // Nếu payload là sự kiện có type -> xử lý như ở onConversationEvent
-      if (msg && msg.type === 'DELETE_MESSAGE') {
-          DMUI.removeMessageElement(msg.messageId);
-          st.displayedMsgIds.delete(String(msg.messageId));
-          return;
-      }
-      if (msg && msg.type === 'RESTORE_MESSAGE') {
-          DMUI.removeMessageElement(msg.id);
-          st.displayedMsgIds.delete(String(msg.id));
-          if (String(msg.conversationId) === String(st.conversationId)) {
-              const avatarMap = {
-                  [st.currentUserId]: st.currentUser?.avatarUrl,
-                  [msg.senderId]: st.activeFriendAvatar
-              };
-              DMUI.appendMessage(msg, st.currentUserId, st.displayedMsgIds, avatarMap, st.activeFriendName);
-          }
-          return;
-      }
 
-      const msgIdStr = String(msg.id);
-      const domId = `msg-${msgIdStr}`;
-      const existingEl = document.getElementById(domId);
+    function removeAttachment(index) {
+        if (index >= 0 && index < st.filesToUpload.length) {
+            st.filesToUpload.splice(index, 1);
+            DMUI.renderAttachmentPreview(st.filesToUpload);
+        }
+    }
 
-      const msgConvId = String(msg.conversationId || '');
-      const currentConvId = String(st.conversationId || '');
+    function scrollToMessage(msgId) {
+        if (!msgId || msgId === 'undefined' || msgId === 'null') return;
+        const elId = `msg-${msgId}`;
+        const el = document.getElementById(elId);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.style.backgroundColor = 'rgba(88, 101, 242, 0.3)'; // Highlight
+            setTimeout(() => {
+                el.style.backgroundColor = 'transparent';
+            }, 2000);
+        } else {
+            console.warn(`Message ${msgId} not loaded or found.`);
+        }
+    }
 
-      // 1. UPDATE: Nếu tin nhắn đã có trên màn hình (Edit/Delete) -> Update ngay
-      if (existingEl) {
-          console.log('[Socket] Updating existing message:', msg);
+    // --- HÀM REAL-TIME (UPDATE MỚI NHẤT) ---
+    async function onIncomingMessage(msg) {
+        // Nếu payload là sự kiện có type -> xử lý như ở onConversationEvent
+        if (msg && msg.type === 'DELETE_MESSAGE') {
+            DMUI.removeMessageElement(msg.messageId);
+            st.displayedMsgIds.delete(String(msg.messageId));
+            return;
+        }
+        if (msg && msg.type === 'RESTORE_MESSAGE') {
+            DMUI.removeMessageElement(msg.id);
+            st.displayedMsgIds.delete(String(msg.id));
+            if (String(msg.conversationId) === String(st.conversationId)) {
+                const avatarMap = {
+                    [st.currentUserId]: st.currentUser?.avatarUrl,
+                    [msg.senderId]: st.activeFriendAvatar
+                };
+                DMUI.appendMessage(msg, st.currentUserId, st.displayedMsgIds, avatarMap, st.activeFriendName);
+            }
+            return;
+        }
 
-          const avatarMap = {
-              [st.currentUserId]: st.currentUser?.avatarUrl,
-              [st.activeFriendId]: st.activeFriendAvatar
-          };
-          if (String(msg.senderId) === String(st.currentUserId)) {
-              avatarMap[msg.senderId] = st.currentUser?.avatarUrl;
-          }
+        const msgIdStr = String(msg.id);
+        const domId = `msg-${msgIdStr}`;
+        const existingEl = document.getElementById(domId);
 
-          DMUI.replaceTempMessage(msgIdStr, msg, st.currentUserId, avatarMap, st.activeFriendName);
-          return;
-      }
+        const msgConvId = String(msg.conversationId || '');
+        const currentConvId = String(st.conversationId || '');
 
-      // 2. Nếu tin mới của mình -> Bỏ qua
-      if (String(msg.senderId) === String(st.currentUserId)) {
-          return;
-      }
+        // 1. UPDATE: Nếu tin nhắn đã có trên màn hình (Edit/Delete) -> Update ngay
+        if (existingEl) {
+            console.log('[Socket] Updating existing message:', msg);
 
-      // 3. Tin mới của người khác
-      let conversationExists = st.conversations.some(c => String(c.conversationId) === msgConvId);
-      if (!conversationExists) {
-          try {
-              const newConvos = await DMApi.fetchAllConversations();
-              st.conversations = newConvos;
-              DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
-              conversationExists = true;
-          } catch (e) { console.error('Error syncing new conversation:', e); }
-      }
+            const avatarMap = {
+                [st.currentUserId]: st.currentUser?.avatarUrl,
+                [st.activeFriendId]: st.activeFriendAvatar
+            };
+            if (String(msg.senderId) === String(st.currentUserId)) {
+                avatarMap[msg.senderId] = st.currentUser?.avatarUrl;
+            }
 
-      if (st.activeFriendId && msgConvId === currentConvId) {
-        const avatarMap = {
-            [st.currentUserId]: st.currentUser?.avatarUrl,
-            [msg.senderId]: st.activeFriendAvatar
-        };
-        DMUI.appendMessage(msg, st.currentUserId, st.displayedMsgIds, avatarMap, st.activeFriendName);
-      } else {
-        const friendId = msg.senderId;
-        if (!msg.deleted) {
-            st.unreadCounts.set(friendId, (st.unreadCounts.get(friendId) || 0) + 1);
-            if (conversationExists) {
-               const idx = st.conversations.findIndex(c => String(c.conversationId) === msgConvId);
-               if (idx >= 0) {
-                   if (idx > 0) {
-                       const [item] = st.conversations.splice(idx, 1);
-                       st.conversations.unshift(item);
-                       DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
-                   }
-                   setTimeout(() => DMUI.updateSidebarItem(friendId, true), 10);
-               }
+            DMUI.replaceTempMessage(msgIdStr, msg, st.currentUserId, avatarMap, st.activeFriendName);
+            return;
+        }
+
+        // 2. Nếu tin mới của mình -> Bỏ qua
+        if (String(msg.senderId) === String(st.currentUserId)) {
+            return;
+        }
+
+        // 3. Tin mới của người khác
+        let conversationExists = st.conversations.some(c => String(c.conversationId) === msgConvId);
+        if (!conversationExists) {
+            try {
+                const newConvos = await DMApi.fetchAllConversations();
+                st.conversations = newConvos;
+                DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
+                conversationExists = true;
+            } catch (e) { console.error('Error syncing new conversation:', e); }
+        }
+
+        if (st.activeFriendId && msgConvId === currentConvId) {
+            const avatarMap = {
+                [st.currentUserId]: st.currentUser?.avatarUrl,
+                [msg.senderId]: st.activeFriendAvatar
+            };
+            DMUI.appendMessage(msg, st.currentUserId, st.displayedMsgIds, avatarMap, st.activeFriendName);
+        } else {
+            const friendId = msg.senderId;
+            if (!msg.deleted) {
+                st.unreadCounts.set(friendId, (st.unreadCounts.get(friendId) || 0) + 1);
+                if (conversationExists) {
+                    const idx = st.conversations.findIndex(c => String(c.conversationId) === msgConvId);
+                    if (idx >= 0) {
+                        if (idx > 0) {
+                            const [item] = st.conversations.splice(idx, 1);
+                            st.conversations.unshift(item);
+                            DMUI.renderFriendsSidebar(st.conversations, onSelectFriend);
+                        }
+                        setTimeout(() => DMUI.updateSidebarItem(friendId, true), 10);
+                    }
+                }
             }
         }
-      }
     }
 
-  // --- ACTIONS ---
+    // --- ACTIONS ---
 
-  function handleEditMessage(msgId, content) {
-      Swal.fire({
-          title: 'Chỉnh sửa tin nhắn',
-          input: 'text',
-          inputValue: content,
-          showCancelButton: true,
-          confirmButtonText: 'Lưu',
-          cancelButtonText: 'Hủy',
-          background: '#36393f',
-          color: '#fff',
-          preConfirm: (newContent) => {
-              if (!newContent || !newContent.trim()) {
-                  Swal.showValidationMessage('Nội dung không thể trống');
-                  return false;
-              }
-              return newContent;
-          }
-      }).then(async (result) => {
-          if (result.isConfirmed) {
-              try {
-                  await DMApi.editMessage(msgId, result.value);
-              } catch (e) {
-                  Swal.fire('Lỗi', e.message, 'error');
-              }
-          }
-      });
-  }
+    function handleEditMessage(msgId, content) {
+        Swal.fire({
+            title: 'Chỉnh sửa tin nhắn',
+            input: 'text',
+            inputValue: content,
+            showCancelButton: true,
+            confirmButtonText: 'Lưu',
+            cancelButtonText: 'Hủy',
+            background: '#36393f',
+            color: '#fff',
+            preConfirm: (newContent) => {
+                if (!newContent || !newContent.trim()) {
+                    Swal.showValidationMessage('Nội dung không thể trống');
+                    return false;
+                }
+                return newContent;
+            }
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    await DMApi.editMessage(msgId, result.value);
+                } catch (e) {
+                    Swal.fire('Lỗi', e.message, 'error');
+                }
+            }
+        });
+    }
 
-  async function handleMoreOptions(msgId, senderId, content) {
+    async function handleMoreOptions(msgId, senderId, content) {
         const isMine = String(senderId) === String(st.currentUserId);
         const inputOptions = {};
 
@@ -458,31 +510,31 @@ const DM = (() => {
             handleEditMessage(msgId, content);
         }
         else if (action === 'delete') {
-            if(confirm('Bạn có chắc muốn xóa tin nhắn này?')) {
+            if (confirm('Bạn có chắc muốn xóa tin nhắn này?')) {
                 try {
                     await DMApi.deleteMessage(msgId);
-                } catch(e) { alert(e.message); }
+                } catch (e) { alert(e.message); }
             }
         }
     }
 
-  async function handleBlock(uid) {
-      const result = await Swal.fire({ title: 'Chặn người dùng?', text: "Bạn sẽ không nhận được tin nhắn từ họ nữa.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ed4245', cancelButtonColor: '#7289da', confirmButtonText: 'Chặn', cancelButtonText: 'Hủy', background: '#36393f', color: '#fff' });
-      if (result.isConfirmed) { try { await DMApi.blockUser(uid); try { st.blockedUsers = await DMApi.fetchBlockedUsers(); } catch(e) {} st.friends = await DMApi.fetchFriends(); if (String(st.activeFriendId) === String(uid)) { await onSelectFriend(uid); } Swal.fire({ icon: 'success', title: 'Đã chặn', toast: true, position: 'bottom-end', showConfirmButton: false, timer: 3000, background: '#36393f', color: '#fff' }); } catch(e) { Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' }); } }
-  }
-  async function handleUnblock(uid) {
-      try { await DMApi.unblockUser(uid); try { st.blockedUsers = await DMApi.fetchBlockedUsers(); } catch(e) {} if (String(st.activeFriendId) === String(uid)) { await onSelectFriend(uid); } Swal.fire({ icon: 'success', title: 'Đã bỏ chặn', toast: true, position: 'bottom-end', showConfirmButton: false, timer: 3000, background: '#36393f', color: '#fff' }); } catch(e) { Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' }); }
-  }
-  async function handleUnfriend(uid) {
-      const result = await Swal.fire({ title: 'Xóa bạn bè?', text: "Bạn có chắc chắn muốn xóa người này?", icon: 'question', showCancelButton: true, confirmButtonColor: '#ed4245', cancelButtonColor: '#7289da', confirmButtonText: 'Xóa bạn', cancelButtonText: 'Hủy', background: '#36393f', color: '#fff' });
-      if (result.isConfirmed) { try { await DMApi.unfriend(uid); st.friends = st.friends.filter(f => f.friendUserId != uid); if (document.getElementById('dm-all-view').style.display !== 'none') { DMUI.renderFriendsCenter(st.friends, onSelectFriend); } const countEl = document.getElementById('dm-center-count'); if(countEl) countEl.textContent = st.friends.length; if (String(st.activeFriendId) === String(uid)) { await onSelectFriend(uid); } Swal.fire({ icon: 'success', title: 'Đã xóa bạn', toast: true, position: 'bottom-end', showConfirmButton: false, timer: 3000, background: '#36393f', color: '#fff' }); } catch(e) { Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' }); } }
-  }
-  async function handleAddFriend(uid) {
-        try { await DMApi.sendFriendRequestById(uid); const btnAdd = document.getElementById('btn-dm-addfriend'); if (btnAdd) { btnAdd.textContent = 'Đã gửi yêu cầu kết bạn'; btnAdd.disabled = true; btnAdd.style.backgroundColor = '#5865F2'; btnAdd.style.color = '#ffffff'; btnAdd.style.cursor = 'not-allowed'; btnAdd.style.opacity = '0.5'; } const btnSpam = document.getElementById('btn-dm-spam'); if (btnSpam) btnSpam.style.display = 'none'; Swal.fire({ icon: 'success', title: 'Đã gửi lời mời', toast: true, position: 'bottom-end', showConfirmButton: false, timer: 3000, background: '#36393f', color: '#fff' }); } catch(e) { Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' }); }
+    async function handleBlock(uid) {
+        const result = await Swal.fire({ title: 'Chặn người dùng?', text: "Bạn sẽ không nhận được tin nhắn từ họ nữa.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#ed4245', cancelButtonColor: '#7289da', confirmButtonText: 'Chặn', cancelButtonText: 'Hủy', background: '#36393f', color: '#fff' });
+        if (result.isConfirmed) { try { await DMApi.blockUser(uid); try { st.blockedUsers = await DMApi.fetchBlockedUsers(); } catch (e) { } st.friends = await DMApi.fetchFriends(); if (String(st.activeFriendId) === String(uid)) { await onSelectFriend(uid); } Swal.fire({ icon: 'success', title: 'Đã chặn', toast: true, position: 'bottom-end', showConfirmButton: false, timer: 3000, background: '#36393f', color: '#fff' }); } catch (e) { Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' }); } }
     }
-  function handleSpam(uid, isBlocked) {
-      Swal.fire({ title: 'Báo cáo Spam', text: 'Bạn có chắc chắn muốn báo cáo?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Nộp báo cáo', confirmButtonColor: '#ed4245', cancelButtonText: 'Huỷ' }).then(async (res) => { if (res.isConfirmed) { try { await DMApi.reportUser(uid, 'SPAM'); if (isBlocked) { Swal.fire('Đã báo cáo', 'Báo cáo đã được gửi.', 'success'); } else { Swal.fire({ title: 'Đã báo cáo', text: 'Báo cáo đã gửi. Bạn có muốn chặn luôn người này?', icon: 'question', showCancelButton: true, confirmButtonText: 'Chặn', confirmButtonColor: '#ed4245', cancelButtonText: 'Xong' }).then(async (r2) => { if (r2.isConfirmed) { await handleBlock(uid); } else { onSelectFriend(uid); } }); } } catch (e) { Swal.fire('Lỗi', e.message, 'error'); } } });
-  }
+    async function handleUnblock(uid) {
+        try { await DMApi.unblockUser(uid); try { st.blockedUsers = await DMApi.fetchBlockedUsers(); } catch (e) { } if (String(st.activeFriendId) === String(uid)) { await onSelectFriend(uid); } Swal.fire({ icon: 'success', title: 'Đã bỏ chặn', toast: true, position: 'bottom-end', showConfirmButton: false, timer: 3000, background: '#36393f', color: '#fff' }); } catch (e) { Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' }); }
+    }
+    async function handleUnfriend(uid) {
+        const result = await Swal.fire({ title: 'Xóa bạn bè?', text: "Bạn có chắc chắn muốn xóa người này?", icon: 'question', showCancelButton: true, confirmButtonColor: '#ed4245', cancelButtonColor: '#7289da', confirmButtonText: 'Xóa bạn', cancelButtonText: 'Hủy', background: '#36393f', color: '#fff' });
+        if (result.isConfirmed) { try { await DMApi.unfriend(uid); st.friends = st.friends.filter(f => f.friendUserId != uid); if (document.getElementById('dm-all-view').style.display !== 'none') { DMUI.renderFriendsCenter(st.friends, onSelectFriend); } const countEl = document.getElementById('dm-center-count'); if (countEl) countEl.textContent = st.friends.length; if (String(st.activeFriendId) === String(uid)) { await onSelectFriend(uid); } Swal.fire({ icon: 'success', title: 'Đã xóa bạn', toast: true, position: 'bottom-end', showConfirmButton: false, timer: 3000, background: '#36393f', color: '#fff' }); } catch (e) { Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' }); } }
+    }
+    async function handleAddFriend(uid) {
+        try { await DMApi.sendFriendRequestById(uid); const btnAdd = document.getElementById('btn-dm-addfriend'); if (btnAdd) { btnAdd.textContent = 'Đã gửi yêu cầu kết bạn'; btnAdd.disabled = true; btnAdd.style.backgroundColor = '#5865F2'; btnAdd.style.color = '#ffffff'; btnAdd.style.cursor = 'not-allowed'; btnAdd.style.opacity = '0.5'; } const btnSpam = document.getElementById('btn-dm-spam'); if (btnSpam) btnSpam.style.display = 'none'; Swal.fire({ icon: 'success', title: 'Đã gửi lời mời', toast: true, position: 'bottom-end', showConfirmButton: false, timer: 3000, background: '#36393f', color: '#fff' }); } catch (e) { Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' }); }
+    }
+    function handleSpam(uid, isBlocked) {
+        Swal.fire({ title: 'Báo cáo Spam', text: 'Bạn có chắc chắn muốn báo cáo?', icon: 'warning', showCancelButton: true, confirmButtonText: 'Nộp báo cáo', confirmButtonColor: '#ed4245', cancelButtonText: 'Huỷ' }).then(async (res) => { if (res.isConfirmed) { try { await DMApi.reportUser(uid, 'SPAM'); if (isBlocked) { Swal.fire('Đã báo cáo', 'Báo cáo đã được gửi.', 'success'); } else { Swal.fire({ title: 'Đã báo cáo', text: 'Báo cáo đã gửi. Bạn có muốn chặn luôn người này?', icon: 'question', showCancelButton: true, confirmButtonText: 'Chặn', confirmButtonColor: '#ed4245', cancelButtonText: 'Xong' }).then(async (r2) => { if (r2.isConfirmed) { await handleBlock(uid); } else { onSelectFriend(uid); } }); } } catch (e) { Swal.fire('Lỗi', e.message, 'error'); } } });
+    }
     function initSearchBar() {
         const input = document.getElementById('dm-sidebar-search');
         const results = document.getElementById('dm-search-results');
@@ -542,30 +594,30 @@ const DM = (() => {
         });
     }
 
-  async function handleAcceptRequest(uid) { try { const inbound = await DMApi.listInboundRequests(); const req = inbound.find(r => String(r.senderId) === String(uid)); if (req) { await DMApi.acceptRequest(req.id); st.friends = await DMApi.fetchFriends(); if (String(st.activeFriendId) === String(uid)) { await onSelectFriend(uid); } Swal.fire({ icon: 'success', title: 'Đã chấp nhận kết bạn', toast: true, position: 'bottom-end', showConfirmButton: false, timer: 3000, background: '#36393f', color: '#fff' }); } else { Swal.fire({ title: 'Lỗi', text: 'Không tìm thấy yêu cầu kết bạn.', icon: 'error', background: '#36393f', color: '#fff' }); } } catch (e) { Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' }); } }
-  async function handleDeclineRequest(uid) { try { const inbound = await DMApi.listInboundRequests(); const req = inbound.find(r => String(r.senderId) === String(uid)); if (req) { await DMApi.declineRequest(req.id); if (String(st.activeFriendId) === String(uid)) { await onSelectFriend(uid); } Swal.fire({ icon: 'success', title: 'Đã từ chối', toast: true, position: 'bottom-end', showConfirmButton: false, timer: 3000, background: '#36393f', color: '#fff' }); } } catch (e) { Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' }); } }
-  async function onFriendEvent(evt) { try { console.log('[Friend Event]', evt); const type = evt?.type; const data = evt?.data; st.friends = await DMApi.fetchFriends(); try { st.blockedUsers = await DMApi.fetchBlockedUsers(); } catch(e){} st.conversations = await DMApi.fetchAllConversations(); DMUI.renderFriendsSidebar(st.conversations, onSelectFriend); const pendingVisible = document.getElementById('dm-pending-view')?.style.display !== 'none'; if (pendingVisible) { const inbound = await DMApi.listInboundRequests(); const outbound = await DMApi.listOutboundRequests(); DMUI.renderPending(inbound, outbound); } if (st.activeFriendId && data) { const currentActiveId = Number(st.activeFriendId); const eventSenderId = Number(data.senderId); const eventRecipientId = Number(data.recipientId); if (currentActiveId === eventSenderId || currentActiveId === eventRecipientId) { await onSelectFriend(st.activeFriendId); } } else if (st.activeFriendId && (type === 'UNFRIEND' || type === 'BLOCKED' || type === 'UNBLOCKED')) { await onSelectFriend(st.activeFriendId); } } catch (e) { console.error('onFriendEvent error', e); } }
+    async function handleAcceptRequest(uid) { try { const inbound = await DMApi.listInboundRequests(); const req = inbound.find(r => String(r.senderId) === String(uid)); if (req) { await DMApi.acceptRequest(req.id); st.friends = await DMApi.fetchFriends(); if (String(st.activeFriendId) === String(uid)) { await onSelectFriend(uid); } Swal.fire({ icon: 'success', title: 'Đã chấp nhận kết bạn', toast: true, position: 'bottom-end', showConfirmButton: false, timer: 3000, background: '#36393f', color: '#fff' }); } else { Swal.fire({ title: 'Lỗi', text: 'Không tìm thấy yêu cầu kết bạn.', icon: 'error', background: '#36393f', color: '#fff' }); } } catch (e) { Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' }); } }
+    async function handleDeclineRequest(uid) { try { const inbound = await DMApi.listInboundRequests(); const req = inbound.find(r => String(r.senderId) === String(uid)); if (req) { await DMApi.declineRequest(req.id); if (String(st.activeFriendId) === String(uid)) { await onSelectFriend(uid); } Swal.fire({ icon: 'success', title: 'Đã từ chối', toast: true, position: 'bottom-end', showConfirmButton: false, timer: 3000, background: '#36393f', color: '#fff' }); } } catch (e) { Swal.fire({ title: 'Lỗi', text: e.message, icon: 'error', background: '#36393f', color: '#fff' }); } }
+    async function onFriendEvent(evt) { try { console.log('[Friend Event]', evt); const type = evt?.type; const data = evt?.data; st.friends = await DMApi.fetchFriends(); try { st.blockedUsers = await DMApi.fetchBlockedUsers(); } catch (e) { } st.conversations = await DMApi.fetchAllConversations(); DMUI.renderFriendsSidebar(st.conversations, onSelectFriend); const pendingVisible = document.getElementById('dm-pending-view')?.style.display !== 'none'; if (pendingVisible) { const inbound = await DMApi.listInboundRequests(); const outbound = await DMApi.listOutboundRequests(); DMUI.renderPending(inbound, outbound); } if (st.activeFriendId && data) { const currentActiveId = Number(st.activeFriendId); const eventSenderId = Number(data.senderId); const eventRecipientId = Number(data.recipientId); if (currentActiveId === eventSenderId || currentActiveId === eventRecipientId) { await onSelectFriend(st.activeFriendId); } } else if (st.activeFriendId && (type === 'UNFRIEND' || type === 'BLOCKED' || type === 'UNBLOCKED')) { await onSelectFriend(st.activeFriendId); } } catch (e) { console.error('onFriendEvent error', e); } }
 
-  // 1. Vào chế độ chỉnh sửa
-  function enterEditMode(msgId, content) {
-      const contentEl = document.getElementById(`msg-content-${msgId}`);
-      if (!contentEl) return;
+    // 1. Vào chế độ chỉnh sửa
+    function enterEditMode(msgId, content) {
+        const contentEl = document.getElementById(`msg-content-${msgId}`);
+        if (!contentEl) return;
 
-      let originalContent = contentEl.getAttribute('data-raw') || contentEl.innerText;
-      if (originalContent) originalContent = originalContent.trim();
+        let originalContent = contentEl.getAttribute('data-raw') || contentEl.innerText;
+        if (originalContent) originalContent = originalContent.trim();
 
-      contentEl.dataset.backupHtml = contentEl.innerHTML;
+        contentEl.dataset.backupHtml = contentEl.innerHTML;
 
-      contentEl.removeAttribute('style');
-      contentEl.style.display = 'block';
-      contentEl.style.width = '100%';
-      contentEl.style.whiteSpace = 'normal';
-      contentEl.style.height = 'auto';
-      contentEl.style.minHeight = '0';
-      contentEl.style.margin = '0';
-      contentEl.style.padding = '0';
+        contentEl.removeAttribute('style');
+        contentEl.style.display = 'block';
+        contentEl.style.width = '100%';
+        contentEl.style.whiteSpace = 'normal';
+        contentEl.style.height = 'auto';
+        contentEl.style.minHeight = '0';
+        contentEl.style.margin = '0';
+        contentEl.style.padding = '0';
 
-      contentEl.innerHTML = `
+        contentEl.innerHTML = `
            <div class="edit-mode-container" style="width: 100%; margin: 0; padding: 0; display: flex; flex-direction: column;">
                <textarea id="edit-input-${msgId}" rows="1"
                    style="
@@ -601,36 +653,36 @@ const DM = (() => {
            </div>
        `;
 
-      const textarea = document.getElementById(`edit-input-${msgId}`);
+        const textarea = document.getElementById(`edit-input-${msgId}`);
 
-      const adjustHeight = () => {
-          textarea.style.height = '1px';
-          textarea.style.height = (textarea.scrollHeight) + 'px';
-      };
+        const adjustHeight = () => {
+            textarea.style.height = '1px';
+            textarea.style.height = (textarea.scrollHeight) + 'px';
+        };
 
-      adjustHeight();
+        adjustHeight();
 
-      textarea.focus();
-      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+        textarea.focus();
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 
-      textarea.addEventListener('input', adjustHeight);
+        textarea.addEventListener('input', adjustHeight);
 
-      textarea.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              finishEdit(msgId);
-          }
-          if (e.key === 'Escape') {
-              e.preventDefault();
-              cancelEdit(msgId);
-          }
-      });
-  }
+        textarea.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                finishEdit(msgId);
+            }
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                cancelEdit(msgId);
+            }
+        });
+    }
 
     // 2. Hủy chỉnh sửa (Quay về trạng thái cũ)
     function cancelEdit(msgId) {
         const contentEl = document.getElementById(`msg-content-${msgId}`);
-        if(contentEl && contentEl.dataset.backupHtml) {
+        if (contentEl && contentEl.dataset.backupHtml) {
             contentEl.innerHTML = contentEl.dataset.backupHtml;
         }
     }
@@ -638,11 +690,11 @@ const DM = (() => {
     // 3. Lưu chỉnh sửa (Gọi API)
     async function finishEdit(msgId) {
         const textarea = document.getElementById(`edit-input-${msgId}`);
-        if(!textarea) return;
+        if (!textarea) return;
 
         const newContent = textarea.value.trim();
-        if(!newContent) {
-            if(confirm("Tin nhắn rỗng. Bạn có muốn xóa tin nhắn này không?")) {
+        if (!newContent) {
+            if (confirm("Tin nhắn rỗng. Bạn có muốn xóa tin nhắn này không?")) {
                 deleteMessageConfirm(msgId);
             }
             return;
@@ -657,14 +709,14 @@ const DM = (() => {
 
         try {
             await DMApi.editMessage(msgId, newContent);
-        } catch(e) {
+        } catch (e) {
             alert('Lỗi sửa tin nhắn: ' + e.message);
             cancelEdit(msgId);
         }
     }
 
-  // 4. Toggle Menu Popup
-  function toggleMenu(msgId) {
+    // 4. Toggle Menu Popup
+    function toggleMenu(msgId) {
         const menu = document.getElementById(`msg-menu-${msgId}`);
         if (!menu) return;
         const isCurrentlyOpen = menu.style.display === 'block';
@@ -674,8 +726,8 @@ const DM = (() => {
         }
     }
 
-  // 5. Xác nhận xóa
-  async function deleteMessageConfirm(msgId) {
+    // 5. Xác nhận xóa
+    async function deleteMessageConfirm(msgId) {
         const result = await Swal.fire({
             title: 'Xóa tin nhắn?',
             text: "Bạn có chắc chắn muốn xóa tin nhắn này không?",
@@ -698,40 +750,54 @@ const DM = (() => {
         }
     }
 
-  // Click ra ngoài để đóng menu
-  document.addEventListener('click', (e) => {
-        if(!e.target.closest('.msg-menu-popover') && !e.target.closest('.btn-more-options')) {
+    // Click ra ngoài để đóng menu
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.msg-menu-popover') && !e.target.closest('.btn-more-options')) {
             document.querySelectorAll('.msg-menu-popover').forEach(el => el.style.display = 'none');
         }
     });
 
-  // ----- Init -----
-  async function init() {
-    try {
-      st.currentUserId = window.state.currentUser?.id || JSON.parse(atob(DMApi.getToken().split('.')[1]))?.id;
-      try { st.currentUser = await DMApi.getMe(); } catch(e) { st.currentUser = { id: st.currentUserId, avatarUrl: null }; }
-      const { dmSendBtn, dmInput } = DMUI.els();
-      if (dmSendBtn) dmSendBtn.addEventListener('click', onSend);
-      if (dmInput) dmInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') onSend(); });
-      const { btnFriends } = DMUI.els();
-      if (btnFriends) { const newBtnFriends = btnFriends.cloneNode(true); btnFriends.parentNode.replaceChild(newBtnFriends, btnFriends); newBtnFriends.addEventListener('click', goHome); }
-      const homeLogo = document.querySelector('.sidebar .sidebar-item[onclick*="switchToDM"]');
-      if (homeLogo) { const newHomeLogo = homeLogo.cloneNode(true); homeLogo.parentNode.replaceChild(newHomeLogo, homeLogo); newHomeLogo.addEventListener('click', () => { window.switchToDM && window.switchToDM(); goHome(); }); }
-      const [convos, friends, blocked] = await Promise.all([ DMApi.fetchAllConversations(), DMApi.fetchFriends(), DMApi.fetchBlockedUsers().catch(() => []) ]);
-      st.conversations = convos; st.friends = friends; st.blockedUsers = blocked;
-      DMUI.renderFriendsSidebar(st.conversations, onSelectFriend); DMUI.initFriendsDashboard({ friends: st.friends, onSelectFriend });
-      initSearchBar(); goHome(); DMWS.connectWS(onIncomingMessage, onFriendEvent);
+    // ----- Init -----
+    async function init() {
+        try {
+            st.currentUserId = window.state.currentUser?.id || JSON.parse(atob(DMApi.getToken().split('.')[1]))?.id;
+            try { st.currentUser = await DMApi.getMe(); } catch (e) { st.currentUser = { id: st.currentUserId, avatarUrl: null }; }
+            const { dmSendBtn, dmInput } = DMUI.els();
+            if (dmSendBtn) dmSendBtn.addEventListener('click', onSend);
+            if (dmInput) dmInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') onSend(); });
 
-      // Export functions to global scope
-      window.DM = {
-          init, goHome, retryMessage, reset: () => {},
-          handleBlock, handleUnblock, handleUnfriend, handleAddFriend, handleSpam, handleAcceptRequest, handleDeclineRequest,
-          prepareReply, cancelReply,
-          enterEditMode, cancelEdit, finishEdit, toggleMenu, deleteMessageConfirm
-      };
+            const { dmFileInput } = DMUI.els();
+            if (dmFileInput) {
+                dmFileInput.addEventListener('change', (e) => {
+                    if (dmFileInput.files && dmFileInput.files.length > 0) {
+                        Array.from(dmFileInput.files).forEach(f => st.filesToUpload.push(f));
+                        DMUI.renderAttachmentPreview(st.filesToUpload);
+                        dmFileInput.value = ''; // Reset to allow re-selecting same file
+                        if (dmInput) dmInput.focus();
+                    }
+                });
+            }
 
-      } catch (err) { console.error('[DM.init Error]', err); }
+            const { btnFriends } = DMUI.els();
+            if (btnFriends) { const newBtnFriends = btnFriends.cloneNode(true); btnFriends.parentNode.replaceChild(newBtnFriends, btnFriends); newBtnFriends.addEventListener('click', goHome); }
+            const homeLogo = document.querySelector('.sidebar .sidebar-item[onclick*="switchToDM"]');
+            if (homeLogo) { const newHomeLogo = homeLogo.cloneNode(true); homeLogo.parentNode.replaceChild(newHomeLogo, homeLogo); newHomeLogo.addEventListener('click', () => { window.switchToDM && window.switchToDM(); goHome(); }); }
+            const [convos, friends, blocked] = await Promise.all([DMApi.fetchAllConversations(), DMApi.fetchFriends(), DMApi.fetchBlockedUsers().catch(() => [])]);
+            st.conversations = convos; st.friends = friends; st.blockedUsers = blocked;
+            DMUI.renderFriendsSidebar(st.conversations, onSelectFriend); DMUI.initFriendsDashboard({ friends: st.friends, onSelectFriend });
+            initSearchBar(); goHome(); DMWS.connectWS(onIncomingMessage, onFriendEvent);
+
+            // Export functions to global scope
+            window.DM = {
+                init, goHome, retryMessage, reset: () => { },
+                handleBlock, handleUnblock, handleUnfriend, handleAddFriend, handleSpam, handleAcceptRequest, handleDeclineRequest,
+                prepareReply, cancelReply,
+                enterEditMode, cancelEdit, finishEdit, toggleMenu, deleteMessageConfirm,
+                removeAttachment, scrollToMessage
+            };
+
+        } catch (err) { console.error('[DM.init Error]', err); }
     }
-      function reset() { console.log('DM reset'); }
-      return { init, goHome, retryMessage, reset, handleBlock, handleUnblock, handleUnfriend, handleAddFriend, handleSpam, handleAcceptRequest, handleDeclineRequest, prepareReply, cancelReply, enterEditMode, cancelEdit, finishEdit, toggleMenu, deleteMessageConfirm };
-      })();
+    function reset() { console.log('DM reset'); }
+    return { init, goHome, retryMessage, reset, handleBlock, handleUnblock, handleUnfriend, handleAddFriend, handleSpam, handleAcceptRequest, handleDeclineRequest, prepareReply, cancelReply, enterEditMode, cancelEdit, finishEdit, toggleMenu, deleteMessageConfirm };
+})();

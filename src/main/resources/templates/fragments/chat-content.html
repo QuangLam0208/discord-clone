@@ -70,10 +70,10 @@
                         Bạn có thể thêm bạn bè bằng tên người dùng Discord của họ.
                     </div>
 
-                    <div style="display:flex; align-items:center; gap:12px; background-color: #1e1f22; padding: 0 12px; border-radius: 8px; border: 1px solid #26272d; height: 58px;">
-                        <input type="text" id="dm-addfriend-username"
-                               placeholder="Tên người dùng (ví dụ: user3)"
-                               style="flex:1; background:transparent; border:none; color:#dcddde; font-size: 16px; outline: none; height: 100%; font-weight: 500;">
+                    <div
+                        style="display:flex; align-items:center; gap:12px; background-color: #1e1f22; padding: 0 12px; border-radius: 8px; border: 1px solid #26272d; height: 58px;">
+                        <input type="text" id="dm-addfriend-username" placeholder="Tên người dùng (ví dụ: user3)"
+                            style="flex:1; background:transparent; border:none; color:#dcddde; font-size: 16px; outline: none; height: 100%; font-weight: 500;">
                         <button class="add-friend-btn" id="dm-addfriend-send">
                             Gửi lời mời
                         </button>
@@ -101,16 +101,25 @@
             </div>
         </div>
 
-        <div id="dm-messages" class="custom-scrollbar" style="flex:1; overflow:auto; padding:16px; display:flex; flex-direction:column; gap:12px;">
+        <div id="dm-messages" class="custom-scrollbar"
+            style="flex:1; overflow:auto; padding:16px; display:flex; flex-direction:column; gap:12px;">
         </div>
 
         <div class="input-area" style="position: relative;">
 
-            <div id="reply-preview-bar" style="display: none; background: #2f3136; padding: 8px 16px; border-top-left-radius: 8px; border-top-right-radius: 8px; align-items: center; justify-content: space-between; margin-bottom: 5px; border-left: 3px solid #ed4245;">
+            <div id="reply-preview-bar"
+                style="display: none; background: #2f3136; padding: 8px 16px; border-top-left-radius: 8px; border-top-right-radius: 8px; align-items: center; justify-content: space-between; margin-bottom: 5px; border-left: 3px solid #ed4245;">
                 <div style="font-size: 14px; color: #b9bbbe; display: flex; align-items: center; gap: 5px;">
-                    <span style="display: flex; align-items: center;">Đang trả lời <strong id="reply-to-user" style="margin-left: 4px; margin-right: 4px; color: #fff;">User</strong></span>
+                    <span style="display: flex; align-items: center;">Đang trả lời <strong id="reply-to-user"
+                            style="margin-left: 4px; margin-right: 4px; color: #fff;">User</strong></span>
                 </div>
-                <i class="fa-solid fa-circle-xmark" style="cursor: pointer; color: #b9bbbe;" onclick="DM.cancelReply()"></i>
+                <i class="fa-solid fa-circle-xmark" style="cursor: pointer; color: #b9bbbe;"
+                    onclick="DM.cancelReply()"></i>
+            </div>
+
+            <div id="dm-attachment-preview"
+                style="display: none; background: #2f3136; padding: 10px; border-top-left-radius: 8px; border-top-right-radius: 8px; gap: 10px; margin-bottom: 5px; overflow-x: auto;">
+                <!-- Attachments will be rendered here -->
             </div>
 
             <div class="input-wrapper">
@@ -122,7 +131,8 @@
                 <div class="input-right-icons">
                     <i class="fa-solid fa-gift"></i>
                     <i class="fa-solid fa-face-smile"></i>
-                    <i class="fa-solid fa-paper-plane" id="dm-send-btn" style="cursor: pointer; margin-left: 8px; color: #b9bbbe;"></i>
+                    <i class="fa-solid fa-paper-plane" id="dm-send-btn"
+                        style="cursor: pointer; margin-left: 8px; color: #b9bbbe;"></i>
                 </div>
             </div>
         </div>

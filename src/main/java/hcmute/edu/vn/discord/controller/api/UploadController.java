@@ -35,8 +35,9 @@ public class UploadController {
     private static final String TYPE_JPEG = "image/jpeg";
     private static final String TYPE_PNG = "image/png";
     private static final String TYPE_WEBP = "image/webp";
+    private static final String TYPE_GIF = "image/gif";
 
-    private static final Set<String> ALLOWED_TYPES = Set.of(TYPE_JPEG, TYPE_PNG, TYPE_WEBP);
+    private static final Set<String> ALLOWED_TYPES = Set.of(TYPE_JPEG, TYPE_PNG, TYPE_WEBP, TYPE_GIF);
 
     @Value("${discord.upload.base-url}")
     private String baseUrl;
@@ -86,7 +87,7 @@ public class UploadController {
 
             if (!isAllowed) {
                 return buildErrorResponse(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
-                        "Chỉ cho phép JPEG/PNG/WebP (Detected: " + detected + ")");
+                        "Chỉ cho phép JPEG/PNG/WebP/GIF (Detected: " + detected + ")");
             }
 
             // Nếu declared khác detected (và cả 2 đều hợp lệ), vẫn cho qua nhưng log cảnh
@@ -107,6 +108,7 @@ public class UploadController {
                 case TYPE_JPEG -> ".jpg";
                 case TYPE_PNG -> ".png";
                 case TYPE_WEBP -> ".webp";
+                case TYPE_GIF -> ".gif";
                 default -> ".bin";
             };
 
