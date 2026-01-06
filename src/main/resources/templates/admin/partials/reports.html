@@ -1,0 +1,41 @@
+<div class="users-section">
+    <div class="users-header">
+        <h2 class="section-title">
+            <i class="fa-solid fa-flag"></i>
+            <span>User Reports</span>
+        </h2>
+        <div class="actions">
+            <!-- Filter can be added here -->
+            <button class="btn btn-secondary btn-sm" onclick="ReportsManager.loadReports()">
+                <i class="fa-solid fa-rotate"></i> Refresh
+            </button>
+        </div>
+    </div>
+
+    <div class="table-container">
+        <div class="table-scroller">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Reporter</th>
+                        <th>Target</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="reports-table-body">
+                    <!-- Rows rendered by JS -->
+                </tbody>
+            </table>
+        </div>
+        <div id="reports-loading" class="loading-state hidden">
+            <i class="fa-solid fa-spinner fa-spin"></i> Loading reports...
+        </div>
+        <div id="reports-empty" class="empty-state hidden">
+            <i class="fa-solid fa-check-circle"></i> No pending reports found.
+        </div>
+    </div>
+</div>

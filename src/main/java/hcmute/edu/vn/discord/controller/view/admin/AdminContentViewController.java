@@ -35,13 +35,14 @@ public class AdminContentViewController {
 
     @GetMapping("/_users")
     public String users(Model model,
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "10") int size,
-                        @RequestParam(defaultValue = "") String keyword) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String keyword) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("id").ascending());
         Page<User> userPage = keyword.isBlank()
                 ? userRepository.findAll(pageable)
-                : userRepository.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(keyword, keyword, pageable);
+                : userRepository.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(keyword, keyword,
+                        pageable);
 
         model.addAttribute("users", userPage.getContent());
         model.addAttribute("currentPage", page);
@@ -53,9 +54,9 @@ public class AdminContentViewController {
 
     @GetMapping("/_servers")
     public String servers(Model model,
-                          @RequestParam(defaultValue = "0") int page,
-                          @RequestParam(defaultValue = "10") int size,
-                          @RequestParam(defaultValue = "") String keyword) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String keyword) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("id").ascending());
         Page<Server> serverPage = keyword.isBlank()
                 ? serverRepository.findAll(pageable)
@@ -75,11 +76,11 @@ public class AdminContentViewController {
 
     @GetMapping("/_audit")
     public String audit(Model model,
-                        @RequestParam(defaultValue = "0") int page,
-                        @RequestParam(defaultValue = "10") int size,
-                        @RequestParam(defaultValue = "") String keyword,
-                        @RequestParam(defaultValue = "") String action,
-                        @RequestParam(required = false) Long adminId) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "") String keyword,
+            @RequestParam(defaultValue = "") String action,
+            @RequestParam(required = false) Long adminId) {
         PageRequest pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
 
         // Chuẩn hóa chuỗi rỗng để query chứa '' trả về all
@@ -87,8 +88,10 @@ public class AdminContentViewController {
         String act = action == null ? "" : action;
 
         Page<AuditLog> result = (adminId != null)
-                ? auditLogMongoRepository.findByAdminIdAndActionContainingIgnoreCaseAndDetailContainingIgnoreCase(adminId, act, kw, pageable)
-                : auditLogMongoRepository.findByActionContainingIgnoreCaseAndDetailContainingIgnoreCase(act, kw, pageable);
+                ? auditLogMongoRepository.findByAdminIdAndActionContainingIgnoreCaseAndDetailContainingIgnoreCase(
+                        adminId, act, kw, pageable)
+                : auditLogMongoRepository.findByActionContainingIgnoreCaseAndDetailContainingIgnoreCase(act, kw,
+                        pageable);
 
         model.addAttribute("logs", result.getContent());
         model.addAttribute("currentPage", page);
@@ -98,5 +101,10 @@ public class AdminContentViewController {
         model.addAttribute("adminId", adminId);
 
         return "admin/partials/audit";
+    }
+
+    @GetMapping("/_reports")
+    public String getReports() {
+        return "admin/partials/reports";
     }
 }

@@ -48,6 +48,15 @@ public class DirectMessageWebSocketController {
             log.error("Sender not found: {}", principal.getName());
             return;
         }
+
+        // Check isMuted
+        if (Boolean.TRUE.equals(sender.getIsMuted())) {
+            // Optional: send error message back to user via separate queue or error channel
+            // For now, just silently drop or log
+            log.warn("User {} is muted and cannot send messages", sender.getUsername());
+            return;
+        }
+
         Long senderId = sender.getId();
         DirectMessageResponse response = directMessageService.sendMessage(senderId, request);
 

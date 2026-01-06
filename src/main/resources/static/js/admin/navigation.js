@@ -6,7 +6,8 @@
         servers: '/admin/_servers',
         'messages-channel': '/admin/_messages_channel',
         'messages-direct': '/admin/_messages_direct',
-        audit: '/admin/_audit'
+        audit: '/admin/_audit',
+        reports: '/admin/_reports'
     };
 
     async function loadSection(section, params = {}) {
@@ -27,12 +28,12 @@
         const labelMap = {
             dashboard: 'Dashboard', users: 'Users', servers: 'Servers',
             'messages-channel': 'Messages · Channel', 'messages-direct': 'Messages · Direct',
-            audit: 'Audit'
+            audit: 'Audit', reports: 'Reports'
         };
         const iconMap = {
             dashboard: 'fa-gauge', users: 'fa-user-shield', servers: 'fa-server',
             'messages-channel': 'fa-envelope', 'messages-direct': 'fa-envelope',
-            audit: 'fa-clipboard-list'
+            audit: 'fa-clipboard-list', reports: 'fa-flag'
         };
         if (title) {
             title.innerHTML = `<i class="fa-solid ${iconMap[section] || 'fa-gauge'}"></i><span>${labelMap[section] || 'Dashboard'}</span>`;

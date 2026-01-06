@@ -55,18 +55,19 @@ public class AuthController {
                         HttpServletResponse httpResponse) {
                 try {
                         Authentication authentication = authenticationManager.authenticate(
-                                new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+                                        new UsernamePasswordAuthenticationToken(loginRequest.getUsername(),
+                                                        loginRequest.getPassword()));
 
                         SecurityContextHolder.getContext().setAuthentication(authentication);
 
                         // Lấy username an toàn từ principal (UserDetailsImpl hoặc bất kỳ UserDetails)
                         Object principal = authentication.getPrincipal();
                         String username = (principal instanceof UserDetails)
-                                ? ((UserDetails) principal).getUsername()
-                                : authentication.getName();
+                                        ? ((UserDetails) principal).getUsername()
+                                        : authentication.getName();
 
                         var userEntity = userService.findByUsername(username)
-                                .orElseThrow(() -> new RuntimeException("User not found"));
+                                        .orElseThrow(() -> new RuntimeException("User not found"));
 
                         // Chặn đăng nhập nếu tài khoản bị ban (isActive=false)
                         if (Boolean.FALSE.equals(userEntity.getIsActive())) {
@@ -79,7 +80,23 @@ public class AuthController {
                                 httpResponse.addCookie(expired);
 
                                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                                        .body(Map.of("message", "Tài khoản đã bị khóa/banned"));
+                                                .body(Map.of("message", "Tài khoản đã bị khóa/banned"));
+                        }
+
+                        // Chặn đăng nhập nếu bị ban tạm thời
+                        if (userEntity.getBannedUntil() != null
+                                        && userEntity.getBannedUntil().isAfter(java.time.LocalDateTime.now())) {
+                                SecurityContextHolder.clearContext();
+                                Cookie expired = new Cookie("jwt", "");
+                                expired.setHttpOnly(true);
+                                expired.setSecure(false);
+                                expired.setPath("/");
+                                expired.setMaxAge(0);
+                                httpResponse.addCookie(expired);
+
+                                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                                                .body(Map.of("message", "Tài khoản bị tạm khóa đến: "
+                                                                + userEntity.getBannedUntil()));
                         }
 
                         String jwt = jwtUtils.generateJwtToken(authentication);
@@ -148,7 +165,8 @@ public class AuthController {
 
                 // Đăng nhập ngay sau khi đăng ký
                 Authentication authentication = authenticationManager.authenticate(
-                        new UsernamePasswordAuthenticationToken(registerRequest.getUsername(), registerRequest.getPassword()));
+                                new UsernamePasswordAuthenticationToken(registerRequest.getUsername(),
+                                                registerRequest.getPassword()));
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
                 String jwt = jwtUtils.generateJwtToken(authentication);
@@ -189,7 +207,7 @@ public class AuthController {
                 // Kiểm tra email đã tồn tại chưa
                 if (userService.existsByEmail(email)) {
                         return ResponseEntity.badRequest()
-                                .body(OtpResponse.error("Email đã được sử dụng"));
+                                        .body(OtpResponse.error("Email đã được sử dụng"));
                 }
 
                 OtpResponse response = otpService.generateAndSendOtp(email);
@@ -206,14 +224,13 @@ public class AuthController {
          */
         @PostMapping("/register/verify-otp")
         public ResponseEntity<?> registerWithOtp(
-                @Valid @RequestBody RegisterWithOtpRequest request,
-                HttpServletResponse httpResponse) {
+                        @Valid @RequestBody RegisterWithOtpRequest request,
+                        HttpServletResponse httpResponse) {
 
                 // Xác thực OTP
                 OtpVerificationResponse otpResult = otpService.verifyOtp(
-                        request.getEmail(),
-                        request.getOtpCode()
-                );
+                                request.getEmail(),
+                                request.getOtpCode());
 
                 if (!otpResult.isVerified()) {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(otpResult);
@@ -230,11 +247,9 @@ public class AuthController {
 
                 // Tạo JWT và trả về
                 Authentication authentication = authenticationManager.authenticate(
-                        new UsernamePasswordAuthenticationToken(
-                                request.getUsername(),
-                                request.getPassword()
-                        )
-                );
+                                new UsernamePasswordAuthenticationToken(
+                                                request.getUsername(),
+                                                request.getPassword()));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
@@ -249,7 +264,7 @@ public class AuthController {
                 httpResponse.addCookie(cookie);
 
                 var userEntity = userService.findByUsername(request.getUsername())
-                        .orElseThrow(() -> new RuntimeException("User not found"));
+                                .orElseThrow(() -> new RuntimeException("User not found"));
 
                 return ResponseEntity.ok(new AuthResponse(jwt, "Bearer", UserResponse.from(userEntity)));
         }
@@ -262,15 +277,13 @@ public class AuthController {
                 // Không tiết lộ tồn tại email — trả OK chung
                 if (!userService.existsByEmail(email)) {
                         return ResponseEntity.ok(Map.of(
-                                "message", "Nếu email tồn tại, mã OTP đã được gửi"
-                        ));
+                                        "message", "Nếu email tồn tại, mã OTP đã được gửi"));
                 }
 
                 otpService.generateAndSendOtp(email);
 
                 return ResponseEntity.ok(Map.of(
-                        "message", "Mã OTP đã được gửi đến email của bạn"
-                ));
+                                "message", "Mã OTP đã được gửi đến email của bạn"));
         }
 
         /**
@@ -278,15 +291,15 @@ public class AuthController {
          */
         @PostMapping("/reset-password")
         public ResponseEntity<?> resetPassword(
-                @RequestParam String email,
-                @RequestParam String otpCode,
-                @RequestParam String newPassword) {
+                        @RequestParam String email,
+                        @RequestParam String otpCode,
+                        @RequestParam String newPassword) {
 
                 // Xác thực OTP
                 var otpVerify = otpService.verifyOtp(email, otpCode);
                 if (!otpVerify.isVerified()) {
                         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                                .body(Map.of("message", "Mã OTP không hợp lệ hoặc đã hết hạn"));
+                                        .body(Map.of("message", "Mã OTP không hợp lệ hoặc đã hết hạn"));
                 }
 
                 // Reset password

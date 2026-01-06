@@ -75,6 +75,7 @@ public class AdminUserController {
     public User unbanUser(@PathVariable Long id, Authentication authentication) {
         User u = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("User not found"));
         u.setIsActive(true);
+        u.setBannedUntil(null); // Clear temporary ban
         User saved = userRepository.save(u);
         auditLogService.log(authentication.getName(),
                 hcmute.edu.vn.discord.entity.enums.EAuditAction.ADMIN_UNBAN_USER.name(), saved.getUsername(),

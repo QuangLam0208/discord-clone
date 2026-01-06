@@ -62,8 +62,13 @@
                     </td>
 
                     <td th:attr="data-user-status=${u.id}">
-                        <span th:if="${u.isActive}" class="badge-status active">Active</span>
-                        <span th:unless="${u.isActive}" class="badge-status banned">Banned</span>
+                        <span
+                            th:if="${u.isActive and (u.bannedUntil == null or u.bannedUntil.isBefore(#temporals.createNow()))}"
+                            class="badge-status active">Active</span>
+                        <span th:if="${!u.isActive}" class="badge-status banned">Global Ban</span>
+                        <span
+                            th:if="${u.isActive and u.bannedUntil != null and u.bannedUntil.isAfter(#temporals.createNow())}"
+                            class="badge-status banned">Temp Ban</span>
                     </td>
 
                     <td>
@@ -75,13 +80,19 @@
                                 <i class="fas fa-pen"></i> Sửa
                             </button>
                             <!-- Bỏ nút 'Chi tiết' tại đây theo yêu cầu -->
-                            <button type="button" class="btn-mini ban" th:if="${u.isActive}" th:data-id="${u.id}"
-                                th:data-username="${u.username}"
+
+                            <!-- Show BAN button if user is NOT Global Banned AND NOT Temp Banned -->
+                            <button type="button" class="btn-mini ban"
+                                th:if="${u.isActive and (u.bannedUntil == null or u.bannedUntil.isBefore(#temporals.createNow()))}"
+                                th:data-id="${u.id}" th:data-username="${u.username}"
                                 onclick="openBanModal(this.getAttribute('data-id'), this.getAttribute('data-username'))">
                                 <i class="fas fa-gavel"></i> Ban
                             </button>
-                            <button type="button" class="btn-mini edit" th:unless="${u.isActive}" th:data-id="${u.id}"
-                                th:data-username="${u.username}"
+
+                            <!-- Show UNBAN button if user is Global Banned OR Temp Banned -->
+                            <button type="button" class="btn-mini edit"
+                                th:if="${!u.isActive or (u.bannedUntil != null and u.bannedUntil.isAfter(#temporals.createNow()))}"
+                                th:data-id="${u.id}" th:data-username="${u.username}"
                                 onclick="openUnbanModal(this.getAttribute('data-id'), this.getAttribute('data-username'))">
                                 <i class="fas fa-unlock"></i> Unban
                             </button>

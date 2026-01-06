@@ -41,6 +41,12 @@ public class User {
     private Boolean isActive;
     private Boolean isEmailVerified;
 
+    private Boolean isMuted;
+    private LocalDateTime mutedUntil;
+
+    private LocalDateTime bannedUntil;
+    private String banReason;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
