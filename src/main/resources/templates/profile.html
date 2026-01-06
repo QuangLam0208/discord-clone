@@ -244,7 +244,16 @@
                                 <label>EMAIL</label>
                                 <p th:text="${user.email}">*****@gmail.com</p>
                             </div>
-                            <button class="btn-edit" onclick="openEditProfileModal()">Chỉnh sửa</button>
+                            <button class="btn-edit" onclick="window.location.href='/change-email'">Chỉnh sửa</button>
+                        </div>
+
+                        <div class="info-row">
+                            <div class="info-col">
+                                <label>MẬT KHẨU</label>
+                                <p>********</p>
+                            </div>
+                            <button class="btn-edit" onclick="window.location.href='/change-password'">Đổi mật
+                                khẩu</button>
                         </div>
                     </div>
                 </div>

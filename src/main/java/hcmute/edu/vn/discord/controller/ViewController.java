@@ -22,4 +22,9 @@ public class ViewController {
     public String resetPassword() {
         return "reset-password";
     }
+
+    @GetMapping("/change-password")
+    public String changePassword() {
+        return "change-password";
+    }
 }
