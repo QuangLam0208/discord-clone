@@ -60,6 +60,14 @@ public class MessageServiceImpl implements MessageService {
             ensurePermission(sender.getId(), channel.getServer().getId(), EPermission.ATTACH_FILES);
         }
 
+        // Check Mute status
+        boolean isMuted = Boolean.TRUE.equals(sender.getIsMuted());
+        boolean isTempMuted = sender.getMutedUntil() != null
+                && sender.getMutedUntil().isAfter(java.time.LocalDateTime.now());
+        if (isMuted || isTempMuted) {
+            throw new AccessDeniedException("Bạn đang bị cấm chat (Muted).");
+        }
+
         boolean hasContent = request.getContent() != null && !request.getContent().trim().isEmpty();
         boolean hasAttachments = request.getAttachments() != null && !request.getAttachments().isEmpty();
 

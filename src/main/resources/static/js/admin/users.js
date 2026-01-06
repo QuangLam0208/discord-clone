@@ -20,22 +20,22 @@
     }
 
     // ====== Edit user modal enable save on change ======
-    function normalizeRoles(arr){
-        return Array.from(new Set((arr||[]).map(x => String(x).trim()))).sort();
+    function normalizeRoles(arr) {
+        return Array.from(new Set((arr || []).map(x => String(x).trim()))).sort();
     }
-    function isEqualArray(a,b){
+    function isEqualArray(a, b) {
         const aa = normalizeRoles(a), bb = normalizeRoles(b);
         if (aa.length !== bb.length) return false;
-        for (let i=0;i<aa.length;i++){ if (aa[i] !== bb[i]) return false; }
+        for (let i = 0; i < aa.length; i++) { if (aa[i] !== bb[i]) return false; }
         return true;
     }
-    function computeCurrentRoles(){
+    function computeCurrentRoles() {
         return Array.from(document.querySelectorAll('input[name="roleNames"]:checked')).map(cb => cb.value);
     }
-    function parseOriginalRolesStr(str){
-        return normalizeRoles(String(str||'').split(',').map(s => s.trim()).filter(Boolean));
+    function parseOriginalRolesStr(str) {
+        return normalizeRoles(String(str || '').split(',').map(s => s.trim()).filter(Boolean));
     }
-    function updateEditSaveEnabled(){
+    function updateEditSaveEnabled() {
         const btn = document.getElementById('btnEditSave');
         if (!btn) return;
         const modal = document.getElementById('editModal');
@@ -79,8 +79,8 @@
         }
         if (btn) btn.disabled = true;
 
-        displayNameInput?.addEventListener('input', updateEditSaveEnabled, { once:false });
-        checkboxes.forEach(cb => cb.addEventListener('change', updateEditSaveEnabled, { once:false }));
+        displayNameInput?.addEventListener('input', updateEditSaveEnabled, { once: false });
+        checkboxes.forEach(cb => cb.addEventListener('change', updateEditSaveEnabled, { once: false }));
     }
 
     async function openUserDetail(userId) {
@@ -141,6 +141,15 @@
         } catch { return safeStr(isoVal); }
     }
 
+    function openUnmuteModal(userId, username) {
+        const modal = document.getElementById('unmuteModal'); if (!modal) return;
+        modal.classList.add('active');
+        const idInput = document.getElementById('unmuteUserId');
+        const nameLabel = document.getElementById('unmuteUsername');
+        if (idInput) idInput.value = userId;
+        if (nameLabel) nameLabel.innerText = username || '';
+    }
+
     function serverCardHtml(s) {
         const status = s?.status === 'FREEZE'
             ? '<span class="badge-status freeze">Freeze</span>'
@@ -177,25 +186,10 @@
                 await Api.post(`/api/admin/users/${id}/ban`, {});
                 closeModal('banModal');
 
-                const st = document.querySelector(`[data-user-status="${id}"]`);
-                if (st) st.innerHTML = '<span class="badge-status banned">Banned</span>';
-
-                const actions = document.querySelector(`[data-user-actions="${id}"]`);
-                const username = actions?.dataset?.userUsername || '';
-                if (actions) {
-                    actions.innerHTML = `
-            <button type="button" class="btn-mini edit"
-                    data-id="${id}" data-username="${escapeJsAttr(username)}"
-                    onclick="openEditModal(${id}, '${escapeJsAttr(username)}')">
-              <i class="fas fa-pen"></i> Sửa
-            </button>
-            <button type="button" class="btn-mini edit"
-                    data-id="${id}" data-username="${escapeJsAttr(username)}"
-                    onclick="openUnbanModal(${id}, '${escapeJsAttr(username)}')">
-              <i class="fas fa-unlock"></i> Unban
-            </button>
-          `;
-                }
+                // Reload section to reflect changes perfectly or manually update DOM
+                // Reloading is safer for complex state updates
+                const cur = document.querySelector('.admin-pagination-link.active') || { dataset: { page: 0, keyword: '' } };
+                loadSection('users', { page: cur.dataset.page || 0, keyword: cur.dataset.keyword || '' });
 
                 toastOk('Đã khóa tài khoản');
             } catch (e) { toastErr(e.message || 'Khóa tài khoản thất bại'); }
@@ -210,28 +204,28 @@
                 await Api.post(`/api/admin/users/${id}/unban`, {});
                 closeModal('unbanModal');
 
-                const st = document.querySelector(`[data-user-status="${id}"]`);
-                if (st) st.innerHTML = '<span class="badge-status active">Active</span>';
-
-                const actions = document.querySelector(`[data-user-actions="${id}"]`);
-                const username = actions?.dataset?.userUsername || '';
-                if (actions) {
-                    actions.innerHTML = `
-            <button type="button" class="btn-mini edit"
-                    data-id="${id}" data-username="${escapeJsAttr(username)}"
-                    onclick="openEditModal(${id}, '${escapeJsAttr(username)}')">
-              <i class="fas fa-pen"></i> Sửa
-            </button>
-            <button type="button" class="btn-mini ban"
-                    data-id="${id}" data-username="${escapeJsAttr(username)}"
-                    onclick="openBanModal(${id}, '${escapeJsAttr(username)}')">
-              <i class="fas fa-gavel"></i> Ban
-            </button>
-          `;
-                }
+                const cur = document.querySelector('.admin-pagination-link.active') || { dataset: { page: 0, keyword: '' } };
+                loadSection('users', { page: cur.dataset.page || 0, keyword: cur.dataset.keyword || '' });
 
                 toastOk('Đã mở khóa tài khoản');
             } catch (e) { toastErr(e.message || 'Mở khóa thất bại'); }
+        });
+
+        // Users: Unmute
+        const btnUnmuteConfirm = document.getElementById('btnUnmuteConfirm');
+        btnUnmuteConfirm?.addEventListener('click', async () => {
+            const id = document.getElementById('unmuteUserId')?.value;
+            if (!id) return;
+            try {
+                await Api.post(`/api/admin/users/${id}/unmute`, {});
+                closeModal('unmuteModal');
+
+                // Reload to refresh status
+                const cur = document.querySelector('.admin-pagination-link.active') || { dataset: { page: 0, keyword: '' } };
+                loadSection('users', { page: cur.dataset.page || 0, keyword: cur.dataset.keyword || '' });
+
+                toastOk('Đã bỏ cấm chat (Unmute)');
+            } catch (e) { toastErr(e.message || 'Unmute thất bại'); }
         });
 
         // Users: Save edit (displayName + roles)
@@ -254,10 +248,10 @@
                 const rolesCell = document.querySelector(`[data-user-roles-cell="${id}"]`);
                 if (rolesCell) {
                     const set = new Set(roles.map(String));
-                    let label='DEFAULT', cls='default';
-                    if (set.has('ADMIN')) { label='ADMIN'; cls='admin'; }
-                    else if (set.has('USER_PREMIUM')) { label='PREMIUM'; cls='premium'; }
-                    else if (set.has('USER_DEFAULT')) { label='DEFAULT'; cls='default'; }
+                    let label = 'DEFAULT', cls = 'default';
+                    if (set.has('ADMIN')) { label = 'ADMIN'; cls = 'admin'; }
+                    else if (set.has('USER_PREMIUM')) { label = 'PREMIUM'; cls = 'premium'; }
+                    else if (set.has('USER_DEFAULT')) { label = 'DEFAULT'; cls = 'default'; }
                     rolesCell.innerHTML = `<span class="badge-role ${cls}">${label}</span>`;
                 }
 
@@ -282,6 +276,7 @@
     // Expose cho template
     window.openBanModal = openBanModal;
     window.openUnbanModal = openUnbanModal;
+    window.openUnmuteModal = openUnmuteModal;
     window.openEditModal = openEditModal;
     window.openUserDetail = openUserDetail;
     window.attachAdminUserHandlers = attachAdminUserHandlers;

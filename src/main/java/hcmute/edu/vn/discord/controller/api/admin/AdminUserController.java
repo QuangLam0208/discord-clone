@@ -83,6 +83,18 @@ public class AdminUserController {
         return saved;
     }
 
+    @PostMapping("/{id}/unmute")
+    public User unmuteUser(@PathVariable Long id, Authentication authentication) {
+        User u = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("User not found"));
+        u.setIsMuted(false);
+        u.setMutedUntil(null);
+        User saved = userRepository.save(u);
+        auditLogService.log(authentication.getName(),
+                "ADMIN_UNMUTE_USER", saved.getUsername(), // Using explicit string if enum doesn't exist yet
+                "Unmuted user id: " + id);
+        return saved;
+    }
+
     // (Giữ nếu bạn còn dùng ở nơi khác)
     @PostMapping("/{id}/roles")
     public User updateRoles(@PathVariable Long id, @Valid @RequestBody UpdateUserAdminRequest req) {

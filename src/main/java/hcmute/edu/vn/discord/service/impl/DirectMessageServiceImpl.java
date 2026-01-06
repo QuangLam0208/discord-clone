@@ -68,7 +68,15 @@ public class DirectMessageServiceImpl implements DirectMessageService {
         User sender = userRepo.findById(senderId).get();
         User receiver = userRepo.findById(request.getReceiverId()).get();
 
-        var friendRel = friendRepository.findByRequesterAndReceiverOrRequesterAndReceiver(sender, receiver, receiver, sender);
+        // Check Mute status
+        boolean isMuted = Boolean.TRUE.equals(sender.getIsMuted());
+        boolean isTempMuted = sender.getMutedUntil() != null
+                && sender.getMutedUntil().isAfter(java.time.LocalDateTime.now());
+        if (isMuted || isTempMuted) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn đang bị cấm chat (Muted).");
+        }
+
+        var friendRel = friendRepository.findByRequesterAndReceiverOrRequesterAndReceiver(sender, receiver, receiver,sender);
 
         if (friendRel.isPresent()) {
             Friend f = friendRel.get();

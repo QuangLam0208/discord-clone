@@ -49,11 +49,18 @@ public class DirectMessageWebSocketController {
             return;
         }
 
-        // Check isMuted
-        if (Boolean.TRUE.equals(sender.getIsMuted())) {
-            // Optional: send error message back to user via separate queue or error channel
-            // For now, just silently drop or log
+        // Check isMuted or mutedUntil
+        boolean isMuted = Boolean.TRUE.equals(sender.getIsMuted());
+        boolean isTempMuted = sender.getMutedUntil() != null
+                && sender.getMutedUntil().isAfter(java.time.LocalDateTime.now());
+
+        if (isMuted || isTempMuted) {
             log.warn("User {} is muted and cannot send messages", sender.getUsername());
+            // Optional: Send error to user
+            messagingTemplate.convertAndSendToUser(
+                    principal.getName(),
+                    "/queue/errors",
+                    java.util.Map.of("code", "USER_MUTED", "message", "Bạn đang bị cấm chat (Muted)."));
             return;
         }
 

@@ -62,13 +62,23 @@
                     </td>
 
                     <td th:attr="data-user-status=${u.id}">
-                        <span
-                            th:if="${u.isActive and (u.bannedUntil == null or u.bannedUntil.isBefore(#temporals.createNow()))}"
-                            class="badge-status active">Active</span>
+                        <!-- Global Ban -->
                         <span th:if="${!u.isActive}" class="badge-status banned">Global Ban</span>
+
+                        <!-- Temp Ban -->
                         <span
                             th:if="${u.isActive and u.bannedUntil != null and u.bannedUntil.isAfter(#temporals.createNow())}"
                             class="badge-status banned">Temp Ban</span>
+
+                        <!-- Mute (Show only if active and not banned) -->
+                        <span
+                            th:if="${u.isActive and (u.bannedUntil == null or u.bannedUntil.isBefore(#temporals.createNow())) and (u.isMuted == true or (u.mutedUntil != null and u.mutedUntil.isAfter(#temporals.createNow())))}"
+                            class="badge-status muted" style="background:#e6a23c;color:#fff;">Muted</span>
+
+                        <!-- Active (Show only if active, not banned, and not muted) -->
+                        <span
+                            th:if="${u.isActive and (u.bannedUntil == null or u.bannedUntil.isBefore(#temporals.createNow())) and (u.isMuted != true and (u.mutedUntil == null or u.mutedUntil.isBefore(#temporals.createNow())))}"
+                            class="badge-status active">Active</span>
                     </td>
 
                     <td>
@@ -95,6 +105,14 @@
                                 th:data-id="${u.id}" th:data-username="${u.username}"
                                 onclick="openUnbanModal(this.getAttribute('data-id'), this.getAttribute('data-username'))">
                                 <i class="fas fa-unlock"></i> Unban
+                            </button>
+
+                            <!-- Unmute Button (Show if Muted AND NOT Banned) -->
+                            <button type="button" class="btn-mini edit" style="background:#e6a23c;"
+                                th:if="${u.isActive and (u.bannedUntil == null or u.bannedUntil.isBefore(#temporals.createNow())) and (u.isMuted == true or (u.mutedUntil != null and u.mutedUntil.isAfter(#temporals.createNow())))}"
+                                th:data-id="${u.id}" th:data-username="${u.username}"
+                                onclick="openUnmuteModal(this.getAttribute('data-id'), this.getAttribute('data-username'))">
+                                <i class="fas fa-microphone-slash"></i> Unmute
                             </button>
                         </div>
                     </td>
@@ -195,6 +213,22 @@
         <div class="modal-footer">
             <button type="button" class="btn-cancel" onclick="closeModal('unbanModal')">Hủy</button>
             <button type="button" class="btn-confirm" id="btnUnbanConfirm">Unban</button>
+        </div>
+    </div>
+</div>
+
+<div id="unmuteModal" class="modal-overlay">
+    <div class="discord-modal">
+        <div class="modal-header">
+            <h2>Unmute người dùng</h2>
+        </div>
+        <div class="modal-body">
+            <input type="hidden" id="unmuteUserId">
+            <p class="confirm-text">Bỏ cấm chat cho người dùng <strong id="unmuteUsername">...</strong>?</p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-cancel" onclick="closeModal('unmuteModal')">Hủy</button>
+            <button type="button" class="btn-confirm" id="btnUnmuteConfirm">Unmute</button>
         </div>
     </div>
 </div>
