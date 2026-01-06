@@ -38,6 +38,10 @@ public class ReportServiceImpl implements ReportService {
         report.setStatus(ReportStatus.PENDING);
         report.setCreatedAt(new Date());
         reportRepository.save(report);
+
+        // Notify admin via WebSocket
+        ReportResponse response = ReportResponse.from(report);
+        messagingTemplate.convertAndSend("/topic/admin/reports", response);
     }
 
     @Override
@@ -96,5 +100,50 @@ public class ReportServiceImpl implements ReportService {
         // Notify admin via WebSocket
         ReportResponse response = ReportResponse.from(report);
         messagingTemplate.convertAndSend("/topic/admin/reports", response);
+
+        // Notify User (Check if penalty exists)
+        if (accepted && penalty != null && report.getTargetUser() != null) {
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("id", report.getId());
+            payload.put("type", "PENALTY");
+            payload.put("penalty", penalty); // WARN, MUTE, BAN, GLOBAL_BAN
+            payload.put("timestamp", new Date());
+
+            String title = "Thông báo từ Admin";
+            String message = "Bạn đã nhận được một thông báo từ quản trị viên.";
+            String icon = "info";
+
+            switch (penalty) {
+                case "WARN":
+                    title = "Cảnh báo vi phạm";
+                    message = "Bạn đã bị cảnh báo vì vi phạm quy tắc cộng đồng: " + report.getType();
+                    icon = "warning";
+                    break;
+                case "MUTE":
+                    title = "Bạn đã bị cấm chat";
+                    message = "Tài khoản của bạn đã bị cấm chat do vi phạm: " + report.getType();
+                    icon = "error";
+                    break;
+                case "BAN":
+                    title = "Tài khoản bị khóa";
+                    message = "Bạn đã bị khóa tài khoản 7 ngày do vi phạm: " + report.getType();
+                    icon = "error";
+                    break;
+                case "GLOBAL_BAN":
+                    title = "Tài khoản bị cấm vĩnh viễn";
+                    message = "Tài khoản của bạn đã bị cấm vĩnh viễn.";
+                    icon = "error";
+                    break;
+            }
+            payload.put("title", title);
+            payload.put("message", message);
+            payload.put("icon", icon);
+
+            String topic = "/topic/user/" + report.getTargetUser().getId() + "/notifications";
+            System.out.println("Sending notification to topic: " + topic);
+
+            // Explicitly send to the ID-based topic
+            messagingTemplate.convertAndSend(topic, payload);
+        }
     }
 }

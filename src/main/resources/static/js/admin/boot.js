@@ -18,6 +18,9 @@
         if (typeof window.attachAdminAuditHandlers === 'function') {
             window.attachAdminAuditHandlers();
         }
+        if (typeof window.attachAdminReportsHandlers === 'function') {
+            window.attachAdminReportsHandlers();
+        }
     }
 
     document.addEventListener('DOMContentLoaded', async () => {

@@ -11,7 +11,13 @@ window.Ws = {
         this.stompClient = Stomp.over(sock);
         this.stompClient.debug = null;
 
-        this.stompClient.connect({}, () => {
+        const token = localStorage.getItem('accessToken');
+        const headers = {};
+        if (token) {
+            headers['Authorization'] = 'Bearer ' + token;
+        }
+
+        this.stompClient.connect(headers, () => {
             this.connected = true;
             console.log("Global WS Connected");
             const userId = localStorage.getItem('userId');
@@ -24,6 +30,32 @@ window.Ws = {
             if (userId) {
                 this.stompClient.subscribe(`/topic/force-logout/${userId}`, (message) => {
                     this.handleLogout(message);
+                });
+
+                // Personal Notifications (Warn, Ban, Mute, etc.)
+                const notifTopic = `/topic/user/${userId}/notifications`;
+                console.log("Subscribing to notifications:", notifTopic);
+                this.stompClient.subscribe(notifTopic, (message) => {
+                    console.log("Notification received:", message.body);
+                    const payload = JSON.parse(message.body);
+                    Swal.fire({
+                        title: payload.title,
+                        text: payload.message,
+                        icon: payload.icon || 'info',
+                        background: '#313338',
+                        color: '#fff',
+                        confirmButtonColor: '#5865F2',
+                        backdrop: `
+                            rgba(0,0,123,0.4)
+                            left top
+                            no-repeat
+                        `
+                    }).then(() => {
+                        // For bans, we might want to logout or reload
+                        if (payload.penalty === 'BAN' || payload.penalty === 'GLOBAL_BAN') {
+                            window.location.reload();
+                        }
+                    });
                 });
             }
         }, () => {
@@ -60,11 +92,6 @@ window.Ws = {
             }
         }
         else if (payload.type === 'ROLE_UPDATE' || payload.type === 'ROLE_DELETE') {
-            // A role changed. It MIGHT affect me. 
-            // Simple approach: Always reload my permissions to be safe.
-            // Optimized: Check if I have this role. 
-            // But I don't easily know my role IDs without refetching. 
-            // So just refetch permissions. It's cheap.
             console.log("Role updated, reloading permissions...");
             if (window.reloadPermissions) window.reloadPermissions(serverId);
         }

@@ -40,9 +40,9 @@ const DMWS = (() => {
       window.state.stompClient = client;
       console.log('[WS] CONNECTED');
 
-      try { subscriptionDM?.unsubscribe(); } catch {}
-      try { subscriptionFriends?.unsubscribe(); } catch {}
-      try { subscriptionCurrentConv?.unsubscribe(); } catch {}
+      try { subscriptionDM?.unsubscribe(); } catch { }
+      try { subscriptionFriends?.unsubscribe(); } catch { }
+      try { subscriptionCurrentConv?.unsubscribe(); } catch { }
 
       // Subscribe DM queue
       subscriptionDM = client.subscribe('/user/queue/dm', (frame) => {
@@ -58,9 +58,63 @@ const DMWS = (() => {
       });
       console.log('[WS] SUBSCRIBED /user/queue/friends');
 
+      let currentUserId = localStorage.getItem('userId');
+
+      // Fallback: Try decoding token if userId is missing
+      if (!currentUserId && token) {
+        try {
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          const payload = JSON.parse(jsonPayload);
+          if (payload.id) {
+            currentUserId = String(payload.id);
+            localStorage.setItem('userId', currentUserId); // Persist for future
+            console.log('[WS] Extracted & Saved userId from token:', currentUserId);
+          } else if (payload.sub) {
+            console.warn('[WS] Token has sub but no id. Cannot subscribe to ID-based topic.');
+          }
+        } catch (e) {
+          console.error('[WS] Token decode failed:', e);
+        }
+      }
+
+      if (currentUserId) {
+        const notifTopic = `/topic/user/${currentUserId}/notifications`;
+        console.log('[WS] Subscribing to Personal Notifications:', notifTopic);
+
+        client.subscribe(notifTopic, (message) => {
+          console.log('[WS] Notification RECEIVED:', message.body);
+          try {
+            const payload = JSON.parse(message.body);
+
+            // Show Popup
+            Swal.fire({
+              title: payload.title || 'Thông báo',
+              text: payload.message || '',
+              icon: payload.icon || 'info',
+              background: '#313338',
+              color: '#fff',
+              confirmButtonColor: '#5865F2',
+              backdrop: `rgba(0,0,0,0.5)`
+            }).then(() => {
+              if (payload.penalty === 'BAN' || payload.penalty === 'GLOBAL_BAN') {
+                window.location.reload();
+              }
+            });
+          } catch (e) {
+            console.error('[WS] Error processing notification:', e);
+          }
+        });
+      } else {
+        console.error('[WS] CRITICAL: Unable to determine User ID. Notifications will not be received.');
+      }
+
       // RE-SUBSCRIBE VÀO HỘI THOẠI ĐANG MỞ (NẾU CÓ)
       if (currentConversationId && currentConvCallback) {
-        try { subscriptionCurrentConv?.unsubscribe(); } catch {}
+        try { subscriptionCurrentConv?.unsubscribe(); } catch { }
         subscriptionCurrentConv = client.subscribe(`/topic/dm/${currentConversationId}`, (frame) => {
           try {
             const payload = JSON.parse(frame.body);
@@ -100,7 +154,7 @@ const DMWS = (() => {
     }
 
     // Hủy đăng ký hội thoại cũ nếu có (để tránh nghe lộn xộn)
-    try { subscriptionCurrentConv?.unsubscribe(); } catch {}
+    try { subscriptionCurrentConv?.unsubscribe(); } catch { }
     subscriptionCurrentConv = null;
 
     currentConversationId = conversationId;
