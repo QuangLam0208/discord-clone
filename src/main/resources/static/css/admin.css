@@ -4,80 +4,317 @@
    - Giữ dark theme đồng nhất với app, thêm modal styles + table/search/header
    ========================================================= */
 
-:root{
-    --bg:#313338; --sidebar:#2b2d31; --panel:#1e1f22; --text:#dbdee1; --muted:#b5bac1;
-    --border:#3f4147; --brand:#5865F2; --danger:#ed4245; --success:#23a559;
+:root {
+    --bg: #313338;
+    --sidebar: #2b2d31;
+    --panel: #1e1f22;
+    --text: #dbdee1;
+    --muted: #b5bac1;
+    --border: #3f4147;
+    --brand: #5865F2;
+    --danger: #ed4245;
+    --success: #23a559;
 }
 
-*{box-sizing:border-box}
-html,body{height:100%;background:var(--bg);color:var(--text);margin:0;font-family:'Segoe UI',sans-serif}
+* {
+    box-sizing: border-box
+}
+
+html,
+body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif
+}
 
 /* =========================================================
    1) DASHBOARD LAYOUT (index.html)
    ========================================================= */
-.admin-root{display:flex;min-height:100vh;}
+.admin-root {
+    display: flex;
+    min-height: 100vh;
+}
 
 /* Sidebar trái */
-.admin-sidebar{
-    width:240px;background:var(--sidebar);display:flex;flex-direction:column;border-right:1px solid #1f2023
+.admin-sidebar {
+    width: 240px;
+    background: var(--sidebar);
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #1f2023
 }
-.brand{display:flex;align-items:center;gap:10px;padding:16px 14px;border-bottom:1px solid #1f2023}
-.brand i{font-size:22px;color:#fff}
-.brand-text{font-weight:800;color:#fff;letter-spacing:.3px}
 
-.nav{padding:8px}
-.nav-item{
-    display:flex;align-items:center;gap:10px;color:#b9bbbe;text-decoration:none;padding:8px 10px;border-radius:6px;
-    margin:2px 0;font-weight:600
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 14px;
+    border-bottom: 1px solid #1f2023
 }
-.nav-item i{width:18px;text-align:center}
-.nav-item:hover{background:#35373c;color:#fff}
-.nav-item.active{background:#404249;color:#fff}
-.separator{height:1px;background:var(--border);margin:8px 12px}
 
-.sidebar-footer{
-    margin-top:auto;padding:10px;border-top:1px solid #1f2023;display:flex;align-items:center;gap:8px
+.brand i {
+    font-size: 22px;
+    color: #fff
 }
-.current-user{display:flex;align-items:center;gap:10px;flex:1}
-.avatar{width:36px;height:36px;border-radius:50%;background:#5865F2;background-size:cover;background-position:center}
-.uinfo{display:flex;flex-direction:column;line-height:1.2}
-.uname{font-weight:700;color:#f2f3f5;font-size:14px;max-width:120px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.utag{font-size:12px;color:#b5bac1}
-.btn-logout{background:transparent;border:none;color:#b5bac1;width:36px;height:36px;border-radius:8px;cursor:pointer}
-.btn-logout:hover{background:#3f4147;color:#fff}
+
+.brand-text {
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: .3px
+}
+
+.nav {
+    padding: 8px
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #b9bbbe;
+    text-decoration: none;
+    padding: 8px 10px;
+    border-radius: 6px;
+    margin: 2px 0;
+    font-weight: 600
+}
+
+.nav-item i {
+    width: 18px;
+    text-align: center
+}
+
+.nav-item:hover {
+    background: #35373c;
+    color: #fff
+}
+
+.nav-item.active {
+    background: #404249;
+    color: #fff
+}
+
+.separator {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 12px
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding: 10px;
+    border-top: 1px solid #1f2023;
+    display: flex;
+    align-items: center;
+    gap: 8px
+}
+
+.current-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1
+}
+
+.avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #5865F2;
+    background-size: cover;
+    background-position: center
+}
+
+.uinfo {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2
+}
+
+.uname {
+    font-weight: 700;
+    color: #f2f3f5;
+    font-size: 14px;
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+.utag {
+    font-size: 12px;
+    color: #b5bac1
+}
+
+.btn-logout {
+    background: transparent;
+    border: none;
+    color: #b5bac1;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer
+}
+
+.btn-logout:hover {
+    background: #3f4147;
+    color: #fff
+}
 
 /* Main */
-.admin-main{flex:1;display:flex;flex-direction:column;min-width:0}
-.topbar{
-    height:54px;border-bottom:1px solid #26272d;display:flex;align-items:center;justify-content:space-between;padding:0 16px
+.admin-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0
 }
-.page-title{display:flex;align-items:center;gap:8px;font-weight:800}
-.ws-indicator{width:10px;height:10px;border-radius:50%;background:#80848e}
 
-.content{padding:16px}
+.topbar {
+    height: 54px;
+    border-bottom: 1px solid #26272d;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px
+}
+
+.page-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800
+}
+
+.ws-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #80848e
+}
+
+.content {
+    padding: 16px
+}
 
 /* Cards thống kê */
-.card{background:var(--panel);border:1px solid #1f2023;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,.1)}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
-.stat{display:flex;align-items:center;padding:14px}
-.stat-icon{width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-right:12px}
-.stat-icon.users{background:#2e3136;color:#9cdcfe}
-.stat-icon.servers{background:#2e3136;color:#ffd166}
-.stat-icon.msgs{background:#2e3136;color:#c3f0ca}
-.stat-label{font-size:12px;color:var(--muted);text-transform:uppercase;font-weight:800}
-.stat-value{font-size:22px;font-weight:900;margin-top:2px}
+.card {
+    background: var(--panel);
+    border: 1px solid #1f2023;
+    border-radius: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .1)
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 16px
+}
+
+.stat {
+    display: flex;
+    align-items: center;
+    padding: 14px
+}
+
+.stat-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 12px
+}
+
+.stat-icon.users {
+    background: #2e3136;
+    color: #9cdcfe
+}
+
+.stat-icon.servers {
+    background: #2e3136;
+    color: #ffd166
+}
+
+.stat-icon.msgs {
+    background: #2e3136;
+    color: #c3f0ca
+}
+
+.stat-label {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    font-weight: 800
+}
+
+.stat-value {
+    font-size: 22px;
+    font-weight: 900;
+    margin-top: 2px
+}
 
 /* Bảng latest (dashboard) */
-.grids{display:grid;grid-template-columns:1fr 1fr;gap:16px}
-.table-card{overflow:hidden}
-.card-header{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--border);font-weight:800}
-.card-header .link{color:#00a8fc;text-decoration:none;font-weight:600}
-.card-header .link:hover{text-decoration:underline}
-.table-wrap{overflow:auto}
-table{width:100%;border-collapse:collapse}
-thead th{font-size:12px;color:#b5bac1;text-transform:uppercase;padding:10px;background:#2b2d31;border-bottom:1px solid #1f2023;text-align:left}
-tbody td{padding:10px;border-bottom:1px solid #2b2d31}
-.muted{color:#b5bac1;text-align:center}
+.grids {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px
+}
+
+.table-card {
+    overflow: hidden
+}
+
+.card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    font-weight: 800
+}
+
+.card-header .link {
+    color: #00a8fc;
+    text-decoration: none;
+    font-weight: 600
+}
+
+.card-header .link:hover {
+    text-decoration: underline
+}
+
+.table-wrap {
+    overflow: auto
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse
+}
+
+thead th {
+    font-size: 12px;
+    color: #b5bac1;
+    text-transform: uppercase;
+    padding: 10px;
+    background: #2b2d31;
+    border-bottom: 1px solid #1f2023;
+    text-align: left
+}
+
+tbody td {
+    padding: 10px;
+    border-bottom: 1px solid #2b2d31
+}
+
+.muted {
+    color: #b5bac1;
+    text-align: center
+}
 
 /* =========================================================
    2) LIST PAGES LAYOUT (users.html, servers.html)
@@ -92,37 +329,126 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
 
 /* Header + search */
 .discord-header {
-    display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;
-    background-color:var(--sidebar);padding:16px 24px;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,0.1)
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    background-color: var(--sidebar);
+    padding: 16px 24px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1)
 }
+
 .discord-header h1 {
-    font-size:20px;font-weight:700;color:#f2f3f5;margin:0;display:flex;align-items:center;gap:10px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #f2f3f5;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
+
 .discord-search {
-    background-color:var(--panel);border-radius:4px;padding:4px 8px;display:flex;align-items:center;transition:0.2s;border:1px solid transparent;
+    background-color: var(--panel);
+    border-radius: 4px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    transition: 0.2s;
+    border: 1px solid transparent;
 }
-.discord-search:focus-within { border-color: var(--brand); }
+
+.discord-search:focus-within {
+    border-color: var(--brand);
+}
+
 .discord-search input {
-    background:transparent;border:none;color:var(--text);padding:6px;outline:none;font-size:14px;width:250px;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    padding: 6px;
+    outline: none;
+    font-size: 14px;
+    width: 250px;
 }
-.discord-search button { background:transparent;border:none;color:#b5bac1;cursor:pointer;font-size:14px; }
-.discord-search button:hover { color:#fff; }
+
+.discord-search button {
+    background: transparent;
+    border: none;
+    color: #b5bac1;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.discord-search button:hover {
+    color: #fff;
+}
 
 /* Bảng danh sách */
-.discord-table-wrapper { background-color:var(--sidebar);border-radius:8px;box-shadow:0 4px 6px rgba(0,0,0,0.1); overflow:visible; }
-.discord-table { width:100%; border-collapse:collapse; }
-.discord-table thead { background-color:var(--panel); border-bottom:1px solid #1f2023; }
-.discord-table th {
-    text-align:left;padding:14px 24px;font-size:12px;font-weight:700;text-transform:uppercase;color:#b5bac1;letter-spacing:.5px;
+.discord-table-wrapper {
+    background-color: var(--sidebar);
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow: visible;
 }
-.discord-table tbody tr { border-bottom:1px solid #1f2023; transition:background-color .1s; }
-.discord-table tbody tr:hover { background-color:#35373c; }
-.discord-table td { padding:12px 24px; font-size:14px; color:var(--text); vertical-align:middle; }
+
+.discord-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.discord-table thead {
+    background-color: var(--panel);
+    border-bottom: 1px solid #1f2023;
+}
+
+.discord-table th {
+    text-align: left;
+    padding: 14px 24px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #b5bac1;
+    letter-spacing: .5px;
+}
+
+.discord-table tbody tr {
+    border-bottom: 1px solid #1f2023;
+    transition: background-color .1s;
+}
+
+.discord-table tbody tr:hover {
+    background-color: #35373c;
+}
+
+.discord-table td {
+    padding: 12px 24px;
+    font-size: 14px;
+    color: var(--text);
+    vertical-align: middle;
+}
 
 /* Avatar + cell info */
-.table-avatar { width:32px;height:32px;border-radius:50%;object-fit:cover;background-color:#5865F2;border:2px solid #2b2d31; }
-.user-cell { display:flex;align-items:center;gap:12px; }
-.user-cell span { font-weight:600;color:#f2f3f5; }
+.table-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    background-color: #5865F2;
+    border: 2px solid #2b2d31;
+}
+
+.user-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.user-cell span {
+    font-weight: 600;
+    color: #f2f3f5;
+}
 
 /* Username clickable (mở modal chi tiết user) */
 .username-link {
@@ -131,16 +457,38 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     cursor: pointer;
     font-weight: 600;
 }
-.username-link:hover { text-decoration: underline; }
+
+.username-link:hover {
+    text-decoration: underline;
+}
 
 /* Badges */
 .badge-role {
-    display:inline-flex;align-items:center;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:700;text-transform:uppercase;color:#fff;margin-right:4px;
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #fff;
+    margin-right: 4px;
 }
+
 /* Vai trò hệ thống cho Users: ADMIN / PREMIUM / DEFAULT */
-.badge-role.default { background-color: #4e5058; }
-.badge-role.premium { background-color: #e0bb2a; color: #1e1f22; }
-.badge-role.admin   { background-color: var(--danger); color: #fff; }
+.badge-role.default {
+    background-color: #4e5058;
+}
+
+.badge-role.premium {
+    background-color: #e0bb2a;
+    color: #1e1f22;
+}
+
+.badge-role.admin {
+    background-color: var(--danger);
+    color: #fff;
+}
 
 /* Trạng thái: Active/Banned/Freeze dạng badge (pill) */
 .badge-status {
@@ -154,20 +502,23 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     letter-spacing: .3px;
     border: 1px solid transparent;
 }
+
 .badge-status.active {
-    background-color: rgba(35,165,89,.15);
+    background-color: rgba(35, 165, 89, .15);
     color: #23a559;
-    border-color: rgba(35,165,89,.3);
+    border-color: rgba(35, 165, 89, .3);
 }
+
 .badge-status.banned {
-    background-color: rgba(237,66,69,.15);
+    background-color: rgba(237, 66, 69, .15);
     color: #ed4245;
-    border-color: rgba(237,66,69,.3);
+    border-color: rgba(237, 66, 69, .3);
 }
+
 .badge-status.freeze {
-    background-color: rgba(88,101,242,.15);
+    background-color: rgba(88, 101, 242, .15);
     color: #5865F2;
-    border-color: rgba(88,101,242,.3);
+    border-color: rgba(88, 101, 242, .3);
 }
 
 /* Nút xác nhận disabled */
@@ -178,64 +529,158 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
 }
 
 /* Action buttons */
-.action-buttons-wrapper { display:flex;align-items:center;gap:8px;white-space:nowrap; }
-.btn-mini {
-    padding:6px 12px;border-radius:3px;font-size:12px;font-weight:500;text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:.2s;border:none;cursor:pointer;font-family:inherit;
+.action-buttons-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
 }
-.btn-mini.edit { background-color:#4e5058;color:#fff; }
-.btn-mini.edit:hover { background-color:#6d6f78; }
-.btn-mini.ban { background-color:#da373c;color:#fff; }
-.btn-mini.ban:hover { background-color:#a1282c; }
-.btn-mini.warn { background-color:#ffd166; color:#1e1f22; }
-.btn-mini.warn:hover { background-color:#e0bb2a; }
+
+.btn-mini {
+    padding: 6px 12px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: .2s;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+}
+
+.btn-mini.edit {
+    background-color: #4e5058;
+    color: #fff;
+}
+
+.btn-mini.edit:hover {
+    background-color: #6d6f78;
+}
+
+.btn-mini.ban {
+    background-color: #da373c;
+    color: #fff;
+}
+
+.btn-mini.ban:hover {
+    background-color: #a1282c;
+}
+
+.btn-mini.warn {
+    background-color: #ffd166;
+    color: #1e1f22;
+}
+
+.btn-mini.warn:hover {
+    background-color: #e0bb2a;
+}
 
 /* Dropdown menu trạng thái */
 .status-menu {
-    position:absolute;
-    top:100%;
-    right:0;
-    background:var(--sidebar);
-    border:1px solid var(--border);
-    border-radius:8px;
-    box-shadow:0 8px 24px rgba(0,0,0,.35);
-    padding:8px;
-    min-width:180px;
-    display:none;
-    z-index:3000;
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--sidebar);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+    padding: 8px;
+    min-width: 180px;
+    display: none;
+    z-index: 3000;
 }
-.status-menu.open { display:block; }
+
+.status-menu.open {
+    display: block;
+}
+
 .status-menu-header {
-    font-size:11px; font-weight:800; color:#b5bac1; text-transform:uppercase; padding:6px 8px; border-bottom:1px solid var(--border); margin-bottom:6px;
+    font-size: 11px;
+    font-weight: 800;
+    color: #b5bac1;
+    text-transform: uppercase;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 6px;
 }
+
 .status-item {
-    width:100%;
-    text-align:left;
-    padding:8px 10px;
-    border:none;
-    border-radius:6px;
-    background:transparent;
-    color:#f2f3f5;
-    cursor:pointer;
-    display:flex; align-items:center; gap:8px;
+    width: 100%;
+    text-align: left;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #f2f3f5;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
-.status-item:hover { background:#35373c; }
-.status-item.active i { color:#23a559; }
-.status-item.freeze i { color:#5865F2; }
+
+.status-item:hover {
+    background: #35373c;
+}
+
+.status-item.active i {
+    color: #23a559;
+}
+
+.status-item.freeze i {
+    color: #5865F2;
+}
 
 /* Pagination */
-.discord-pagination { display:flex;justify-content:center;align-items:center;margin-top:24px;gap:12px; }
-.page-btn { background-color:var(--sidebar);color:var(--text);padding:8px 16px;border-radius:4px;text-decoration:none;font-size:14px;font-weight:500;transition:.2s;display:flex;align-items:center;gap:6px; }
-.page-btn:hover { background-color: var(--brand); color:#fff; }
-.page-info { font-size:14px;color:var(--muted); }
-.page-info b { color:#f2f3f5; }
+.discord-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 24px;
+    gap: 12px;
+}
+
+.page-btn {
+    background-color: var(--sidebar);
+    color: var(--text);
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: .2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.page-btn:hover {
+    background-color: var(--brand);
+    color: #fff;
+}
+
+.page-info {
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.page-info b {
+    color: #f2f3f5;
+}
 
 /* =========================================================
    3) MODAL STYLES (servers/users)
    - Scope theo container để tránh xung đột với modal của app
    ========================================================= */
 .modal-overlay {
-    position: fixed; top:0; left:0; width:100%; height:100%;
-    background-color: rgba(0,0,0,0.85);
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
     z-index: 3000;
     display: none;
     justify-content: center;
@@ -243,45 +688,112 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     backdrop-filter: blur(3px);
     animation: fadeInOverlay .2s ease-out;
 }
-.modal-overlay.active { display:flex; }
+
+.modal-overlay.active {
+    display: flex;
+}
 
 .discord-modal {
     background-color: var(--bg);
     width: 460px;
     border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
     overflow: hidden;
     color: var(--text);
     transform: scale(.95);
     opacity: 0;
-    transition: all .2s cubic-bezier(0.175,0.885,0.32,1.275);
+    transition: all .2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
-.modal-overlay.active .discord-modal { transform: scale(1); opacity: 1; }
 
-.modal-header { padding: 20px 24px; text-align:center; }
-.modal-header h2 { font-size:22px; font-weight:700; color:#f2f3f5; margin:0; }
-.modal-header h2.danger-title { color: var(--danger); }
+.modal-overlay.active .discord-modal {
+    transform: scale(1);
+    opacity: 1;
+}
 
-.modal-body { padding: 0 24px 24px; }
-.form-group { margin-bottom:20px; }
-.form-group label { display:block; color:#b5bac1; font-size:12px; font-weight:700; text-transform:uppercase; margin-bottom:8px; letter-spacing:.5px; }
+.modal-header {
+    padding: 20px 24px;
+    text-align: center;
+}
+
+.modal-header h2 {
+    font-size: 22px;
+    font-weight: 700;
+    color: #f2f3f5;
+    margin: 0;
+}
+
+.modal-header h2.danger-title {
+    color: var(--danger);
+}
+
+.modal-body {
+    padding: 0 24px 24px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    color: #b5bac1;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    letter-spacing: .5px;
+}
 
 .discord-input {
-    width:100%; padding:12px; background-color:var(--panel);
-    border:1px solid transparent; border-radius:4px; color:var(--text); font-size:16px; outline:none; transition:border-color .2s, background-color .2s;
+    width: 100%;
+    padding: 12px;
+    background-color: var(--panel);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    color: var(--text);
+    font-size: 16px;
+    outline: none;
+    transition: border-color .2s, background-color .2s;
 }
-.discord-input:focus { border-color: var(--brand); }
-.discord-input.read-only-label { background-color:transparent; border:none; padding:0; font-size:18px; font-weight:600; color:#f2f3f5; cursor:default; text-align:center; }
+
+.discord-input:focus {
+    border-color: var(--brand);
+}
+
+.discord-input.read-only-label {
+    background-color: transparent;
+    border: none;
+    padding: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #f2f3f5;
+    cursor: default;
+    text-align: center;
+}
 
 .discord-warning-box {
-    background-color: rgba(240,178,50,.1);
+    background-color: rgba(240, 178, 50, .1);
     border: 1px solid #e0bb2a;
-    border-radius:4px;
-    padding:12px;
-    display:flex; gap:12px; align-items:flex-start; margin-top:12px;
+    border-radius: 4px;
+    padding: 12px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-top: 12px;
 }
-.discord-warning-box i { color:#e0bb2a; font-size:18px; margin-top:2px; }
-.discord-warning-box p { margin:0; font-size:14px; color:var(--text); line-height:1.4; }
+
+.discord-warning-box i {
+    color: #e0bb2a;
+    font-size: 18px;
+    margin-top: 2px;
+}
+
+.discord-warning-box p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text);
+    line-height: 1.4;
+}
 
 .confirm-text { font-size:16px; line-height:1.5; margin-bottom:12px; text-align:center; }
 .confirm-text strong { color:#f2f3f5; font-weight:700; }
@@ -289,20 +801,58 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
 
 .modal-footer {
     background-color: var(--sidebar);
-    padding:16px 24px;
-    display:flex; justify-content:flex-end; gap:12px;
-    border-top:1px solid #1e1f22;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid #1e1f22;
 }
-.btn-cancel { background:transparent; color:#fff; border:none; padding:10px 20px; cursor:pointer; font-weight:500; font-family:inherit; }
-.btn-cancel:hover { text-decoration: underline; }
+
+.btn-cancel {
+    background: transparent;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    cursor: pointer;
+    font-weight: 500;
+    font-family: inherit;
+}
+
+.btn-cancel:hover {
+    text-decoration: underline;
+}
+
 .btn-confirm {
-    background-color: var(--brand); color:#fff; border:none; border-radius:3px; padding:10px 24px; cursor:pointer; font-weight:500; transition:.2s; font-family:inherit;
+    background-color: var(--brand);
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 10px 24px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: .2s;
+    font-family: inherit;
 }
-.btn-confirm:hover { background-color:#4752c4; }
+
+.btn-confirm:hover {
+    background-color: #4752c4;
+}
+
 .btn-danger-action {
-    background-color:#da373c; color:#fff; border:none; border-radius:3px; padding:10px 24px; cursor:pointer; font-weight:500; transition:.2s; font-family:inherit;
+    background-color: #da373c;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 10px 24px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: .2s;
+    font-family: inherit;
 }
-.btn-danger-action:hover { background-color:#a1282c; }
+
+.btn-danger-action:hover {
+    background-color: #a1282c;
+}
 
 @keyframes fadeInOverlay { from{opacity:0} to{opacity:1} }
 
@@ -313,7 +863,12 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     gap: 8px 16px;
     color: #f2f3f5;
 }
-.server-list { display: grid; gap: 8px; }
+
+.server-list {
+    display: grid;
+    gap: 8px;
+}
+
 .server-card {
     background: #2b2d31;
     border: 1px solid #3e4147;
@@ -324,6 +879,7 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     gap: 10px;
     align-items: center;
 }
+
 .server-card .icon {
     width: 56px;
     height: 56px;
@@ -332,33 +888,38 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     background-size: cover;
     background-position: center;
 }
+
 .server-meta {
-    color:#b5bac1;
+    color: #b5bac1;
     font-size: 12px;
-    display:flex;
-    gap:8px;
-    flex-wrap:wrap;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
 }
+
 .server-meta .badge {
-    background:#1f2023;
-    border:1px solid #3e4147;
-    padding:2px 6px;
-    border-radius:6px;
+    background: #1f2023;
+    border: 1px solid #3e4147;
+    padding: 2px 6px;
+    border-radius: 6px;
 }
 
 /* Kính lúp nằm cuối ô nhập trong modal chuyển owner */
 .search-inline {
     position: relative;
 }
+
 .search-inline input {
     width: 100%;
     background: transparent;
     border: none;
     color: var(--text);
-    padding: 10px 34px 10px 10px; /* chừa chỗ bên phải cho icon */
+    padding: 10px 34px 10px 10px;
+    /* chừa chỗ bên phải cho icon */
     outline: none;
     font-size: 14px;
 }
+
 .search-inline .search-btn-inline {
     position: absolute;
     right: 8px;
@@ -371,7 +932,10 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     padding: 0;
     line-height: 1;
 }
-.search-inline .search-btn-inline:hover { color: #fff; }
+
+.search-inline .search-btn-inline:hover {
+    color: #fff;
+}
 
 /* Tên server hiển thị giữa header modal */
 .modal-subtitle.server-name-title {
@@ -388,6 +952,7 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     opacity: .6;
     cursor: not-allowed;
 }
+
 .transfer-member-row .owner-chip {
     display: inline-flex;
     align-items: center;
@@ -396,36 +961,77 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     font-size: 10px;
     font-weight: 800;
     letter-spacing: .3px;
-    background-color: rgba(35,165,89,.15);
+    background-color: rgba(35, 165, 89, .15);
     color: #23a559;
-    border: 1px solid rgba(35,165,89,.3);
+    border: 1px solid rgba(35, 165, 89, .3);
     margin-left: 6px;
 }
 
 /* Submenu trong Sidebar cho nhóm Messages */
 .nav-group .nav-group-toggle {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 14px; color: #dbdee1; text-decoration: none; border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    color: #dbdee1;
+    text-decoration: none;
+    border-radius: 6px;
 }
-.nav-group .nav-group-toggle:hover { background: #2b2d31; }
-.nav-group .caret { transition: transform .2s ease; }
-.nav-group.open .caret { transform: rotate(180deg); }
-.nav-group .nav-sub { display: none; padding-left: 16px; }
-.nav-group.open .nav-sub { display: block; }
+
+.nav-group .nav-group-toggle:hover {
+    background: #2b2d31;
+}
+
+.nav-group .caret {
+    transition: transform .2s ease;
+}
+
+.nav-group.open .caret {
+    transform: rotate(180deg);
+}
+
+.nav-group .nav-sub {
+    display: none;
+    padding-left: 16px;
+}
+
+.nav-group.open .nav-sub {
+    display: block;
+}
+
 .nav-sub .nav-item {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 12px; color: #b5bac1; text-decoration: none; border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    color: #b5bac1;
+    text-decoration: none;
+    border-radius: 6px;
 }
-.nav-sub .nav-item:hover { background: #2b2d31; color: #fff; }
-.nav-sub .nav-item.active { background: #404249; color: #fff; }
+
+.nav-sub .nav-item:hover {
+    background: #2b2d31;
+    color: #fff;
+}
+
+.nav-sub .nav-item.active {
+    background: #404249;
+    color: #fff;
+}
 
 /* =========================================================
    4) Responsive
    ========================================================= */
-@media (max-width: 1000px){
-    .stats{grid-template-columns:1fr}
-    .grids{grid-template-columns:1fr}
+@media (max-width: 1000px) {
+    .stats {
+        grid-template-columns: 1fr
+    }
+
+    .grids {
+        grid-template-columns: 1fr
+    }
 }
+
 /* =========================================================
    5) USER BAR (Shared from style.css, adapted for Admin)
    ========================================================= */
@@ -433,7 +1039,8 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     position: fixed;
     bottom: 10px;
     left: 10px;
-    width: 220px; /* Adjusted from 292px to fit 240px Admin Sidebar */
+    width: 220px;
+    /* Adjusted from 292px to fit 240px Admin Sidebar */
     height: 60px;
     background-color: #232428;
     border-radius: 12px;
@@ -446,6 +1053,16 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     border-top: none;
     transition: transform 0.2s ease;
     overflow: visible !important;
+}
+
+/* Hide main app sidebars if they accidentally appear */
+.sidebar,
+.channels-sidebar {
+    display: none !important;
+}
+
+.admin-sidebar .user-bar .user-wrapper {
+    cursor: pointer;
 }
 
 .user-bar:hover {
@@ -568,6 +1185,7 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
         opacity: 0;
         transform: translateY(10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -585,7 +1203,7 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     align-items: center;
     gap: 12px;
     transition: background-color 0.1s;
-    text-decoration: none; /* Add this for <a> tags */
+    text-decoration: none;
 }
 
 .menu-item:hover {
@@ -601,6 +1219,7 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
     background-color: #f23f42;
     color: white;
 }
+
 /* Close Modal Button (Standardized) */
 .close-modal-btn {
     position: absolute;
@@ -621,6 +1240,7 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
 .close-modal-btn:hover {
     color: #dbdee1;
 }
+
 /* =========================================
    6. PROFILE MODAL & AVATAR (Ported from style.css)
    ========================================= */
@@ -682,6 +1302,7 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
 .profile-avatar-upload:hover .profile-overlay {
     opacity: 1;
 }
+
 /* =========================================
    6. PROFILE MODAL & AVATAR (Ported from style.css)
    ========================================= */
@@ -745,6 +1366,7 @@ tbody td{padding:10px;border-bottom:1px solid #2b2d31}
 .profile-avatar-upload:hover .profile-overlay {
     opacity: 1;
 }
+
 /* Popup Separator - Full Width */
 .popup-separator {
     height: 1px;
