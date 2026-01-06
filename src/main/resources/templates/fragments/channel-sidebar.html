@@ -24,7 +24,7 @@
                         <span>THÔNG TIN</span>
                     </div>
                     <i class="fa-solid fa-plus add-channel-icon" id="createChannelInCategoryBtn-cat-1"
-                       onclick="openCreateChannelModal(event, 'THÔNG TIN', 'cat-1')" title="Tạo kênh"></i>
+                        onclick="openCreateChannelModal(event, 'THÔNG TIN', 'cat-1')" title="Tạo kênh"></i>
                 </div>
                 <div class="category-content">
                     <div class="channel-item" data-channel-id="201">
@@ -40,7 +40,7 @@
                         <span>TRÒ CHUYỆN</span>
                     </div>
                     <i class="fa-solid fa-plus add-channel-icon" id="createChannelInCategoryBtn-cat-2"
-                       onclick="openCreateChannelModal(event, 'TRÒ CHUYỆN', 'cat-2')" title="Tạo kênh"></i>
+                        onclick="openCreateChannelModal(event, 'TRÒ CHUYỆN', 'cat-2')" title="Tạo kênh"></i>
                 </div>
                 <div class="category-content">
                     <div class="channel-item" data-channel-id="301">
@@ -59,8 +59,9 @@
 
         <div class="search-bar-container" style="padding: 10px; position: relative;">
             <input type="text" id="dm-sidebar-search" placeholder="Tìm kiếm hoặc bắt đầu cuộc trò chuyện"
-                   style="width: 100%; background-color: #1e1f22; border: none; padding: 7px; color: #dbdee1; border-radius: 4px; font-size: 13px;">
-            <div id="dm-search-results" class="custom-scrollbar" style="display:none; position: absolute; top: 40px; left: 10px; right: 10px; background: #2b2d31; border-radius: 4px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
+                style="width: 100%; background-color: #1e1f22; border: none; padding: 7px; color: #dbdee1; border-radius: 4px; font-size: 13px;">
+            <div id="dm-search-results" class="custom-scrollbar"
+                style="display:none; position: absolute; top: 40px; left: 10px; right: 10px; background: #2b2d31; border-radius: 4px; z-index: 1000; max-height: 200px; overflow-y: auto; box-shadow: 0 4px 8px rgba(0,0,0,0.3);">
             </div>
         </div>
 
@@ -78,27 +79,7 @@
     </div>
 
     <input type="file" id="hidden-file-upload" style="display: none;" accept="image/png, image/jpeg, image/webp">
-        <div class="user-bar">
-            <div class="user-wrapper">
-                <div class="user-avatar"></div>
-                <div class="user-info">
-                    <span id="user-display" class="username">User</span>
-                    <span class="usertag">#1234</span>
-                </div>
-            </div>
-            <div class="user-actions">
-                <button class="btn-icon"><i class="fa-solid fa-microphone"></i></button>
-                <button class="btn-icon"><i class="fa-solid fa-headphones"></i></button>
-                <button class="btn-icon" id="btn-settings"><i class="fa-solid fa-gear"></i></button>
-            </div>
-            <div class="settings-popup" id="settings-popup">
-                <div class="menu-item" id="btn-profile-action">
-                    <i class="fa-solid fa-user-pen"></i> Hồ sơ
-                </div>
-                <div class="separator" style="height: 1px; background: #3f4147; margin: 4px 0;"></div>
-                <div class="menu-item logout" id="btn-logout-action">
-                    <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
-                </div>
-            </div>
-        </div>
+
+    <!-- Shared User Bar -->
+    <div th:replace="~{fragments/user-bar :: user-bar}"></div>
 </aside>

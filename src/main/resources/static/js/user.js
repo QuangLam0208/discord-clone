@@ -18,6 +18,16 @@ async function loadMe() {
                 el.style.backgroundColor = 'transparent';
                 el.innerHTML = '';
             });
+
+            // Handle Admin Button logic
+            const btnAdmin = document.getElementById('btn-admin-manage');
+            if (btnAdmin) {
+                if (user.roles && user.roles.includes('ADMIN')) {
+                    btnAdmin.style.display = 'flex';
+                } else {
+                    btnAdmin.style.display = 'none';
+                }
+            }
         }
     } catch (e) {
         console.error("Lỗi load user:", e);

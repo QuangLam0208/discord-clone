@@ -1,0 +1,31 @@
+<div class="user-bar" th:fragment="user-bar" xmlns:th="http://www.thymeleaf.org">
+    <div class="user-wrapper">
+        <div class="user-avatar"></div>
+        <div class="user-info">
+            <span id="user-display" class="username">Loading...</span>
+            <span class="usertag">#0001</span>
+        </div>
+    </div>
+    <div class="user-actions">
+        <button class="btn-icon"><i class="fa-solid fa-microphone"></i></button>
+        <button class="btn-icon"><i class="fa-solid fa-headphones"></i></button>
+        <button class="btn-icon" id="btn-settings"><i class="fa-solid fa-gear"></i></button>
+    </div>
+    <div class="settings-popup" id="settings-popup">
+        <div class="menu-item" id="btn-profile-action">
+            <i class="fa-solid fa-user-pen"></i> Hồ sơ
+        </div>
+        <!-- Button visible ONLY for ADMIN on Home page -->
+        <a href="/admin" class="menu-item" id="btn-admin-manage" style="display: none;">
+            <i class="fa-solid fa-user-shield"></i> Admin Management
+        </a>
+        <!-- Button visible ONLY on Admin page -->
+        <a href="/home" class="menu-item" id="btn-back-app" style="display: none;">
+            <i class="fa-solid fa-arrow-left"></i> Về ứng dụng
+        </a>
+        <div class="popup-separator"></div>
+        <div class="menu-item logout" id="btn-logout-action">
+            <i class="fa-solid fa-right-from-bracket"></i> Đăng xuất
+        </div>
+    </div>
+</div>
