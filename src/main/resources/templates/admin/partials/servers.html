@@ -26,8 +26,9 @@
                 <tr th:each="sv : ${servers}" th:attr="data-server-row=${sv.id}">
                     <td style="color:#b5bac1;font-family:monospace;" th:text="'#' + ${sv.id}">#1</td>
                     <td>
-                        <div class="user-cell">
-                            <span th:text="${sv.name}">Server Name</span>
+                        <div class="user-cell" style="cursor:pointer;" title="Xem chi tiết"
+                            th:attr="onclick='openServerDetailModal(' + ${sv.id} + ')'">
+                            <span th:text="${sv.name}" class="hover-underline">Server Name</span>
                         </div>
                     </td>
                     <td th:attr="data-server-owner=${sv.id}">
@@ -169,6 +170,94 @@
         <div class="modal-footer">
             <button type="button" class="btn-cancel" onclick="closeModal('transferModal')">Hủy bỏ</button>
             <button type="button" class="btn-confirm" id="btnConfirmTransfer">Xác nhận chuyển</button>
+        </div>
+    </div>
+</div>
+
+<!-- Server Detail Modal -->
+<div id="detailServerModal" class="modal-overlay">
+    <div class="discord-modal" style="width:600px; max-width:90vw;">
+        <div class="modal-header" style="border-bottom:none; padding-bottom:0;">
+            <button type="button" class="btn-close" onclick="closeModal('detailServerModal')"
+                style="float:right;background:none;border:none;color:#b9bbbe;font-size:20px;cursor:pointer;">&times;</button>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <img id="detailServerIcon" src="/images/default.png"
+                    style="width:48px;height:48px;border-radius:16px;object-fit:cover;">
+                <div>
+                    <h2 id="detailServerName" style="margin:0;font-size:20px;">Server Name</h2>
+                    <div id="detailServerId" style="color:#b5bac1;font-size:12px;font-family:monospace;">ID: #1</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-body" style="padding-top:10px;">
+            <!-- Status Badge -->
+            <div style="margin-bottom:16px;">
+                <span id="detailServerStatus" class="badge-status active">ACTIVE</span>
+            </div>
+
+            <!-- Description -->
+            <div style="margin-bottom:16px;">
+                <label style="color:#b5bac1;font-size:12px;font-weight:700;text-transform:uppercase;">Mô tả</label>
+                <div id="detailServerDesc" style="color:#dbdee1;font-style:italic;">Không có mô tả</div>
+            </div>
+
+            <!-- Owner -->
+            <div
+                style="margin-bottom:16px; display:flex; gap:8px; align-items:center; background:#2b2d31; padding:8px 12px; border-radius:4px;">
+                <i class="fas fa-crown" style="color:#faa61a;"></i>
+                <div style="color:#b5bac1;font-size:12px;">Owner: <strong id="detailServerOwner"
+                        style="color:#fff;">admin</strong></div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:8px; margin-bottom:16px;">
+                <div style="background:#2b2d31; padding:10px; border-radius:4px; text-align:center;">
+                    <div style="color:#b5bac1;font-size:11px;text-transform:uppercase;">Thành viên</div>
+                    <div id="detailMemberCount" style="color:#fff;font-size:18px;font-weight:bold;">0</div>
+                </div>
+                <div style="background:#2b2d31; padding:10px; border-radius:4px; text-align:center;">
+                    <div style="color:#b5bac1;font-size:11px;text-transform:uppercase;">Kênh</div>
+                    <div id="detailChannelCount" style="color:#fff;font-size:18px;font-weight:bold;">0</div>
+                </div>
+                <div style="background:#2b2d31; padding:10px; border-radius:4px; text-align:center;">
+                    <div style="color:#b5bac1;font-size:11px;text-transform:uppercase;">Roles</div>
+                    <div id="detailRoleCount" style="color:#fff;font-size:18px;font-weight:bold;">0</div>
+                </div>
+            </div>
+
+            <!-- Lists (Tabs or simple dump) -->
+            <div style="display:flex; gap:16px;">
+                <!-- Members List -->
+                <div style="flex:1;">
+                    <label
+                        style="color:#b5bac1;font-size:11px;font-weight:700;text-transform:uppercase; display:block; margin-bottom:4px;">Members
+                        (Sample)</label>
+                    <div id="detailMembersList"
+                        style="background:#2b2d31; height:150px; overflow-y:auto; padding:8px; border-radius:4px; font-size:13px; color:#dbdee1;">
+                        <!-- JS Insert -->
+                    </div>
+                </div>
+
+                <!-- Channels & Roles -->
+                <div style="flex:1; display:flex; flex-direction:column; gap:12px;">
+                    <div>
+                        <label
+                            style="color:#b5bac1;font-size:11px;font-weight:700;text-transform:uppercase; display:block; margin-bottom:4px;">Channels</label>
+                        <div id="detailChannelsList"
+                            style="background:#2b2d31; height:69px; overflow-y:auto; padding:8px; border-radius:4px; font-size:13px; color:#dbdee1;">
+                        </div>
+                    </div>
+                    <div>
+                        <label
+                            style="color:#b5bac1;font-size:11px;font-weight:700;text-transform:uppercase; display:block; margin-bottom:4px;">Roles</label>
+                        <div id="detailRolesList"
+                            style="background:#2b2d31; height:69px; overflow-y:auto; padding:8px; border-radius:4px; font-size:13px; color:#dbdee1;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </div>
 </div>

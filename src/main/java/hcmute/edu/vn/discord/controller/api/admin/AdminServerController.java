@@ -2,6 +2,7 @@ package hcmute.edu.vn.discord.controller.api.admin;
 
 import hcmute.edu.vn.discord.dto.request.TransferOwnerRequest;
 import hcmute.edu.vn.discord.dto.request.UpdateServerStatusRequest;
+import hcmute.edu.vn.discord.dto.response.AdminServerDetailResponse;
 import hcmute.edu.vn.discord.dto.response.ServerMemberSummaryResponse;
 import hcmute.edu.vn.discord.entity.enums.EAuditAction;
 import hcmute.edu.vn.discord.entity.enums.ServerStatus;
@@ -53,8 +54,42 @@ public class AdminServerController {
 
     // GET /api/admin/servers/{id}
     @GetMapping("/{id}")
-    public Server getServer(@PathVariable Long id) {
-        return serverRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Server not found"));
+    @Transactional(readOnly = true)
+    public AdminServerDetailResponse getServer(@PathVariable Long id) {
+        Server s = serverRepository.findById(id).orElseThrow(() -> new EntityNotFoundException("Server not found"));
+
+        // Assemble Lists (limit members to 50)
+        List<String> channelNames = s.getChannels().stream()
+                .map(c -> c.getName() + " (" + c.getType() + ")")
+                .sorted()
+                .toList();
+
+        List<String> roleNames = s.getRoles().stream()
+                .map(r -> r.getName())
+                .sorted()
+                .toList();
+
+        List<String> memberNames = s.getMembers().stream()
+                .limit(50)
+                .map(m -> m.getUser().getUsername() + (m.getNickname() != null ? " (" + m.getNickname() + ")" : ""))
+                .toList();
+
+        return AdminServerDetailResponse.builder()
+                .id(s.getId())
+                .name(s.getName())
+                .description(s.getDescription())
+                .iconUrl(s.getIconUrl())
+                .status(s.getStatus())
+                .ownerId(s.getOwner() != null ? s.getOwner().getId() : null)
+                .ownerUsername(s.getOwner() != null ? s.getOwner().getUsername() : null)
+                .ownerDisplayName(s.getOwner() != null ? s.getOwner().getDisplayName() : null)
+                .memberCount(s.getMembers().size())
+                .channelCount(s.getChannels().size())
+                .roleCount(s.getRoles().size())
+                .channelNames(channelNames)
+                .roleNames(roleNames)
+                .memberNames(memberNames)
+                .build();
     }
 
     // DELETE /api/admin/servers/{id}

@@ -266,6 +266,79 @@
         });
     }
 
+    // ====== Server Detail Modal ======
+    async function openServerDetailModal(serverId) {
+        const modal = document.getElementById('detailServerModal');
+        if (!modal) return;
+
+        // Reset UI
+        document.getElementById('detailServerName').innerText = 'Loading...';
+        document.getElementById('detailServerId').innerText = `ID: #${serverId}`;
+        document.getElementById('detailServerDesc').innerText = '...';
+        document.getElementById('detailServerOwner').innerText = '...';
+        document.getElementById('detailMemberCount').innerText = '-';
+        document.getElementById('detailChannelCount').innerText = '-';
+        document.getElementById('detailRoleCount').innerText = '-';
+        document.getElementById('detailMembersList').innerHTML = '';
+        document.getElementById('detailChannelsList').innerHTML = '';
+        document.getElementById('detailRolesList').innerHTML = '';
+        document.getElementById('detailServerStatus').className = 'badge-status';
+        document.getElementById('detailServerStatus').innerText = '...';
+
+        modal.classList.add('active');
+
+        try {
+            const data = await Api.get(`/api/admin/servers/${serverId}`);
+            if (!data) throw new Error("No data");
+
+            // Fill header
+            document.getElementById('detailServerName').innerText = data.name || 'Unnamed';
+            document.getElementById('detailServerIcon').src = data.iconUrl || '/images/default.png';
+            document.getElementById('detailServerDesc').innerText = data.description || 'Không có mô tả';
+
+            // Status
+            const statusEl = document.getElementById('detailServerStatus');
+            if (data.status === 'ACTIVE') {
+                statusEl.className = 'badge-status active';
+                statusEl.innerText = 'ACTIVE';
+            } else if (data.status === 'FREEZE') {
+                statusEl.className = 'badge-status freeze';
+                statusEl.innerText = 'FREEZE';
+            } else if (data.status === 'SHADOW') {
+                statusEl.className = 'badge-status shadow';
+                statusEl.innerText = 'SHADOW';
+                statusEl.style.background = '#555';
+                statusEl.style.color = '#bbb';
+            } else {
+                statusEl.className = 'badge-status';
+                statusEl.innerText = data.status;
+            }
+
+            // Owner
+            document.getElementById('detailServerOwner').innerText = data.ownerUsername || 'No Owner';
+
+            // Counts
+            document.getElementById('detailMemberCount').innerText = data.memberCount || 0;
+            document.getElementById('detailChannelCount').innerText = data.channelCount || 0;
+            document.getElementById('detailRoleCount').innerText = data.roleCount || 0;
+
+            // Lists
+            const membersHtml = (data.memberNames || []).map(n => `<div style="padding:2px 0;">${escapeHtml(n)}</div>`).join('');
+            document.getElementById('detailMembersList').innerHTML = membersHtml || '<div class="muted">Empty</div>';
+
+            const channelsHtml = (data.channelNames || []).map(n => `<div style="padding:2px 0;"># ${escapeHtml(n)}</div>`).join('');
+            document.getElementById('detailChannelsList').innerHTML = channelsHtml || '<div class="muted">Empty</div>';
+
+            const rolesHtml = (data.roleNames || []).map(n => `<div style="padding:2px 0;">@ ${escapeHtml(n)}</div>`).join('');
+            document.getElementById('detailRolesList').innerHTML = rolesHtml || '<div class="muted">Empty</div>';
+
+        } catch (e) {
+            console.error(e);
+            toastErr('Không lấy được thông tin server');
+            closeModal('detailServerModal');
+        }
+    }
+
     // Expose cho template
     window.openDeleteModal = openDeleteModal;
     window.openTransferModal = openTransferModal;
@@ -273,4 +346,5 @@
     window.updateServerStatus = updateServerStatus;
     window.attachAdminServerHandlers = attachAdminServerHandlers;
     window.filterTransferMemberList = filterTransferMemberList;
+    window.openServerDetailModal = openServerDetailModal;
 })();
