@@ -34,13 +34,18 @@ public class OtpService {
     private static final int MAX_ATTEMPTS = 5;
 
     /**
-     * Tạo và gửi OTP đến email
-     *
-     * @param email Email nhận OTP
-     * @return OtpResponse chứa thông tin kết quả
+     * Tạo và gửi OTP đến email (Default context)
      */
     @Transactional
     public OtpResponse generateAndSendOtp(String email) {
+        return generateAndSendOtp(email, "DEFAULT");
+    }
+
+    /**
+     * Tạo và gửi OTP đến email với Context
+     */
+    @Transactional
+    public OtpResponse generateAndSendOtp(String email, String context) {
         try {
             // Kiểm tra rate limiting (chống spam)
             var rateLimitCheck = checkRateLimit(email);
@@ -59,18 +64,20 @@ public class OtpService {
             verification.setExpiresAt(LocalDateTime.now().plusMinutes(otpExpirationMinutes));
             verification.setVerified(false);
             verification.setAttemptCount(0);
+            // Có thể lưu context vào DB nếu mở rộng bảng EmailVerification, hiện tại chỉ
+            // dùng để log/email
 
             verificationRepository.save(verification);
 
-            // Gửi email
-            boolean emailSent = emailService.sendOtpEmail(email, otpCode);
+            // Gửi email với context
+            boolean emailSent = emailService.sendOtpEmail(email, otpCode, context);
 
             if (!emailSent) {
                 log.error("Failed to send OTP email to:  {}", email);
                 return OtpResponse.error("Không thể gửi email.  Vui lòng thử lại sau.");
             }
 
-            log.info("OTP sent successfully to email: {}", maskEmail(email));
+            log.info("OTP sent successfully to email: {} (Context: {})", maskEmail(email), context);
             return OtpResponse.success(email, verification.getExpiresAt());
 
         } catch (Exception e) {
@@ -91,8 +98,7 @@ public class OtpService {
         try {
             var verificationOpt = verificationRepository
                     .findByEmailAndOtpCodeAndVerifiedFalseAndExpiresAtAfter(
-                            email, otpCode, LocalDateTime.now()
-                    );
+                            email, otpCode, LocalDateTime.now());
 
             // Không tìm thấy OTP hoặc đã hết hạn
             if (verificationOpt.isEmpty()) {
@@ -122,9 +128,11 @@ public class OtpService {
 
             // Xác thực thành công
             verification.setVerified(true);
-            // setVerifiedAt may not exist; set via reflection to avoid compilation issues if field absent
+            // setVerifiedAt may not exist; set via reflection to avoid compilation issues
+            // if field absent
             try {
-                verification.getClass().getMethod("setVerifiedAt", LocalDateTime.class).invoke(verification, LocalDateTime.now());
+                verification.getClass().getMethod("setVerifiedAt", LocalDateTime.class).invoke(verification,
+                        LocalDateTime.now());
             } catch (NoSuchMethodException ignored) {
                 // method not present; skip
             }
@@ -153,15 +161,13 @@ public class OtpService {
         if (lastVerification.isPresent()) {
             var timeSinceLastSent = Duration.between(
                     lastVerification.get().getCreatedAt(),
-                    LocalDateTime.now()
-            );
+                    LocalDateTime.now());
 
             if (timeSinceLastSent.getSeconds() < resendCooldownSeconds) {
                 long remainingSeconds = resendCooldownSeconds - timeSinceLastSent.getSeconds();
                 String message = String.format(
                         "Vui lòng đợi %d giây trước khi gửi lại OTP",
-                        remainingSeconds
-                );
+                        remainingSeconds);
                 log.warn("Rate limit hit for email: {}, remaining:  {}s", maskEmail(email), remainingSeconds);
                 return OtpResponse.error(message);
             }
@@ -202,8 +208,7 @@ public class OtpService {
     public boolean isOtpValid(String email, String otpCode) {
         return verificationRepository
                 .findByEmailAndOtpCodeAndVerifiedFalseAndExpiresAtAfter(
-                        email, otpCode, LocalDateTime.now()
-                )
+                        email, otpCode, LocalDateTime.now())
                 .isPresent();
     }
 

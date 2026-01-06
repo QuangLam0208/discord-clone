@@ -227,4 +227,15 @@ public class UserServiceImpl implements UserService {
         u.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(u);
     }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional
+    public void updateEmail(Long userId, String newEmail) {
+        User u = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("User not found: " + userId));
+
+        u.setEmail(newEmail);
+        u.setIsEmailVerified(true);
+        userRepository.save(u);
+    }
 }

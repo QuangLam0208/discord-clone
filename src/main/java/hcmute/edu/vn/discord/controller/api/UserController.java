@@ -84,8 +84,7 @@ public class UserController {
         otpService.generateAndSendOtp(user.getEmail());
 
         return ResponseEntity.ok(Map.of(
-                "message", "Mã OTP đã được gửi đến email của bạn"
-        ));
+                "message", "Mã OTP đã được gửi đến email của bạn"));
     }
 
     /**
@@ -111,5 +110,130 @@ public class UserController {
         userService.changePassword(user.getId(), newPassword);
 
         return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công"));
+    }
+
+    // Temporary storage (production nên dùng Redis với TTL)
+    private final Map<Long, String> tempEmailChangeStorage = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Yêu cầu đổi email - Gửi OTP đến email hiện tại
+     */
+    @PostMapping("/change-email/request")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> requestChangeEmail(
+            @RequestParam @Email String newEmail,
+            Authentication auth) {
+
+        var user = userService.findByUsername(auth.getName())
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        // Kiểm tra email mới đã tồn tại chưa
+        if (userService.existsByEmail(newEmail)) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Email đã được sử dụng"));
+        }
+
+        // Kiểm tra email mới khác email cũ
+        if (user.getEmail().equals(newEmail)) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Email mới phải khác email hiện tại"));
+        }
+
+        // Gửi OTP đến email hiện tại
+        hcmute.edu.vn.discord.dto.response.OtpResponse otpResponse = otpService.generateAndSendOtp(user.getEmail(),
+                "CHANGE_EMAIL");
+
+        if (!otpResponse.isSuccess()) {
+            return ResponseEntity.badRequest().body(otpResponse);
+        }
+
+        // Lưu newEmail tạm thời vào cache/session (dùng Spring Cache hoặc Redis)
+        // Ở đây đơn giản hóa: lưu vào Map tạm (production nên dùng Redis)
+        tempEmailChangeStorage.put(user.getId(), newEmail);
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Mã OTP đã được gửi đến email hiện tại của bạn",
+                "expiresAt", otpResponse.getExpiresAt()));
+    }
+
+    /**
+     * Xác thực OTP email cũ và gửi OTP đến email mới
+     */
+    @PostMapping("/change-email/verify-old")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> verifyOldEmailOtp(
+            @RequestParam String otpCode,
+            Authentication auth) {
+
+        var user = userService.findByUsername(auth.getName())
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        // Xác thực OTP email cũ
+        hcmute.edu.vn.discord.dto.response.OtpVerificationResponse verification = otpService.verifyOtp(user.getEmail(),
+                otpCode);
+
+        if (!verification.isVerified()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(verification);
+        }
+
+        // Lấy email mới từ storage
+        String newEmail = tempEmailChangeStorage.get(user.getId());
+        if (newEmail == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Phiên đổi email đã hết hạn"));
+        }
+
+        // Gửi OTP đến email mới
+        hcmute.edu.vn.discord.dto.response.OtpResponse otpResponse = otpService.generateAndSendOtp(newEmail,
+                "CHANGE_EMAIL_NEW");
+
+        if (!otpResponse.isSuccess()) {
+            return ResponseEntity.badRequest().body(otpResponse);
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Mã OTP đã được gửi đến email mới. Vui lòng kiểm tra.",
+                "expiresAt", otpResponse.getExpiresAt()));
+    }
+
+    /**
+     * Xác nhận OTP email mới và hoàn tất đổi email
+     */
+    @PostMapping("/change-email/verify-new")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> verifyNewEmailOtp(
+            @RequestParam String otpCode,
+            Authentication auth) {
+
+        var user = userService.findByUsername(auth.getName())
+                .orElseThrow(() -> new EntityNotFoundException("User not found"));
+
+        // Lấy email mới từ storage
+        String newEmail = tempEmailChangeStorage.get(user.getId());
+        if (newEmail == null) {
+            return ResponseEntity.badRequest()
+                    .body(Map.of("success", false, "message", "Phiên đổi email đã hết hạn"));
+        }
+
+        // Xác thực OTP email mới
+        hcmute.edu.vn.discord.dto.response.OtpVerificationResponse verification = otpService.verifyOtp(newEmail,
+                otpCode);
+
+        if (!verification.isVerified()) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(verification);
+        }
+
+        // Cập nhật email
+        userService.updateEmail(user.getId(), newEmail);
+
+        // Xóa khỏi storage
+        tempEmailChangeStorage.remove(user.getId());
+
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "message", "Đổi email thành công",
+                "newEmail", newEmail));
     }
 }
