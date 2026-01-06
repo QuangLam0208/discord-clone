@@ -80,6 +80,10 @@ window.onClickServer = function (serverId) {
     if (window.loadCategoriesAndChannels) {
         loadCategoriesAndChannels(serverId);
     }
+
+    setTimeout(() => {
+        if (window.subscribeToServer) window.subscribeToServer(serverId);
+    }, 1000); // 1s delay to valid socket connection
 }
 
 // 2. CREATE / JOIN SERVER UI

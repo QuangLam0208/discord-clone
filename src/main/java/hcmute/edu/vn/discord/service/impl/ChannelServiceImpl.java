@@ -22,11 +22,12 @@ public class ChannelServiceImpl implements ChannelService {
     private final UserRepository userRepository;
     private final ServerMemberRepository serverMemberRepository;
     private final hcmute.edu.vn.discord.service.AuditLogService auditLogService;
+    private final org.springframework.messaging.simp.SimpMessagingTemplate messagingTemplate;
 
     @Override
     @Transactional
     public Channel createChannel(Long serverId, String name, ChannelType type, Long categoryId,
-                                 Boolean isPrivate, String createdByUsername) {
+            Boolean isPrivate, String createdByUsername) {
         Server server = serverRepository.findById(serverId)
                 .orElseThrow(() -> new EntityNotFoundException("Server not found"));
 
@@ -68,6 +69,14 @@ public class ChannelServiceImpl implements ChannelService {
         }
         auditLogService.logAction(server, creator, EAuditAction.CHANNEL_CREATE,
                 saved.getId().toString(), "CHANNEL", "Tạo kênh: " + saved.getName());
+
+        // Broadcast WebSocket
+        try {
+            messagingTemplate.convertAndSend("/topic/server/" + serverId,
+                    java.util.Map.of("type", "CHANNEL_CREATE", "channelId", saved.getId()));
+        } catch (Exception e) {
+            // ignore
+        }
 
         return saved;
     }
@@ -129,6 +138,13 @@ public class ChannelServiceImpl implements ChannelService {
         } catch (Exception e) {
         }
 
+        // Broadcast WebSocket
+        try {
+            messagingTemplate.convertAndSend("/topic/server/" + updated.getServer().getId(),
+                    java.util.Map.of("type", "CHANNEL_UPDATE", "channelId", updated.getId()));
+        } catch (Exception e) {
+        }
+
         return updated;
     }
 
@@ -150,6 +166,13 @@ public class ChannelServiceImpl implements ChannelService {
 
             auditLogService.logAction(server, actor, EAuditAction.CHANNEL_DELETE,
                     channelIdStr, "CHANNEL", "Xóa kênh: " + channelName);
+        } catch (Exception e) {
+        }
+
+        // Broadcast WebSocket
+        try {
+            messagingTemplate.convertAndSend("/topic/server/" + server.getId(),
+                    java.util.Map.of("type", "CHANNEL_DELETE", "channelId", channelId));
         } catch (Exception e) {
         }
     }

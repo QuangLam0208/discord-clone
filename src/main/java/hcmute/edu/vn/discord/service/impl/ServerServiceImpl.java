@@ -38,6 +38,7 @@ public class ServerServiceImpl implements ServerService {
     private final AuditLogService auditLogService;
     private final AuditLogMongoService auditLogMongoService;
     private final SimpUserRegistry simpUserRegistry;
+    private final InviteRepository inviteRepository;
 
     @Override
     @Transactional
@@ -185,6 +186,9 @@ public class ServerServiceImpl implements ServerService {
             throw new EntityNotFoundException("Server not found");
         }
 
+        // Must delete Invites first due to FK constraint (not cascaded in Entity)
+        inviteRepository.deleteAllByServerId(serverId);
+
         serverRepository.deleteById(serverId);
         try {
             String username = SecurityContextHolder.getContext().getAuthentication().getName();
@@ -211,7 +215,8 @@ public class ServerServiceImpl implements ServerService {
                 .orElseThrow(() -> new EntityNotFoundException("Server not found"));
     }
 
-    // Lấy servers theo username hiện tại, chỉ ACTIVE/FREEZE, kèm counts an toàn (không chạm LAZY)
+    // Lấy servers theo username hiện tại, chỉ ACTIVE/FREEZE, kèm counts an toàn
+    // (không chạm LAZY)
     @Override
     @Transactional(readOnly = true)
     public List<ServerResponse> getMyServersResponses() {

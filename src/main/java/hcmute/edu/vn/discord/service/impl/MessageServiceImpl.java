@@ -11,6 +11,8 @@ import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.entity.mongo.Message;
 import hcmute.edu.vn.discord.repository.*;
 import hcmute.edu.vn.discord.service.AuditLogMongoService;
+import hcmute.edu.vn.discord.entity.enums.EAuditAction;
+import hcmute.edu.vn.discord.service.AuditLogService; // JPA Interface
 import hcmute.edu.vn.discord.service.MessageService;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.transaction.Transactional;
@@ -34,6 +36,7 @@ public class MessageServiceImpl implements MessageService {
     private final ServerRepository serverRepository;
     private final ServerMemberRepository serverMemberRepository;
     private final AuditLogMongoService auditLogService;
+    private final AuditLogService auditLogJpaService;
 
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -58,6 +61,10 @@ public class MessageServiceImpl implements MessageService {
 
         boolean hasContent = request.getContent() != null && !request.getContent().trim().isEmpty();
         boolean hasAttachments = request.getAttachments() != null && !request.getAttachments().isEmpty();
+
+        if (hasAttachments) {
+            ensurePermission(sender.getId(), channel.getServer().getId(), EPermission.ATTACH_FILES);
+        }
 
         if (!hasContent && !hasAttachments) {
             throw new IllegalArgumentException("Tin nhắn phải có nội dung hoặc ảnh đính kèm");
@@ -96,8 +103,29 @@ public class MessageServiceImpl implements MessageService {
 
         checkChannelAccess(user, channel);
 
+        // Check READ_MESSAGE_HISTORY
+        Date cutoffDate = null;
+        try {
+            ensurePermission(user.getId(), channel.getServer().getId(), EPermission.READ_MESSAGE_HISTORY);
+        } catch (AccessDeniedException e) {
+            // Nếu không có quyền xem lịch sử, chỉ cho xem tin nhắn từ lúc tham gia server
+            ServerMember member = serverMemberRepository
+                    .findByServerIdAndUserId(channel.getServer().getId(), user.getId())
+                    .orElseThrow(() -> new AccessDeniedException("Member not found"));
+
+            if (member.getJoinedAt() != null) {
+                cutoffDate = Date.from(member.getJoinedAt().atZone(java.time.ZoneId.systemDefault()).toInstant());
+            } else {
+                // Fallback if joinedAt is null (should not happen) -> Block all
+                return new ArrayList<>();
+            }
+        }
+
+        final Date finalCutoff = cutoffDate;
+
         return messageRepository.findByChannelId(channelId, pageable)
                 .stream()
+                .filter(msg -> finalCutoff == null || !msg.getCreatedAt().before(finalCutoff))
                 .map(msg -> {
                     User sender = userRepository.findById(msg.getSenderId()).orElse(null);
                     return mapToResponse(msg, sender);
@@ -146,6 +174,22 @@ public class MessageServiceImpl implements MessageService {
                     "USER_UPDATE_MESSAGE",
                     "MessageId: " + messageId + " || " + context,
                     "Old: " + oldContent + " || New: " + saved.getContent());
+
+            // NEW: Log to JPA (MySQL) for Server Audit Log UI
+            try {
+                if (message.getChannelId() != null) {
+                    Channel ch = channelRepository.findById(message.getChannelId()).orElse(null);
+                    if (ch != null && ch.getServer() != null) {
+                        auditLogJpaService.logAction(ch.getServer(), user,
+                                EAuditAction.MESSAGE_UPDATE,
+                                messageId,
+                                "MESSAGE",
+                                "Sửa tin nhắn tại kênh " + ch.getName());
+                    }
+                }
+            } catch (Exception ex) {
+                log.error("JPA Audit Log failed for edit message", ex);
+            }
         } catch (Exception e) {
             log.error("Audit log failed", e);
         }
@@ -236,6 +280,23 @@ public class MessageServiceImpl implements MessageService {
                     "MessageId: " + messageId + " || " + context,
                     "Owner deleted message: "
                             + (message.getContent() != null ? message.getContent() : "Image/Attachment"));
+
+            // NEW: Log to JPA (MySQL) for Server Audit Log UI
+            try {
+                if (message.getChannelId() != null) {
+                    Channel ch = channelRepository.findById(message.getChannelId()).orElse(null);
+                    if (ch != null && ch.getServer() != null) {
+                        auditLogJpaService.logAction(ch.getServer(), requester,
+                                EAuditAction.MESSAGE_DELETE,
+                                messageId,
+                                "MESSAGE",
+                                "Xóa tin nhắn của " + (sender != null ? sender.getUsername() : "Unknown") + " tại kênh "
+                                        + ch.getName());
+                    }
+                }
+            } catch (Exception ex) {
+                log.error("JPA Audit Log failed for delete message", ex);
+            }
         } catch (Exception e) {
             log.error("Audit log failed", e);
         }

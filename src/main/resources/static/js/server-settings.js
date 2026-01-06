@@ -44,48 +44,8 @@ window.openServerSettings = async function (serverId) {
         const header = document.getElementById('server-settings-header');
         if (header) header.querySelector('span').innerText = server.name.toUpperCase();
 
-        // Check Permissions
-        let myPerms = new Set();
-        try {
-            const permsList = await Api.get(`/api/servers/${serverId}/members/me/permissions`);
-            if (permsList && Array.isArray(permsList)) {
-                permsList.forEach(p => myPerms.add(p.code));
-            }
-        } catch (e) {
-            console.error("Failed to fetch permissions", e);
-        }
-
-        const isOwner = (state.currentUser && state.currentUser.id === server.ownerId);
-        // "ADMIN" or "ADMINISTRATOR" - verify backend code
-        const isAdmin = myPerms.has('ADMIN') || myPerms.has('ADMINISTRATOR');
-
-        // Logic
-        const canViewOverview = isOwner || isAdmin || myPerms.has('MANAGE_SERVER');
-        const canViewRoles = isOwner || isAdmin || myPerms.has('MANAGE_ROLES');
-        const canViewAudit = isOwner || isAdmin || myPerms.has('VIEW_AUDIT_LOG');
-        const canViewBans = isOwner || isAdmin || myPerms.has('BAN_MEMBERS');
-        // Usually only owner deletes, or ADMIN with strict checks
-        const canDelete = isOwner;
-
-        // Tabs
-        const setDisplay = (id, visible) => {
-            const el = document.getElementById(id);
-            if (el) el.style.display = visible ? 'block' : 'none';
-        };
-
-        setDisplay('nav-server-overview', canViewOverview);
-        setDisplay('nav-server-roles', canViewRoles);
-        setDisplay('nav-server-audit', canViewAudit);
-        setDisplay('nav-server-bans', canViewBans);
-        setDisplay('nav-server-delete', canDelete);
-
-        // Members always visible for now (or check VIEW_MEMBERS?)
-        setDisplay('nav-server-members', true);
-
-        // Separators
-        const separators = document.querySelectorAll('#serverSettingsModal .settings-nav-separator');
-        const anyAdminTab = canViewOverview || canViewRoles || canViewAudit || canViewBans || canDelete;
-        separators.forEach(el => el.style.display = anyAdminTab ? 'block' : 'none');
+        // Check Permissions & Update Sidebar
+        const perms = await refreshServerSettingsPermissions(serverId);
 
         // PREVIEW COUNTS
         const onlineCountEl = document.getElementById('preview-online-count');
@@ -119,7 +79,7 @@ window.openServerSettings = async function (serverId) {
         document.getElementById('serverSettingsModal').classList.add('active');
 
         // DEFAULT TAB
-        if (canViewOverview) {
+        if (perms.canViewOverview) {
             switchServerSettingsTab('overview');
         } else {
             switchServerSettingsTab('members');
@@ -167,4 +127,63 @@ window.switchServerSettingsTab = function (tabName) {
     } else if (tabName === 'audit' && window.loadAuditLogs) {
         loadAuditLogs();
     }
+}
+
+window.refreshServerSettingsPermissions = async function (serverId) {
+    if (!state.editingServerData) return { canViewOverview: false }; // Safety
+
+    // Default Owner Check from state to avoid re-fetch server if possible, 
+    // but permissions must be re-fetched.
+    let myPerms = new Set();
+    try {
+        const permsList = await Api.get(`/api/servers/${serverId}/members/me/permissions`);
+        if (permsList && Array.isArray(permsList)) {
+            permsList.forEach(p => myPerms.add(p.code));
+        }
+    } catch (e) {
+        console.error("Failed to fetch permissions", e);
+    }
+
+    const isOwner = (state.currentUser && state.currentUser.id === state.editingServerData.ownerId);
+    const isAdmin = myPerms.has('ADMIN') || myPerms.has('ADMINISTRATOR');
+
+    const canViewOverview = isOwner || isAdmin || myPerms.has('MANAGE_SERVER');
+    // Updated requirement: "Only owner can edit roles" -> Effectively Owner or Admin since Admin is superuser.
+    const canViewRoles = isOwner || isAdmin;
+
+    // Audit Log Permission
+    const canViewAudit = isOwner || isAdmin || myPerms.has('VIEW_AUDIT_LOG');
+
+    const canViewBans = isOwner || isAdmin || myPerms.has('BAN_MEMBERS');
+    const canDelete = isOwner;
+
+    const setDisplay = (id, visible) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.display = visible ? 'block' : 'none';
+            // If current tab is hidden, switch to something else? 
+            // e.g. if I am viewing Audit Log and it gets hidden.
+            if (!visible && el.classList.contains('active')) {
+                // Find first visible tab?
+                if (canViewOverview) switchServerSettingsTab('overview');
+                else switchServerSettingsTab('members');
+            }
+        }
+    };
+
+    setDisplay('nav-server-overview', canViewOverview);
+    setDisplay('nav-server-roles', canViewRoles);
+    setDisplay('nav-server-audit', canViewAudit);
+    setDisplay('nav-server-bans', canViewBans);
+    setDisplay('nav-server-delete', canDelete);
+    setDisplay('nav-server-members', true); // Members always visible
+
+    // Separators update
+    const anyAdminTab = canViewOverview || canViewRoles || canViewAudit || canViewBans || canDelete;
+    document.querySelectorAll('#serverSettingsModal .settings-nav-separator').forEach(el => el.style.display = anyAdminTab ? 'block' : 'none');
+
+    return {
+        isOwner, isAdmin,
+        canViewOverview, canViewRoles, canViewAudit, canViewBans, canDelete
+    };
 }

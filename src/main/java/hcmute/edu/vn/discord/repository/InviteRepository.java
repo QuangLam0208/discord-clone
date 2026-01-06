@@ -14,4 +14,7 @@ public interface InviteRepository extends JpaRepository<Invite, Long> {
 
     // Lấy danh sách invite của server (cho admin quản lý)
     List<Invite> findByServerId(Long serverId);
+
+    // Xóa tất cả invite của server
+    void deleteAllByServerId(Long serverId);
 }

@@ -11,11 +11,13 @@ import hcmute.edu.vn.discord.entity.jpa.User;
 import hcmute.edu.vn.discord.repository.PermissionRepository;
 import hcmute.edu.vn.discord.repository.ServerMemberRepository;
 import hcmute.edu.vn.discord.repository.ServerRoleRepository;
+import hcmute.edu.vn.discord.service.AuditLogService;
 import hcmute.edu.vn.discord.service.ServerRoleService;
 import hcmute.edu.vn.discord.service.ServerService;
 import hcmute.edu.vn.discord.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,17 +38,27 @@ public class ServerRoleServiceImpl implements ServerRoleService {
     private final ServerRoleRepository serverRoleRepository;
     private final PermissionRepository permissionRepository;
     private final ServerMemberRepository serverMemberRepository;
-    private final hcmute.edu.vn.discord.service.AuditLogService auditLogService;
+    private final AuditLogService auditLogService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     private Server requireOwner(Long serverId, String actorUsername) {
         Server server = serverService.getServerById(serverId);
         if (server.getOwner() == null || server.getOwner().getUsername() == null) {
             throw new AccessDeniedException("Server chưa có owner hợp lệ");
         }
-        if (!server.getOwner().getUsername().equals(actorUsername)) {
-            throw new AccessDeniedException("Chỉ owner server mới được quản lý role");
+
+        // 1. Check Owner
+        if (server.getOwner().getUsername().equals(actorUsername)) {
+            return server;
         }
-        return server;
+
+        // 2. Check Admin Permission
+        Set<String> perms = serverMemberRepository.findPermissionCodesByServerIdAndUsername(serverId, actorUsername);
+        if (perms.contains(hcmute.edu.vn.discord.entity.enums.EPermission.ADMIN.getCode())) {
+            return server;
+        }
+
+        throw new AccessDeniedException("Chỉ Owner hoặc Admin mới được quản lý role");
     }
 
     private Set<Permission> mapPermissionCodes(Set<String> codes) {
@@ -117,6 +129,13 @@ public class ServerRoleServiceImpl implements ServerRoleService {
             } catch (Exception e) {
             }
 
+            // Broadcast WebSocket
+            try {
+                messagingTemplate.convertAndSend("/topic/server/" + serverId,
+                        java.util.Map.of("type", "ROLE_UPDATE", "roleId", updated.getId()));
+            } catch (Exception e) {
+            }
+
             return updated;
         }
 
@@ -152,6 +171,13 @@ public class ServerRoleServiceImpl implements ServerRoleService {
                         EAuditAction.ROLE_UPDATE,
                         updated.getId().toString(), "ROLE", "Cập nhật quyền hạn");
             }
+        } catch (Exception e) {
+        }
+
+        // Broadcast WebSocket
+        try {
+            messagingTemplate.convertAndSend("/topic/server/" + serverId,
+                    java.util.Map.of("type", "ROLE_UPDATE", "roleId", updated.getId()));
         } catch (Exception e) {
         }
 
@@ -232,6 +258,13 @@ public class ServerRoleServiceImpl implements ServerRoleService {
                     EAuditAction.MEMBER_ROLE_UPDATE,
                     member.getId().toString(), "MEMBER", "Cập nhật vai trò cho thành viên: "
                             + (member.getNickname() != null ? member.getNickname() : member.getUser().getUsername()));
+        } catch (Exception e) {
+        }
+
+        // Broadcast WebSocket
+        try {
+            messagingTemplate.convertAndSend("/topic/server/" + serverId,
+                    java.util.Map.of("type", "MEMBER_ROLE_UPDATE", "userId", member.getUser().getId()));
         } catch (Exception e) {
         }
 

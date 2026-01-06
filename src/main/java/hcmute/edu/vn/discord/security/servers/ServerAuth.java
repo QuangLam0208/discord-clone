@@ -61,6 +61,10 @@ public class ServerAuth {
         return false;
     }
 
+    public boolean hasPermission(Long serverId, String username, String code) {
+        return has(serverId, username, Set.of(code));
+    }
+
     private boolean isServerFrozen(Long serverId) {
         Server s = serverRepository.findById(serverId)
                 .orElseThrow(() -> new EntityNotFoundException("Server not found"));
@@ -152,9 +156,7 @@ public class ServerAuth {
         if (isServerFrozen(serverId)) {
             return isOwner(serverId, username) || isServerAdmin(serverId, username);
         }
-        if (isOwner(serverId, username))
-            return true;
-        return has(serverId, username, Set.of(EPermission.ADD_REACTIONS.getCode(), EPermission.ADMIN.getCode()));
+        return isOwner(serverId, username) || isServerAdmin(serverId, username);
     }
 
     public boolean canReadMessageHistory(Long channelId, String username) {
@@ -176,17 +178,6 @@ public class ServerAuth {
         return has(serverId, username, Set.of(EPermission.ATTACH_FILES.getCode(), EPermission.ADMIN.getCode()));
     }
 
-    public boolean canEmbedLink(Long channelId, String username) {
-        if (!canViewChannel(channelId, username))
-            return false;
-        Long serverId = channelRepository.findServerIdByChannelId(channelId)
-                .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
-        if (isServerFrozen(serverId)) {
-            return isOwner(serverId, username) || isServerAdmin(serverId, username);
-        }
-        return has(serverId, username, Set.of(EPermission.EMBED_LINK.getCode(), EPermission.ADMIN.getCode()));
-    }
-
     public boolean canCreateInvite(Long serverId, String username) {
         if (!isMember(serverId, username))
             return false;
@@ -196,15 +187,6 @@ public class ServerAuth {
             return isServerAdmin(serverId, username);
         }
         return has(serverId, username, Set.of(EPermission.CREATE_INVITE.getCode(), EPermission.ADMIN.getCode()));
-    }
-
-    public boolean canChangeNickname(Long serverId, String username) {
-        if (!isMember(serverId, username))
-            return false;
-        if (isServerFrozen(serverId)) {
-            return isOwner(serverId, username) || isServerAdmin(serverId, username);
-        }
-        return has(serverId, username, Set.of(EPermission.CHANGE_NICKNAME.getCode(), EPermission.ADMIN.getCode()));
     }
 
     public boolean canMentionEveryone(Long serverId, String username) {
@@ -258,7 +240,7 @@ public class ServerAuth {
             return false;
         if (isOwner(serverId, username))
             return true;
-        return has(serverId, username, Set.of(EPermission.ADMIN.getCode(), EPermission.MANAGE_ROLES.getCode()));
+        return isServerAdmin(serverId, username);
     }
 
     public boolean canManageMembers(Long serverId, String username) {

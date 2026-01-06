@@ -74,26 +74,37 @@ function createMessageElement(msg) {
     const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(senderName)}&background=random&color=fff&size=40`;
 
     // Check ownership for Edit/Delete actions
-    // Assume state.currentUser is populated (from home.js/loadMe)
     const currentUserId = state.currentUser ? state.currentUser.id : (localStorage.getItem('userId') ? parseInt(localStorage.getItem('userId')) : null);
     const isOwner = currentUserId && (msg.senderId === currentUserId);
 
+    // Check MANAGE_MESSAGES permission (loaded in loadMessages)
+    const hasManageMessages = state.currentPermissions && (state.currentPermissions.has('MANAGE_MESSAGES') || state.currentPermissions.has('ADMIN'));
+    const canDelete = isOwner || hasManageMessages;
+
     // Controls HTML (Restored)
     let controlsHtml = '';
-    if (isOwner && !msg.deleted) {
+    // Show controls if Owner (Edit/Delete) OR if has ManageMessages (Delete only)
+    if ((isOwner || canDelete) && !msg.deleted) {
+        let buttons = '';
+        if (isOwner) {
+            buttons += `<i class="fas fa-pen" onclick="enableEditMessage('${msg.id}')" title="Chỉnh sửa"></i>`;
+        }
+        if (canDelete) {
+            buttons += `<i class="fas fa-trash trash-icon" onclick="confirmDeleteMessage('${msg.id}')" title="Xóa"></i>`;
+        }
+
         controlsHtml = `
             <div class="message-actions">
-                <i class="fas fa-pen" onclick="enableEditMessage('${msg.id}')" title="Chỉnh sửa"></i>
-                <i class="fas fa-trash trash-icon" onclick="confirmDeleteMessage('${msg.id}')" title="Xóa"></i>
+                ${buttons}
             </div>
         `;
     }
 
-    // Context Menu Trigger: Right-click on .message (Keeping this as secondary option)
+    // Context Menu Trigger
     div.addEventListener('contextmenu', (e) => {
-        if (!isOwner || msg.deleted) return;
+        if ((!isOwner && !canDelete) || msg.deleted) return;
         e.preventDefault();
-        showContextMenu(e.pageX, e.pageY, msg.id);
+        showContextMenu(e.pageX, e.pageY, msg.id, isOwner, canDelete);
     });
 
 
@@ -122,7 +133,7 @@ function createMessageElement(msg) {
     `;
 
     // Hover effect for actions
-    if (isOwner && !msg.deleted) {
+    if ((isOwner || canDelete) && !msg.deleted) {
         div.style.position = 'relative';
         // CSS will handle hover display via .message:hover .message-actions
     }
@@ -136,17 +147,24 @@ const contextMenuEl = document.createElement('div');
 contextMenuEl.className = 'context-menu';
 document.body.appendChild(contextMenuEl);
 
-function showContextMenu(x, y, msgId) {
-    contextMenuEl.innerHTML = `
+function showContextMenu(x, y, msgId, isOwner, canDelete) {
+    let items = '';
+    if (isOwner) {
+        items += `
         <div class="context-menu-item" onclick="enableEditMessage('${msgId}'); hideContextMenu()">
             <span>Chỉnh sửa tin nhắn</span>
             <i class="fas fa-pen"></i>
-        </div>
+        </div>`;
+    }
+    if (canDelete) {
+        items += `
         <div class="context-menu-item delete" onclick="confirmDeleteMessage('${msgId}'); hideContextMenu()">
             <span>Xóa tin nhắn</span>
             <i class="fas fa-trash"></i>
-        </div>
-    `;
+        </div>`;
+    }
+
+    contextMenuEl.innerHTML = items;
 
     // Position check to avoid overflow
     const winWidth = window.innerWidth;
@@ -186,6 +204,22 @@ async function loadMessages(channelId) {
     if (!chatArea) return;
 
     chatArea.innerHTML = '<div style="color: #aaa; text-align: center; margin-top: 20px;">Đang tải tin nhắn...</div>';
+
+    // FETCH PERMISSIONS FOR CURRENT CONTEXT
+    state.currentPermissions = new Set();
+    try {
+        // We need serverId. Currently relying on channel lookup or state.
+        // Let's try to get serverId from the channel object if available, or fetch channel info first.
+        const channel = await Api.get(`/api/channels/${channelId}`);
+        if (channel && channel.serverId) {
+            const perms = await Api.get(`/api/servers/${channel.serverId}/members/me/permissions`);
+            if (perms && Array.isArray(perms)) {
+                perms.forEach(p => state.currentPermissions.add(p.code));
+            }
+        }
+    } catch (err) {
+        console.warn("Failed to load permissions", err);
+    }
 
     try {
         // GET /api/channels/{id}/messages?page=0&size=50
@@ -252,7 +286,12 @@ function connectChannelSocket(channelId) {
     state.stompClient.connect({ 'Authorization': `Bearer ${token}` }, function (frame) {
         console.log('Connected to WebSocket');
         state.isConnecting = false;
-        subscribeToChannel(channelId);
+        if (channelId) subscribeToChannel(channelId); // Only if channelId provided
+
+        // Also subscribe to Server updates if we are in a server
+        if (state.currentServerId && window.subscribeToServer) {
+            window.subscribeToServer(state.currentServerId);
+        }
     }, function (error) {
         console.error('WebSocket Error:', error);
         state.isConnecting = false;
@@ -343,6 +382,56 @@ function subscribeToChannel(channelId) {
     });
 
     console.log(`Subscribed to /topic/channel/${channelId}`);
+}
+
+let serverSubscription = null;
+window.subscribeToServer = function (serverId) {
+    if (!serverId) return;
+
+    // Auto connect if needed
+    if (!state.stompClient || !state.stompClient.connected) {
+        // Should implemented generic connect if not exists, but usually connectChannelSocket is enough
+        return;
+    }
+
+    if (serverSubscription) {
+        serverSubscription.unsubscribe();
+    }
+
+    serverSubscription = state.stompClient.subscribe(`/topic/server/${serverId}`, function (message) {
+        const msg = JSON.parse(message.body);
+        // Handle Channel Update Events
+        if (['CHANNEL_CREATE', 'CHANNEL_UPDATE', 'CHANNEL_DELETE', 'ROLE_UPDATE', 'MEMBER_ROLE_UPDATE'].includes(msg.type)) {
+            console.log("Received server update:", msg);
+
+            // Optimize: Only reload if needed
+            // If MEMBER_ROLE_UPDATE, only reload if it's ME
+            if (msg.type === 'MEMBER_ROLE_UPDATE') {
+                if (state.currentUser && state.currentUser.id === msg.userId) {
+                    if (window.loadCategoriesAndChannels) window.loadCategoriesAndChannels(serverId);
+                }
+            } else {
+                // Global updates (Role / Channel) -> Reload for everyone
+                if (window.loadCategoriesAndChannels) {
+                    window.loadCategoriesAndChannels(serverId);
+                }
+            }
+
+            // Real-time Update for Settings Sidebar if Open
+            const settingsModal = document.getElementById('serverSettingsModal');
+            if (settingsModal && settingsModal.classList.contains('active') && window.refreshServerSettingsPermissions) {
+                // If MEMBER_ROLE_UPDATE for ME -> Refresh
+                if (msg.type === 'MEMBER_ROLE_UPDATE' && state.currentUser && state.currentUser.id === msg.userId) {
+                    window.refreshServerSettingsPermissions(serverId);
+                }
+                // If ROLE_UPDATE (permission definition changed) -> Refresh for everyone
+                if (msg.type === 'ROLE_UPDATE') {
+                    window.refreshServerSettingsPermissions(serverId);
+                }
+            }
+        }
+    });
+    console.log(`Subscribed to /topic/server/${serverId}`);
 }
 
 // 6. Edit & Delete Logic
