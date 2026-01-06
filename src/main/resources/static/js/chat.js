@@ -78,9 +78,14 @@ function createMessageElement(msg) {
     const currentUserId = state.currentUser ? state.currentUser.id : (localStorage.getItem('userId') ? parseInt(localStorage.getItem('userId')) : null);
     const isOwner = currentUserId && (msg.senderId === currentUserId);
 
-    // Controls HTML (Restored)
+    // Permission check
+    const perms = state.serverPermissions || new Set();
+    const canManage = perms.has('MANAGE_MESSAGES') || perms.has('ADMIN') || perms.has('ADMINISTRATOR');
+
+    // Controls HTML
     let controlsHtml = '';
-    if (isOwner && !msg.deleted) {
+    // Allow if owner OR has MANAGE_MESSAGES (User requested ability to edit others too)
+    if ((isOwner || canManage) && !msg.deleted) {
         controlsHtml = `
             <div class="message-actions">
                 <i class="fas fa-pen" onclick="enableEditMessage('${msg.id}')" title="Chỉnh sửa"></i>
@@ -89,9 +94,9 @@ function createMessageElement(msg) {
         `;
     }
 
-    // Context Menu Trigger: Right-click on .message (Keeping this as secondary option)
+    // Context Menu Trigger
     div.addEventListener('contextmenu', (e) => {
-        if (!isOwner || msg.deleted) return;
+        if ((!isOwner && !canManage) || msg.deleted) return;
         e.preventDefault();
         showContextMenu(e.pageX, e.pageY, msg.id);
     });
@@ -122,7 +127,7 @@ function createMessageElement(msg) {
     `;
 
     // Hover effect for actions
-    if (isOwner && !msg.deleted) {
+    if ((isOwner || canManage) && !msg.deleted) {
         div.style.position = 'relative';
         // CSS will handle hover display via .message:hover .message-actions
     }

@@ -4,7 +4,9 @@ window.state = {
   currentUser: null,
   stompClient: null,
   tempCategoryId: null,
-  pendingAttachments: []
+  tempCategoryId: null,
+  pendingAttachments: [],
+  serverPermissions: new Set() // Store current server permissions
 };
 
 window.elements = {
@@ -17,6 +19,29 @@ window.elements = {
 window.addEventListener('unhandledrejection', (e) => {
   console.error('[App Unhandled Rejection]', e.reason);
 });
+
+window.reloadPermissions = async function (serverId) {
+  if (!serverId) return;
+  try {
+    const permsList = await Api.get(`/api/servers/${serverId}/members/me/permissions`);
+    state.serverPermissions = new Set(permsList.map(p => p.code));
+    console.log("Updated permissions:", state.serverPermissions);
+
+    // Refresh Chat UI (if active)
+    if (window.loadMessages && state.currentChannelId) {
+      // Reload to update edit/delete icons
+      loadMessages(state.currentChannelId);
+    }
+
+    // Refresh Server Settings (if open)
+    if (document.getElementById('serverSettingsModal') &&
+      document.getElementById('serverSettingsModal').classList.contains('active')) {
+      if (window.openServerSettings) window.openServerSettings(serverId);
+    }
+  } catch (e) {
+    console.error("Failed to reload permissions", e);
+  }
+}
 
 // ==================== APP BOOTSTRAP ====================
 document.addEventListener('DOMContentLoaded', async function () {

@@ -16,6 +16,7 @@ import hcmute.edu.vn.discord.service.ServerService;
 import hcmute.edu.vn.discord.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,6 +38,7 @@ public class ServerRoleServiceImpl implements ServerRoleService {
     private final PermissionRepository permissionRepository;
     private final ServerMemberRepository serverMemberRepository;
     private final hcmute.edu.vn.discord.service.AuditLogService auditLogService;
+    private final SimpMessagingTemplate messagingTemplate;
 
     private Server requireOwner(Long serverId, String actorUsername) {
         Server server = serverService.getServerById(serverId);
@@ -87,6 +89,9 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         } catch (Exception e) {
         }
 
+        // Broadcast
+        broadcastServerUpdate(serverId, "ROLE_CREATE", saved);
+
         return saved;
     }
 
@@ -116,6 +121,9 @@ public class ServerRoleServiceImpl implements ServerRoleService {
                         updated.getId().toString(), "ROLE", "Cập nhật vai trò hệ thống: " + role.getName());
             } catch (Exception e) {
             }
+
+            // Broadcast
+            broadcastServerUpdate(serverId, "ROLE_UPDATE", updated);
 
             return updated;
         }
@@ -155,6 +163,9 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         } catch (Exception e) {
         }
 
+        // Broadcast
+        broadcastServerUpdate(serverId, "ROLE_UPDATE", updated);
+
         return updated;
     }
 
@@ -183,6 +194,8 @@ public class ServerRoleServiceImpl implements ServerRoleService {
                     roleIdStr, "ROLE", "Xóa vai trò: " + roleName);
         } catch (Exception e) {
         }
+
+        broadcastServerUpdate(serverId, "ROLE_DELETE", java.util.Map.of("id", roleId));
     }
 
     @Transactional(readOnly = true)
@@ -222,8 +235,7 @@ public class ServerRoleServiceImpl implements ServerRoleService {
         newRoles.add(everyone);
 
         member.setRoles(newRoles);
-        ServerMember saved = serverMemberRepository.save(member); // Fixed: was saving 'member', return value used for
-        // consistency generally, though member is mutable
+        ServerMember saved = serverMemberRepository.save(member);
 
         // Audit Log
         try {
@@ -234,6 +246,10 @@ public class ServerRoleServiceImpl implements ServerRoleService {
                             + (member.getNickname() != null ? member.getNickname() : member.getUser().getUsername()));
         } catch (Exception e) {
         }
+
+        broadcastServerUpdate(serverId, "MEMBER_UPDATE", java.util.Map.of(
+                "userId", request.getUserId(),
+                "roleIds", request.getRoleIds()));
 
         return saved;
     }
@@ -252,5 +268,16 @@ public class ServerRoleServiceImpl implements ServerRoleService {
                 .orElseThrow(() -> new EntityNotFoundException("Role not found in this server"));
 
         return serverMemberRepository.findByRoleId(roleId);
+    }
+
+    private void broadcastServerUpdate(Long serverId, String type, Object data) {
+        try {
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("type", type);
+            payload.put("data", data);
+            messagingTemplate.convertAndSend("/topic/server/" + serverId, payload);
+        } catch (Exception e) {
+            // log error
+        }   
     }
 }

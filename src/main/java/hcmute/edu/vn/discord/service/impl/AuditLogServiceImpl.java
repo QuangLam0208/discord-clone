@@ -19,7 +19,7 @@ public class AuditLogServiceImpl implements AuditLogService {
 
     @Override
     public void logAction(Server server, User actor, EAuditAction action, String targetId, String targetType,
-                          String changes) {
+            String changes) {
         AuditLog log = AuditLog.builder()
                 .server(server)
                 .actor(actor)
@@ -34,5 +34,10 @@ public class AuditLogServiceImpl implements AuditLogService {
     @Override
     public List<AuditLog> getAuditLogs(Long serverId) {
         return auditLogRepository.findByServerIdOrderByCreatedAtDesc(serverId);
+    }
+
+    @Override
+    public void deleteByServer(Long serverId) {
+        auditLogRepository.deleteByServerId(serverId);
     }
 }

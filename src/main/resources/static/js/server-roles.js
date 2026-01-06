@@ -254,7 +254,6 @@ const permissionsDefinitions = [
         permissions: [
             { code: "VIEW_CHANNELS", name: "Xem Kênh", description: "Cho phép thành viên xem các kênh (không tính kênh riêng tư)." },
             { code: "MANAGE_CHANNELS", name: "Quản Lý Kênh", description: "Cho phép tạo, chỉnh sửa hoặc xóa kênh." },
-            { code: "MANAGE_ROLES", name: "Quản Lý Vai Trò", description: "Cho phép thành viên tạo, chỉnh sửa hoặc xóa các vai trò thấp hơn vai trò của họ." },
             { code: "MANAGE_SERVER", name: "Quản Lý Máy Chủ", description: "Cho phép thay đổi tên máy chủ và xem lời mời." },
             { code: "VIEW_AUDIT_LOG", name: "Xem Nhật Ký Kiểm Tra", description: "Cho phép xem lịch sử thay đổi của máy chủ." }
         ]
@@ -263,20 +262,15 @@ const permissionsDefinitions = [
         category: "Quản lý thành viên",
         permissions: [
             { code: "CREATE_INVITE", name: "Tạo Lời Mời", description: "Cho phép mời người mới vào máy chủ." },
-            { code: "CHANGE_NICKNAME", name: "Đổi Biệt Danh", description: "Cho phép thay đổi biệt danh của chính mình." },
-            { code: "MANAGE_NICKNAME", name: "Quản Lý Biệt Danh", description: "Cho phép thay đổi biệt danh của người khác." },
             { code: "KICK_APPROVE_REJECT_MEMBERS", name: "Đuổi Thành Viên", description: "Cho phép đuổi thành viên khỏi máy chủ." },
-            { code: "BAN_MEMBERS", name: "Cấm Thành Viên", description: "Cho phép cấm vĩnh viễn thành viên khỏi máy chủ." },
-            { code: "TIME_OUT_MEMBERS", name: "Timeout Thành Viên", description: "Cho phép cách ly thành viên tạm thời." }
+            { code: "BAN_MEMBERS", name: "Cấm Thành Viên", description: "Cho phép cấm vĩnh viễn thành viên khỏi máy chủ." }
         ]
     },
     {
         category: "Kênh Văn Bản",
         permissions: [
             { code: "SEND_MESSAGES", name: "Gửi Tin Nhắn", description: "Cho phép gửi tin nhắn trong kênh chat." },
-            { code: "EMBED_LINK", name: "Nhúng Liên Kết", description: "Cho phép hiển thị bản xem trước của liên kết." },
             { code: "ATTACH_FILES", name: "Đính Kèm Tệp", description: "Cho phép tải lên tệp và ảnh." },
-            { code: "ADD_REACTIONS", name: "Thêm Biểu Cảm", description: "Cho phép thêm biểu cảm (reaction) vào tin nhắn." },
             { code: "MANAGE_MESSAGES", name: "Quản Lý Tin Nhắn", description: "Cho phép xóa tin nhắn của người khác." },
             { code: "READ_MESSAGE_HISTORY", name: "Đọc Lịch Sử Tin Nhắn", description: "Cho phép xem tin nhắn cũ." }
         ]

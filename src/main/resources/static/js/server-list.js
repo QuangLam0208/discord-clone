@@ -70,6 +70,13 @@ window.onClickServer = function (serverId) {
     if (state.currentServerId === serverId) return;
     state.currentServerId = serverId;
 
+    if (window.Ws && window.Ws.subscribeToServer) {
+        window.Ws.subscribeToServer(serverId);
+    }
+    if (window.reloadPermissions) {
+        window.reloadPermissions(serverId);
+    }
+
     const headerName = document.querySelector('.channel-header h4');
     if (headerName) {
         const serverItem = document.querySelector(`.sidebar-item[data-server-id="${serverId}"]`);

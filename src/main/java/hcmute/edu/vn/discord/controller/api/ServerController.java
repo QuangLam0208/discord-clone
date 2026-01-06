@@ -43,7 +43,7 @@ public class ServerController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("@serverAuth.isOwner(#id, authentication.name)")
+    @PreAuthorize("@serverAuth.isOwner(#id, authentication.name) or @serverAuth.hasPermission(#id, authentication.name, 'MANAGE_SERVER')")
     public ResponseEntity<ServerResponse> updateServer(@PathVariable Long id,
             @Valid @RequestBody ServerRequest request) {
         request.normalize();

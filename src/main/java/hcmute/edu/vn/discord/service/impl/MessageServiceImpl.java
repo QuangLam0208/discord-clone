@@ -56,6 +56,10 @@ public class MessageServiceImpl implements MessageService {
         checkChannelAccess(sender, channel);
         ensurePermission(sender.getId(), channel.getServer().getId(), EPermission.SEND_MESSAGES);
 
+        if (request.getAttachments() != null && !request.getAttachments().isEmpty()) {
+            ensurePermission(sender.getId(), channel.getServer().getId(), EPermission.ATTACH_FILES);
+        }
+
         boolean hasContent = request.getContent() != null && !request.getContent().trim().isEmpty();
         boolean hasAttachments = request.getAttachments() != null && !request.getAttachments().isEmpty();
 
@@ -96,6 +100,29 @@ public class MessageServiceImpl implements MessageService {
 
         checkChannelAccess(user, channel);
 
+        // Check READ_MESSAGE_HISTORY
+        Long serverId = channel.getServer().getId();
+        ServerMember member = serverMemberRepository.findByServerIdAndUserId(serverId, user.getId())
+                .orElseThrow(() -> new AccessDeniedException("Bạn không phải thành viên server này"));
+
+        boolean canReadHistory = member.getRoles().stream()
+                .flatMap(r -> r.getPermissions().stream())
+                .anyMatch(p -> p.getCode().equals(EPermission.READ_MESSAGE_HISTORY.getCode())
+                        || p.getCode().equals(EPermission.ADMIN.getCode())
+                        || channel.getServer().getOwner().getId().equals(user.getId()));
+
+        if (!canReadHistory) {
+            java.util.Date joinedDate = java.util.Date
+                    .from(member.getJoinedAt().atZone(java.time.ZoneId.systemDefault()).toInstant());
+            return messageRepository.findByChannelIdAndCreatedAtAfter(channelId, joinedDate, pageable)
+                    .stream()
+                    .map(msg -> {
+                        User sender = userRepository.findById(msg.getSenderId()).orElse(null);
+                        return mapToResponse(msg, sender);
+                    })
+                    .collect(Collectors.toList());
+        }
+
         return messageRepository.findByChannelId(channelId, pageable)
                 .stream()
                 .map(msg -> {
@@ -118,7 +145,14 @@ public class MessageServiceImpl implements MessageService {
         }
 
         if (!message.getSenderId().equals(user.getId())) {
-            throw new AccessDeniedException("Bạn không có quyền sửa tin nhắn này");
+            // Check for MANAGE_MESSAGES
+            Channel channel = channelRepository.findById(message.getChannelId())
+                    .orElseThrow(() -> new EntityNotFoundException("Channel not found"));
+            try {
+                ensurePermission(user.getId(), channel.getServer().getId(), EPermission.MANAGE_MESSAGES);
+            } catch (AccessDeniedException e) {
+                throw new AccessDeniedException("Bạn không có quyền sửa tin nhắn này");
+            }
         }
 
         if (Boolean.TRUE.equals(message.getDeleted())) {

@@ -61,6 +61,10 @@ public class ServerAuth {
         return false;
     }
 
+    public boolean hasPermission(Long serverId, String username, String permissionCode) {
+        return has(serverId, username, Set.of(permissionCode));
+    }
+
     private boolean isServerFrozen(Long serverId) {
         Server s = serverRepository.findById(serverId)
                 .orElseThrow(() -> new EntityNotFoundException("Server not found"));

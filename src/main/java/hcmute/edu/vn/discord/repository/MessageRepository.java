@@ -6,6 +6,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.mongodb.repository.MongoRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -16,6 +17,8 @@ public interface MessageRepository extends MongoRepository<Message, String> {
     // Spring Data Mongo sẽ tự động xử lý page & size cho bạn
     Page<Message> findByChannelId(Long channelId, Pageable pageable);
 
+    List<Message> findByChannelIdAndCreatedAtAfter(Long channelId, Date date, Pageable pageable);
+
     // 2. (Optional) Tìm tin nhắn cũ không phân trang (nếu cần dùng nội bộ)
     List<Message> findByChannelId(Long channelId);
 
@@ -24,6 +27,7 @@ public interface MessageRepository extends MongoRepository<Message, String> {
 
     // Lấy message mới nhất theo senderId (phù hợp với schema hiện tại)
     Optional<Message> findFirstBySenderIdOrderByCreatedAtDesc(Long senderId);
-    //nếu cần theo channel + sender
+
+    // nếu cần theo channel + sender
     Optional<Message> findFirstByChannelIdAndSenderIdOrderByCreatedAtDesc(Long channelId, Long senderId);
 }
