@@ -55,25 +55,9 @@
                     <i class="fa-solid fa-clipboard-list"></i>
                     <span>Audit</span>
                 </a>
-                <div class="separator"></div>
-                <a class="nav-item" href="/home">
-                    <i class="fa-solid fa-arrow-left"></i>
-                    <span>Về ứng dụng</span>
-                </a>
             </nav>
 
-            <div class="sidebar-footer">
-                <div class="current-user">
-                    <div class="avatar" id="admin-avatar"></div>
-                    <div class="uinfo">
-                        <div class="uname" id="admin-name">Admin</div>
-                        <div class="utag">#admin</div>
-                    </div>
-                </div>
-                <button class="btn-logout" id="btn-admin-logout" title="Đăng xuất">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                </button>
-            </div>
+            <div th:replace="~{fragments/user-bar :: user-bar}"></div>
         </aside>
 
         <main class="admin-main">
@@ -92,6 +76,9 @@
             </section>
         </main>
     </div>
+
+    <!-- Modals -->
+    <div th:replace="~{fragments/modals :: modals}"></div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>

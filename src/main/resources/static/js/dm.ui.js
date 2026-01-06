@@ -38,9 +38,10 @@ const DMUI = (() => {
       dmSidebarSearch: document.getElementById('dm-sidebar-search'),
       dmSearchResults: document.getElementById('dm-search-results'),
 
-      // Center Search
       dmSearch: document.getElementById('dm-center-search'),
       dmSearchContainer: document.getElementById('dm-search-container'),
+      dmAttachmentPreview: document.getElementById('dm-attachment-preview'),
+      dmActiveList: document.getElementById('dm-active-list'),
     };
   }
 
@@ -84,6 +85,47 @@ const DMUI = (() => {
     }
   }
 
+  function renderAttachmentPreview(files) {
+    const { dmAttachmentPreview } = els();
+    if (!dmAttachmentPreview) return;
+
+    if (files.length === 0) {
+      dmAttachmentPreview.style.display = 'none';
+      dmAttachmentPreview.innerHTML = '';
+      return;
+    }
+
+    dmAttachmentPreview.style.display = 'flex';
+    dmAttachmentPreview.innerHTML = '';
+
+    files.forEach((file, index) => {
+      const item = document.createElement('div');
+      item.className = 'attachment-preview-item';
+      item.style.cssText = 'position: relative; width: 100px; height: 100px; border-radius: 8px; overflow: hidden; background: #202225; flex-shrink: 0; border: 1px solid #202225;';
+
+      let innerContent = '';
+      if (file.type.startsWith('image/')) {
+        const url = URL.createObjectURL(file);
+        innerContent = `<img src="${url}" style="width: 100%; height: 100%; object-fit: cover;">`;
+      } else {
+        innerContent = `
+                <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px;">
+                    <i class="fa-solid fa-file" style="font-size: 24px; color: #b9bbbe; margin-bottom: 5px;"></i>
+                    <span style="font-size: 10px; color: #b9bbbe; text-align: center; word-break: break-all; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">${file.name}</span>
+                </div>
+            `;
+      }
+
+      item.innerHTML = `
+            ${innerContent}
+            <div onclick="window.DM.removeAttachment(${index})" style="position: absolute; top: 2px; right: 2px; background: #ed4245; color: white; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.5);">
+                <i class="fa-solid fa-xmark"></i>
+            </div>
+        `;
+      dmAttachmentPreview.appendChild(item);
+    });
+  }
+
   // --- RENDER SIDEBAR ---
   function renderFriendsSidebar(conversations, onSelectConversationCallback) {
     const { dmList } = els();
@@ -97,8 +139,8 @@ const DMUI = (() => {
         // UI: Mark as read
         const nameText = item.querySelector('.dm-name-text');
         if (nameText) {
-            nameText.style.color = '#96989d';
-            nameText.style.fontWeight = '500';
+          nameText.style.color = '#96989d';
+          nameText.style.fontWeight = '500';
         }
         item.classList.add('active');
 
@@ -106,7 +148,7 @@ const DMUI = (() => {
         const name = item.getAttribute('data-friend-name') || '';
 
         if (onSelectConversationCallback) {
-            onSelectConversationCallback(friendId, name);
+          onSelectConversationCallback(friendId, name);
         }
       });
     });
@@ -116,18 +158,24 @@ const DMUI = (() => {
     const name = f.displayName || f.friendUsername || ('User ' + f.friendUserId);
     const initials = (name || 'U').split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
     const avatar = f.avatarUrl
-        ? `<img src="${f.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
-        : initials;
+      ? `<img src="${f.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+      : initials;
 
     const isUnread = f.unreadCount > 0;
     const color = isUnread ? '#ffffff' : '#96989d';
     const weight = isUnread ? '700' : '500';
 
+    const statusColor = f.online ? '#23a559' : '#747f8d';
+    const statusDot = `<div style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; background:${statusColor}; border-radius:50%; border:3px solid #2f3136;"></div>`;
+
     return `
       <div class="channel-item dm-item" id="dm-item-${f.friendUserId}" data-friend-id="${f.friendUserId}" data-friend-name="${name}">
         <div style="display:flex; align-items:center; gap:12px; flex:1; overflow:hidden;">
-          <div style="width:32px; height:32px; border-radius:50%; background:#3f4147; color:#cfd1d5; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0;">
-            ${avatar}
+          <div style="position:relative; width:32px; height:32px;">
+              <div style="width:100%; height:100%; border-radius:50%; background:#3f4147; color:#cfd1d5; display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; overflow:hidden;">
+                ${avatar}
+              </div>
+              ${statusDot}
           </div>
           <div class="dm-name-container" style="display:flex; flex-direction:column; overflow:hidden;">
             <span class="dm-name-text" style="color:${color}; font-weight:${weight}; white-space:nowrap; text-overflow:ellipsis; overflow:hidden; font-size:15px;">
@@ -166,19 +214,69 @@ const DMUI = (() => {
     const name = f.displayName || f.friendUsername || ('User ' + f.friendUserId);
     const initials = (name || 'U').split(' ').map(s => s[0]).join('').slice(0, 2).toUpperCase();
     const avatar = f.avatarUrl
-        ? `<img src="${f.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
-        : initials;
+      ? `<img src="${f.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+      : initials;
+
+    const statusColor = f.online ? '#23a559' : '#747f8d';
+    const statusDot = `<div style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; background:${statusColor}; border-radius:50%; border:3px solid #36393f;"></div>`;
 
     return `
       <div class="dm-center-item dm-header-item" data-friend-id="${f.friendUserId}" data-friend-name="${name}" style="display:flex; align-items:center; gap:12px; border-radius:8px;">
-        <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:#5865F2;display:flex;align-items:center;justify-content:center;color:#fff;overflow:hidden;">
-            ${avatar}
+        <div style="position: relative; width: 32px; height: 32px;">
+            <div class="user-avatar" style="width:100%;height:100%;border-radius:50%;background:#5865F2;display:flex;align-items:center;justify-content:center;color:#fff;overflow:hidden;">
+                ${avatar}
+            </div>
+            ${statusDot}
         </div>
         <div style="display:flex; flex-direction:column;">
           <span style="color:#fff;">${name}</span>
-          <small style="color:#b5bac1;">Online</small>
+          <small style="color:#b5bac1;">${f.online ? 'Online' : 'Offline'}</small>
         </div>
       </div>`;
+  }
+
+  function renderActiveNow(friends, onSelectFriendCallback) {
+    const { dmActiveList } = els();
+    if (!dmActiveList) return;
+
+    const onlineFriends = friends.filter(f => f.online);
+
+    if (onlineFriends.length === 0) {
+      dmActiveList.innerHTML = `
+            <div class="empty-active-state">
+                <div class="empty-text-bold">Hiện không có ai đang hoạt động</div>
+            </div>`;
+      return;
+    }
+
+    dmActiveList.innerHTML = onlineFriends.map(f => activeListItem(f)).join('');
+
+    dmActiveList.querySelectorAll('.active-now-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const friendId = Number(item.getAttribute('data-id'));
+        const name = item.getAttribute('data-name');
+        onSelectFriendCallback(friendId, name);
+      });
+    });
+  }
+
+  function activeListItem(f) {
+    const name = f.displayName || f.friendUsername || ('User ' + f.friendUserId);
+    const avatar = f.avatarUrl
+      ? `<img src="${f.avatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+      : `<div style="width:100%;height:100%;background:#5865F2;color:#fff;display:flex;align-items:center;justify-content:center;">${name.charAt(0)}</div>`;
+
+    return `
+        <div class="active-now-item" data-id="${f.friendUserId}" data-name="${name}" style="display:flex; align-items:center; gap:12px; padding:10px; border-radius:8px; cursor:pointer;" onmouseover="this.style.backgroundColor='#35373c'" onmouseout="this.style.backgroundColor='transparent'">
+            <div style="position:relative; width:32px; height:32px;">
+                <div style="width:100%; height:100%; border-radius:50%; overflow:hidden;">${avatar}</div>
+                <div style="position:absolute; bottom:-2px; right:-2px; width:14px; height:14px; background:#23a559; border-radius:50%; border:3px solid #2f3136;"></div>
+            </div>
+            <div style="font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                ${name}
+            </div>
+        </div>
+     `;
   }
 
   function isNearBottom() {
@@ -203,29 +301,29 @@ const DMUI = (() => {
     const btnBlue = 'background-color: #5865F2;';
 
     if (relationshipStatus === 'FRIEND') {
-        actionsHtml = `
+      actionsHtml = `
             <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-unfriend" data-id="${friendId}" data-name="${displayName}">Xóa bạn</button>
             <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
         `;
     } else if (relationshipStatus === 'BLOCKED') {
-        actionsHtml = `
+      actionsHtml = `
             <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-unblock" data-id="${friendId}" data-name="${displayName}">Bỏ chặn</button>
             <button class="btn-dm-action" style="${btnStyle} ${btnRed}" id="btn-dm-spam" data-id="${friendId}" data-name="${displayName}" data-blocked="true">Báo cáo Spam</button>
         `;
     } else if (relationshipStatus === 'SENT_REQUEST') {
-        actionsHtml = `
+      actionsHtml = `
             <button class="btn-dm-action" style="${btnStyle} ${btnBlue} opacity: 0.6; cursor: not-allowed;" disabled>Đã gửi yêu cầu kết bạn</button>
             <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
         `;
     } else if (relationshipStatus === 'RECEIVED_REQUEST') {
-        actionsHtml = `
+      actionsHtml = `
             <button class="btn-dm-action" style="${btnStyle} ${btnBlue}" id="btn-dm-accept" data-id="${friendId}" data-name="${displayName}">Chấp nhận yêu cầu</button>
             <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-decline" data-id="${friendId}" data-name="${displayName}">Bỏ qua</button>
             <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
             <button class="btn-dm-action" style="${btnStyle} ${btnRed}" id="btn-dm-spam" data-id="${friendId}" data-name="${displayName}" data-blocked="false">Báo cáo Spam</button>
         `;
     } else {
-        actionsHtml = `
+      actionsHtml = `
             <button class="btn-dm-action" style="${btnStyle} ${btnBlue}" id="btn-dm-addfriend" data-id="${friendId}" data-name="${displayName}">Thêm bạn</button>
             <button class="btn-dm-action" style="${btnStyle} ${btnGray}" id="btn-dm-block" data-id="${friendId}" data-name="${displayName}">Chặn</button>
             <button class="btn-dm-action" style="${btnStyle} ${btnRed}" id="btn-dm-spam" data-id="${friendId}" data-name="${displayName}" data-blocked="false">Báo cáo Spam</button>
@@ -251,83 +349,83 @@ const DMUI = (() => {
 
   // --- Logic Thời Gian---
   function formatDiscordTime(isoString) {
-      if (!isoString) return '';
-      const date = new Date(isoString);
-      const now = new Date();
-      const oneDay = 24 * 60 * 60 * 1000;
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const now = new Date();
+    const oneDay = 24 * 60 * 60 * 1000;
 
-      const isToday = now.getDate() === date.getDate() && now.getMonth() === date.getMonth() && now.getFullYear() === date.getFullYear();
-      const isYesterday = new Date(now - oneDay).getDate() === date.getDate() && now.getMonth() === date.getMonth() && now.getFullYear() === date.getFullYear();
+    const isToday = now.getDate() === date.getDate() && now.getMonth() === date.getMonth() && now.getFullYear() === date.getFullYear();
+    const isYesterday = new Date(now - oneDay).getDate() === date.getDate() && now.getMonth() === date.getMonth() && now.getFullYear() === date.getFullYear();
 
-      const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    const timeStr = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
 
-      if (isToday) return `${timeStr}`;
-      if (isYesterday) return `Hôm qua lúc ${timeStr}`;
-      return `${('0' + date.getDate()).slice(-2)}/${('0' + (date.getMonth() + 1)).slice(-2)}/${date.getFullYear()} ${timeStr}`;
+    if (isToday) return `${timeStr}`;
+    if (isYesterday) return `Hôm qua lúc ${timeStr}`;
+    return `${('0' + date.getDate()).slice(-2)}/${('0' + (date.getMonth() + 1)).slice(-2)}/${date.getFullYear()} ${timeStr}`;
   }
 
   // --- HÀM VẼ TIN NHẮN---
-    function msgBubble(m, currentUserId, avatarMap = {}, friendName = 'Người dùng') {
-        const mine = String(m.senderId) === String(currentUserId);
-        const timeDisplay = formatDiscordTime(m.createdAt);
-        const isError = m.status === 'error';
-        const errorStyle = isError ? 'opacity: 0.5;' : '';
-        const msgId = m.id || m.tempId;
+  function msgBubble(m, currentUserId, avatarMap = {}, friendName = 'Người dùng') {
+    const mine = String(m.senderId) === String(currentUserId);
+    const timeDisplay = formatDiscordTime(m.createdAt);
+    const isError = m.status === 'error';
+    const errorStyle = isError ? 'opacity: 0.5;' : '';
+    const msgId = m.id || m.tempId;
 
-        // Xác định tên người gửi
-        const senderName = mine ? 'Bạn' : friendName;
+    // Xác định tên người gửi
+    const senderName = mine ? 'Bạn' : friendName;
 
-        // Avatar
-        const userAvatarUrl = avatarMap[m.senderId];
-        const avatarImg = userAvatarUrl
-            ? `<img src="${userAvatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
-            : `<div style="width:100%;height:100%;border-radius:50%;background:#5865F2;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;">U</div>`;
-        const avatarHtml = `<div class="user-avatar" style="width: 40px; height: 40px; margin-right: 16px; flex-shrink: 0; cursor: pointer;">${avatarImg}</div>`;
+    // Avatar
+    const userAvatarUrl = avatarMap[m.senderId];
+    const avatarImg = userAvatarUrl
+      ? `<img src="${userAvatarUrl}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`
+      : `<div style="width:100%;height:100%;border-radius:50%;background:#5865F2;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;">U</div>`;
+    const avatarHtml = `<div class="user-avatar" style="width: 40px; height: 40px; margin-right: 16px; flex-shrink: 0; cursor: pointer;">${avatarImg}</div>`;
 
-        // Reply Bar
-        let replyHtml = '';
-        if (m.replyToMessage) {
-            replyHtml = `
+    // Reply Bar
+    let replyHtml = '';
+    if (m.replyToMessage) {
+      replyHtml = `
             <div class="reply-bar" style="display: flex; align-items: center; margin-bottom: 4px; margin-left: 56px; font-size: 0.875rem; color: #b9bbbe; position: relative;">
                 <div style="width: 34px; border-top: 2px solid #4f545c; border-left: 2px solid #4f545c; border-top-left-radius: 6px; height: 8px; margin-right: 8px; margin-top: 8px; position: absolute; left: -42px; top: 6px;"></div>
-                <span style="opacity: 0.8; font-size: 13px; cursor: pointer;">
+                <span style="opacity: 0.8; font-size: 13px; cursor: pointer;" onclick="window.DM.scrollToMessage('${m.replyToId || m.replyToMessage.id}')">
                     <strong style="color: #fff;">User</strong> đã trả lời: ${m.replyToMessage.content ? m.replyToMessage.content.substring(0, 50) + (m.replyToMessage.content.length > 50 ? '...' : '') : '[Tệp đính kèm]'}
                 </span>
             </div>`;
-        }
+    }
 
-        // Attachments
-        let attachmentsHtml = '';
-        if (m.attachments && m.attachments.length > 0) {
-            m.attachments.forEach(url => {
-                if (url.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
-                    attachmentsHtml += `<div style="margin-top:5px;"><img src="${url}" style="max-width: 100%; max-height: 350px; border-radius: 4px; cursor: pointer;" onclick="window.open('${url}')"></div>`;
-                } else {
-                    attachmentsHtml += `<div style="margin-top:5px; background: #2f3136; padding: 10px; border-radius: 4px; border: 1px solid #202225; display: inline-flex; align-items: center; gap: 8px;">
+    // Attachments
+    let attachmentsHtml = '';
+    if (m.attachments && m.attachments.length > 0) {
+      m.attachments.forEach(url => {
+        if (url.match(/\.(jpeg|jpg|gif|png|webp)$/i)) {
+          attachmentsHtml += `<div style="margin-top:5px;"><img src="${url}" style="max-width: 100%; max-height: 350px; border-radius: 4px; cursor: pointer;" onclick="window.open('${url}')"></div>`;
+        } else {
+          attachmentsHtml += `<div style="margin-top:5px; background: #2f3136; padding: 10px; border-radius: 4px; border: 1px solid #202225; display: inline-flex; align-items: center; gap: 8px;">
                         <i class="fa-solid fa-file" style="color: #b9bbbe; font-size: 24px;"></i>
                         <a href="${url}" target="_blank" style="color: #00b0f4; text-decoration: none; font-size: 14px;">Tải xuống tệp tin</a>
                     </div>`;
-                }
-            });
         }
+      });
+    }
 
-        // Content
-        let contentHtml = '';
-        const rawContent = (m.content || '');
-        const safeRawContent = rawContent.replace(/"/g, '&quot;');
+    // Content
+    let contentHtml = '';
+    const rawContent = (m.content || '');
+    const safeRawContent = rawContent.replace(/"/g, '&quot;');
 
-        if (m.deleted) {
-            contentHtml = `<em style="color: #9ca3af; font-size: 14px;">(Tin nhắn đã bị xóa)</em>`;
-        } else {
-            const safeContent = rawContent.replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
-            const editedHtml = m.edited ? '<span style="font-size: 0.625rem; color: #72767d; margin-left: 4px;">(đã chỉnh sửa)</span>' : '';
-            contentHtml = `<div id="msg-content-${msgId}" data-raw="${safeRawContent}" class="msg-content-text" style="color: #dcddde; font-size: 1rem; line-height: 1.375rem; white-space: pre-wrap;">${safeContent} ${editedHtml}</div>`;
-        }
+    if (m.deleted) {
+      contentHtml = `<em style="color: #9ca3af; font-size: 14px;">(Tin nhắn đã bị xóa)</em>`;
+    } else {
+      const safeContent = rawContent.replace(/[&<>"']/g, s => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[s]));
+      const editedHtml = m.edited ? '<span style="font-size: 0.625rem; color: #72767d; margin-left: 4px;">(đã chỉnh sửa)</span>' : '';
+      contentHtml = `<div id="msg-content-${msgId}" data-raw="${safeRawContent}" class="msg-content-text" style="color: #dcddde; font-size: 1rem; line-height: 1.375rem; white-space: pre-wrap;">${safeContent} ${editedHtml}</div>`;
+    }
 
-        // --- MENU POPUP ---
-        const escapedRawContent = rawContent.replace(/`/g, '\\`').replace(/"/g, '&quot;');
+    // --- MENU POPUP ---
+    const escapedRawContent = rawContent.replace(/`/g, '\\`').replace(/"/g, '&quot;');
 
-        const menuHtml = `
+    const menuHtml = `
           <div id="msg-menu-${msgId}" class="msg-menu-popover"
                style="display:none;
                       position: absolute;
@@ -368,8 +466,8 @@ const DMUI = (() => {
           </div>
         `;
 
-        // Toolbar
-        const toolbarHtml = `
+    // Toolbar
+    const toolbarHtml = `
             <div class="message-actions-toolbar" style="display: none; position: absolute; right: 16px; top: -16px; background-color: #36393f; border: 1px solid #26272d; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 100; padding: 0 2px; align-items:center;">
                 <div class="action-btn" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #b9bbbe;"
                      onclick="DM.prepareReply('${msgId}', '${m.senderId}', \`${escapedRawContent}\`)" title="Trả lời">
@@ -389,7 +487,7 @@ const DMUI = (() => {
             </div>
         `;
 
-        return `
+    return `
           <div class="message-group" style="margin-top: 17px; position: relative;">
             ${replyHtml}
 
@@ -414,14 +512,14 @@ const DMUI = (() => {
                         <span style="font-size: 0.75rem; color: #72767d; margin-left: 0.25rem;">${timeDisplay}</span>
                     </div>
                     <div>${contentHtml}${attachmentsHtml}</div>
-                    ${isError ? '<div style="color: #ed4245; font-size: 12px; margin-top: 2px; cursor: pointer;" onclick="DM.retryMessage(\''+m.tempId+'\')">Gửi lỗi. Nhấn để thử lại.</div>' : ''}
+                    ${isError ? '<div style="color: #ed4245; font-size: 12px; margin-top: 2px; cursor: pointer;" onclick="DM.retryMessage(\'' + m.tempId + '\')">Gửi lỗi. Nhấn để thử lại.</div>' : ''}
                 </div>
 
                 ${!m.deleted && !isError ? toolbarHtml : ''}
             </div>
           </div>
         `;
-    }
+  }
 
   function renderMessages(list, currentUserId, displayedMsgIdsSet, friendInfo, relationshipStatus, avatarMap, friendName) {
     const { dmMessages } = els();
@@ -433,8 +531,8 @@ const DMUI = (() => {
     let blockNoticeHtml = '';
 
     if (relationshipStatus === 'BLOCKED') {
-        messagesToRender = [];
-        blockNoticeHtml = `
+      messagesToRender = [];
+      blockNoticeHtml = `
             <div style="display: flex; justify-content: center; margin: 20px 0;">
                 <span style="background-color: #36393f; padding: 8px 12px; border-radius: 4px; color: #dcddde; font-size: 14px; border: 1px solid #202225;">
                     Tin nhắn đã bị ẩn vì bạn đang chặn người dùng này.
@@ -490,32 +588,32 @@ const DMUI = (() => {
   }
 
   function replaceTempMessage(tempId, realMessage, currentUserId, avatarMap, friendName) {
-      const elId = `msg-${tempId}`;
-      const tempEl = document.getElementById(elId);
+    const elId = `msg-${tempId}`;
+    const tempEl = document.getElementById(elId);
 
-      if (tempEl) {
-          const group = tempEl.closest('.message-group');
+    if (tempEl) {
+      const group = tempEl.closest('.message-group');
 
-          const newHtml = msgBubble(realMessage, currentUserId, avatarMap, friendName);
+      const newHtml = msgBubble(realMessage, currentUserId, avatarMap, friendName);
 
-          if (group) {
-              group.outerHTML = newHtml;
-          } else {
-              tempEl.outerHTML = newHtml;
-          }
-
-          console.log(`[UI] Replaced message ${tempId} successfully.`);
+      if (group) {
+        group.outerHTML = newHtml;
       } else {
-          console.warn(`[UI] Cannot find message element with ID: ${elId} to replace.`);
+        tempEl.outerHTML = newHtml;
       }
+
+      console.log(`[UI] Replaced message ${tempId} successfully.`);
+    } else {
+      console.warn(`[UI] Cannot find message element with ID: ${elId} to replace.`);
     }
+  }
 
   function markMessageError(tempId) {
     const tempEl = document.getElementById(`msg-${tempId}`);
     if (tempEl) {
       tempEl.style.opacity = '0.5';
       const content = tempEl.querySelector('.msg-content-text');
-      if(content) content.style.color = '#ed4245';
+      if (content) content.style.color = '#ed4245';
     }
   }
 
@@ -533,9 +631,9 @@ const DMUI = (() => {
   function renderPending(inbound, outbound) {
     const { dmPendingInList, dmPendingOutList } = els();
     if (dmPendingInList) {
-        dmPendingInList.innerHTML = inbound.map(r => {
-            const name = r.senderUsername || ('User ' + r.senderId);
-            return `
+      dmPendingInList.innerHTML = inbound.map(r => {
+        const name = r.senderUsername || ('User ' + r.senderId);
+        return `
               <div class="dm-pending-item" style="display:flex; align-items:center; justify-content:space-between; padding:10px; border-radius:8px; background:#2b2d31; color:#fff; margin-bottom:8px; border: 1px solid #3f4147;">
                 <div style="display:flex; align-items:center; gap:12px;">
                   <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:#5865F2;"></div>
@@ -549,12 +647,12 @@ const DMUI = (() => {
                   <button class="add-friend-btn" style="background-color: #ed4245;" data-action="decline" data-request-id="${r.id}">Từ chối</button>
                 </div>
               </div>`;
-        }).join('');
+      }).join('');
     }
     if (dmPendingOutList) {
-        dmPendingOutList.innerHTML = outbound.map(r => {
-            const name = r.recipientUsername || ('User ' + r.recipientId);
-            return `
+      dmPendingOutList.innerHTML = outbound.map(r => {
+        const name = r.recipientUsername || ('User ' + r.recipientId);
+        return `
               <div class="dm-pending-item" style="display:flex; align-items:center; justify-content:space-between; padding:10px; border-radius:8px; background:#2b2d31; color:#fff; margin-bottom:8px; border: 1px solid #3f4147;">
                 <div style="display:flex; align-items:center; gap:12px;">
                   <div class="user-avatar" style="width:32px;height:32px;border-radius:50%;background:#5865F2;"></div>
@@ -567,7 +665,7 @@ const DMUI = (() => {
                   <button class="add-friend-btn" style="background-color: #4f545c;" data-action="cancel" data-request-id="${r.id}">Huỷ</button>
                 </div>
               </div>`;
-        }).join('');
+      }).join('');
     }
   }
 
@@ -581,7 +679,10 @@ const DMUI = (() => {
   function initFriendsDashboard({ friends, onSelectFriend }) {
     onSelectFriendRef = onSelectFriend;
     setActiveTab('all');
+    onSelectFriendRef = onSelectFriend;
+    setActiveTab('all');
     renderFriendsCenter(friends, onSelectFriend);
+    renderActiveNow(friends, onSelectFriend);
 
     const { dmSearch } = els();
     dmSearch?.addEventListener('input', (e) => {
@@ -624,15 +725,15 @@ const DMUI = (() => {
       const outbound = await DMApi.listOutboundRequests();
       renderPending(inbound, outbound);
       setTimeout(() => {
-          document.querySelectorAll('#dm-pending-in-list [data-action="accept"]').forEach(btn => {
-            btn.addEventListener('click', async () => { try { await DMApi.acceptRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); await reloadFriends(); } catch (e) { alert('Lỗi: ' + e); } });
-          });
-          document.querySelectorAll('#dm-pending-in-list [data-action="decline"]').forEach(btn => {
-            btn.addEventListener('click', async () => { try { await DMApi.declineRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); } catch (e) { alert('Lỗi: ' + e); } });
-          });
-          document.querySelectorAll('#dm-pending-out-list [data-action="cancel"]').forEach(btn => {
-            btn.addEventListener('click', async () => { try { await DMApi.cancelRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); } catch (e) { alert('Lỗi: ' + e); } });
-          });
+        document.querySelectorAll('#dm-pending-in-list [data-action="accept"]').forEach(btn => {
+          btn.addEventListener('click', async () => { try { await DMApi.acceptRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); await reloadFriends(); } catch (e) { alert('Lỗi: ' + e); } });
+        });
+        document.querySelectorAll('#dm-pending-in-list [data-action="decline"]').forEach(btn => {
+          btn.addEventListener('click', async () => { try { await DMApi.declineRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); } catch (e) { alert('Lỗi: ' + e); } });
+        });
+        document.querySelectorAll('#dm-pending-out-list [data-action="cancel"]').forEach(btn => {
+          btn.addEventListener('click', async () => { try { await DMApi.cancelRequest(btn.getAttribute('data-request-id')); const i = await DMApi.listInboundRequests(); const o = await DMApi.listOutboundRequests(); renderPending(i, o); } catch (e) { alert('Lỗi: ' + e); } });
+        });
       }, 100);
     });
     dmTabAddFriend?.addEventListener('click', () => { setActiveTab('add'); });
@@ -642,6 +743,6 @@ const DMUI = (() => {
     els, showDashboard, showConversation, setActiveFriendName, renderFriendsSidebar, updateSidebarItem,
     renderFriendsCenter, renderMessages, appendMessage, replaceTempMessage, markMessageError,
     scrollToBottom, resetActiveItems, highlightFriendsButton, initFriendsDashboard, setActiveTab,
-    renderPending, reloadFriends, removeMessageElement
+    renderPending, reloadFriends, removeMessageElement, renderAttachmentPreview, renderActiveNow
   };
 })();
