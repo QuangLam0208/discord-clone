@@ -21,17 +21,22 @@ public class AppViewController {
     private final UserService userService;
     private final FriendService friendService;
 
-    @GetMapping({"/home"})
-    public String home() {
+    @GetMapping({ "/home" })
+    public String home(Authentication auth) {
+        if (auth == null || !auth.isAuthenticated()) {
+            return "redirect:/login";
+        }
         return "home";
     }
 
     @GetMapping("/friends")
     public String friendsPage(Authentication auth, Model model) {
-        if (auth == null || !auth.isAuthenticated()) return "redirect:/login";
+        if (auth == null || !auth.isAuthenticated())
+            return "redirect:/login";
 
         User currentUser = userService.findByUsername(auth.getName()).orElse(null);
-        if (currentUser == null) return "redirect:/login";
+        if (currentUser == null)
+            return "redirect:/login";
 
         List<FriendResponse> friends = friendService.listFriends(currentUser.getId());
         List<FriendRequestResponse> inboundRequests = friendService.listInboundRequests(currentUser.getId());
@@ -45,10 +50,12 @@ public class AppViewController {
 
     @GetMapping("/dm/{friendId}")
     public String dmPage(@PathVariable Long friendId, Authentication auth, Model model) {
-        if (auth == null || !auth.isAuthenticated()) return "redirect:/login";
+        if (auth == null || !auth.isAuthenticated())
+            return "redirect:/login";
 
         User currentUser = userService.findByUsername(auth.getName()).orElse(null);
-        if (currentUser == null) return "redirect:/login";
+        if (currentUser == null)
+            return "redirect:/login";
 
         User friend = userService.findById(friendId)
                 .orElseThrow(() -> new RuntimeException("Friend not found"));

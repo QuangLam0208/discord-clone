@@ -33,7 +33,7 @@ public class SecurityConfig {
 
         @Bean
         public AuthenticationManager authenticationManager(
-                AuthenticationConfiguration authConfig) throws Exception {
+                        AuthenticationConfiguration authConfig) throws Exception {
                 return authConfig.getAuthenticationManager();
         }
 
@@ -41,42 +41,46 @@ public class SecurityConfig {
         public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
                 http
-                        .csrf(AbstractHttpConfigurer::disable)
-                        .cors(cors -> {}) // bật CORS ở Security layer để dùng WebMvcConfigurer
-                        .exceptionHandling(ex -> ex
-                                .authenticationEntryPoint(unauthorizedHandler))
-                        .sessionManagement(sess -> sess
-                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                        .authorizeHttpRequests(auth -> auth
-                                // Cho phép preflight CORS
-                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                                .csrf(AbstractHttpConfigurer::disable)
+                                .cors(cors -> {
+                                }) // bật CORS ở Security layer để dùng WebMvcConfigurer
+                                .exceptionHandling(ex -> ex
+                                                .authenticationEntryPoint(unauthorizedHandler))
+                                .sessionManagement(sess -> sess
+                                                .sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                                // Prevent Browser Caching for secured pages
+                                .headers(headers -> headers
+                                                .cacheControl(cache -> cache.disable()))
+                                .authorizeHttpRequests(auth -> auth
+                                                // Cho phép preflight CORS
+                                                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                                // Cho phép render các trang view (SSR khung) và static assets
-                                .requestMatchers(
-                                        "/", "/login", "/register", "/home",
-                                        "/error", "/favicon.ico",
-                                        "/css/**", "/js/**", "/images/**", "/fonts/**", "/webjars/**",
-                                        "/ws/**", "/ws-test.html",
-                                        "/swagger-ui.html", "/swagger-ui/**",
-                                        "/v3/api-docs/**", "/swagger-resources/**",
-                                        "/websocket-test.html",
-                                        "/files/**",
-                                        "/admin/**" // KHUNG UI admin (không data). Dữ liệu đi qua REST đã bảo vệ.
-                                ).permitAll()
+                                                // Cho phép render các trang view (SSR khung) và static assets
+                                                .requestMatchers(
+                                                                "/", "/login", "/register",
+                                                                "/error", "/favicon.ico",
+                                                                "/css/**", "/js/**", "/images/**", "/fonts/**",
+                                                                "/webjars/**",
+                                                                "/ws/**", "/ws-test.html",
+                                                                "/swagger-ui.html", "/swagger-ui/**",
+                                                                "/v3/api-docs/**", "/swagger-resources/**",
+                                                                "/websocket-test.html",
+                                                                "/files/**")
+                                                .permitAll()
 
-                                // Bảo vệ REST Admin
-                                .requestMatchers("/api/admin/**").hasAnyAuthority("ADMIN", "MODERATOR")
+                                                // Bảo vệ REST Admin
+                                                .requestMatchers("/api/admin/**", "/admin/**").hasAnyAuthority("ADMIN")
 
-                                // Cho phép các API auth public
-                                .requestMatchers("/api/auth/**").permitAll()
+                                                // Cho phép các API auth public
+                                                .requestMatchers("/api/auth/**").permitAll()
 
-                                // Các REST API còn lại yêu cầu xác thực
-                                .requestMatchers("/api/**").authenticated()
+                                                // Các REST API còn lại yêu cầu xác thực
+                                                .requestMatchers("/api/**").authenticated()
 
-                                // Mặc định: yêu cầu xác thực
-                                .anyRequest().authenticated())
-                        .userDetailsService(userDetailsService)
-                        .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
+                                                // Mặc định: yêu cầu xác thực
+                                                .anyRequest().authenticated())
+                                .userDetailsService(userDetailsService)
+                                .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
                 return http.build();
         }
