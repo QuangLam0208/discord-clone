@@ -631,6 +631,20 @@ Dự án này thuộc quyền sở hữu của **HCMUTE** và được sử dụ
         <sub><b>Tue Nguyen</b></sub>
       </a>
     </td>
+    <td align="center">
+      <a href="https://github.com/Peterdir">
+        <img src="https://github.com/Peterdir" width="100px;" alt=""/>
+        <br />
+        <sub><b>Khanh Duy</b></sub>
+      </a>
+    </td>
+    <td align="center">
+      <a href="https://github.com/TruongMinhIT">
+        <img src="https://github.com/TruongMinhIT" width="100px;" alt=""/>
+        <br />
+        <sub><b>Truong Minh</b></sub>
+      </a>
+    </td>
   </tr>
 </table>
 
