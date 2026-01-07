@@ -1,12 +1,6 @@
 # 🎮 Discord Clone
 
-<div align="center">
 
-![Java](https://img.shields.io/badge/Java-21-orange? style=for-the-badge&logo=openjdk)
-![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.5.7-brightgreen?style=for-the-badge&logo=spring)
-![MySQL](https://img.shields.io/badge/MySQL-8.0-blue?style=for-the-badge&logo=mysql)
-![MongoDB](https://img.shields.io/badge/MongoDB-4.4-green?style=for-the-badge&logo=mongodb)
-![Redis](https://img.shields.io/badge/Redis-6.0-red?style=for-the-badge&logo=redis)
 
 **Ứng dụng chat real-time giống Discord với Spring Boot & WebSocket**
 
