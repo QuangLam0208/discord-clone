@@ -1,5 +1,5 @@
 <div class="user-bar" th:fragment="user-bar" xmlns:th="http://www.thymeleaf.org">
-    <div class="user-wrapper">
+    <div class="user-wrapper" onclick="window.location.href='/profile'" style="cursor: pointer;">
         <div class="user-avatar"></div>
         <div class="user-info">
             <span id="user-display" class="username">Loading...</span>
@@ -12,9 +12,9 @@
         <button class="btn-icon" id="btn-settings"><i class="fa-solid fa-gear"></i></button>
     </div>
     <div class="settings-popup" id="settings-popup">
-        <div class="menu-item" id="btn-profile-action">
+        <a href="/profile" class="menu-item" style="text-decoration: none;">
             <i class="fa-solid fa-user-pen"></i> Hồ sơ
-        </div>
+        </a>
         <!-- Button visible ONLY for ADMIN on Home page -->
         <a href="/admin" class="menu-item" id="btn-admin-manage" style="display: none;">
             <i class="fa-solid fa-user-shield"></i> Admin Management

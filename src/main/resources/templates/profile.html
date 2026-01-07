@@ -184,9 +184,9 @@
 
         <div class="settings-sidebar">
             <div class="sidebar-header">CÀI ĐẶT NGƯỜI DÙNG</div>
-            <div class="sidebar-item active">Tài khoản của tôi</div>
+            <div class="sidebar-item active" onclick="switchTab('my-account', this)">Tài khoản của tôi</div>
             <div class="sidebar-item">Hồ sơ người dùng</div>
-            <div class="sidebar-item">Quyền riêng tư & An toàn</div>
+            <div class="sidebar-item" onclick="switchTab('privacy', this)">Quyền riêng tư & An toàn</div>
             <div class="sidebar-separator"></div>
             <div class="sidebar-item danger"><a th:href="@{/logout}" style="color:inherit;text-decoration:none">Đăng
                     xuất</a></div>
@@ -196,11 +196,11 @@
             </div>
         </div>
 
-        <div class="settings-content">
+        <div class="settings-content" id="tab-my-account">
             <h2 class="section-heading">Tài khoản của tôi</h2>
 
             <div class="my-account-card">
-                <div class="account-banner" style="background-color: #5865f2;"></div>
+                <div class="account-banner" id="banner-display" style="background-color: #5865f2;"></div>
 
                 <div class="account-card-body">
                     <div class="account-header-row">
@@ -259,6 +259,38 @@
                 </div>
             </div>
         </div>
+
+        <div class="settings-content" id="tab-privacy" style="display: none;">
+            <h2 class="section-heading">Quyền riêng tư & An toàn</h2>
+            <div style="color: #b9bbbe; line-height: 1.6;">
+                <h3 style="color: #f2f3f5; margin-bottom: 15px;">An toàn cho bạn</h3>
+                <p style="margin-bottom: 20px;">
+                    Giữ cho bạn an toàn là ưu tiên hàng đầu của chúng tôi. Tại đây bạn có thể kiểm soát ai có thể nhắn
+                    tin cho bạn.
+                </p>
+
+                <div style="background: #2b2d31; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="color: #f2f3f5; margin-bottom: 10px;">Tin nhắn trực tiếp</h4>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span>Cho phép tin nhắn từ thành viên máy chủ</span>
+                        <input type="checkbox" checked style="transform: scale(1.5);">
+                    </div>
+                </div>
+
+                <div style="background: #2b2d31; padding: 15px; border-radius: 8px;">
+                    <h4 style="color: #f2f3f5; margin-bottom: 10px;">Ai có thể kết bạn với bạn?</h4>
+                    <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                        <input type="checkbox" checked> Mọi người
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                        <input type="checkbox" checked> Bạn của bạn bè
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" checked> Thành viên máy chủ
+                    </label>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div id="editProfileModal" class="modal-overlay">
@@ -300,6 +332,14 @@
                 <div class="profile-right-col">
                     <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 20px;">Hồ sơ người dùng</h2>
 
+                    <label class="input-label">MÀU HỒ SƠ (BANNER)</label>
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                        <input type="color" id="edit-profile-color" value="#5865f2"
+                            style="width: 60px; height: 40px; border: none; padding: 0; background: none; cursor: pointer;">
+                        <span style="font-size: 12px; color: #b9bbbe; align-self: center;">Chọn màu nền cho banner hồ sơ
+                            của bạn.</span>
+                    </div>
+
                     <label class="input-label">Tên hiển thị</label>
                     <input type="text" id="edit-profile-displayname" class="discord-input"
                         placeholder="Tên hiển thị của bạn">
@@ -307,6 +347,10 @@
                     <label class="input-label">Email</label>
                     <input type="text" id="edit-profile-email" class="discord-input" readonly
                         style="opacity: 0.7; cursor: not-allowed;">
+
+                    <label class="input-label">Bio</label>
+                    <textarea id="edit-profile-bio" class="discord-input" rows="3"
+                        placeholder="Giới thiệu bản thân..."></textarea>
 
                     <label class="input-label">Username</label>
                     <input type="text" id="edit-profile-username" class="discord-input" readonly
@@ -327,35 +371,98 @@
         </div>
     </div>
 
-    <script th:src="@{/js/api.js}"></script>
-    <script th:src="@{/js/user.js}"></script>
+    <script th:src="@{/js/api.js(v=999)}"></script>
+    <script th:src="@{/js/user.js(v=999)}"></script>
 
-    <script>
+    <script th:inline="javascript">
         // Hàm đóng Modal
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('active');
         }
 
-        // Ghi đè hoặc bổ sung nếu user.js chưa xử lý phần hiển thị modal
-        // Lưu ý: user.js của bạn đã có hàm openEditProfileModal,
-        // script dưới đây đảm bảo modal hiện lên bằng CSS class 'active' khớp với style.css
-        const originalOpenEdit = window.openEditProfileModal;
+        // Initialize Global State
+        window.state = {
+            currentUser: {
+                id: /*[[${user.id}]]*/ 0,
+                username: /*[[${user.username}]]*/ 'user',
+                displayName: /*[[${user.displayName}]]*/ 'Display Name',
+                email: /*[[${user.email}]]*/ 'email@example.com',
+                bio: /*[[${user.bio}]]*/ '',
+                avatarUrl: /*[[${user.avatarUrl}]]*/ '',
+                bannerColor: /*[[${user.bannerColor}]]*/ '#5865f2'
+            }
+        };
 
+        const elements = {
+            userDisplay: document.getElementById('main-displayname'),
+            userAvatars: document.querySelectorAll('.settings-avatar') // Helper for updating UI
+        };
+
+        // Hàm mở modal chỉnh sửa (Self-contained)
         window.openEditProfileModal = function () {
-            // Gọi hàm gốc để load dữ liệu vào form
-            if (typeof originalOpenEdit === 'function') {
-                originalOpenEdit();
-            } else {
-                // Fallback nếu hàm gốc lỗi: Tự load dữ liệu từ trang
-                const displayName = document.getElementById('main-displayname').innerText;
-                const avatarSrc = document.getElementById('main-avatar-display').src;
+            const user = window.state.currentUser;
+            if (!user) {
+                console.error("User state not found");
+                return;
+            }
 
-                document.getElementById('edit-profile-displayname').value = displayName;
-                document.getElementById('edit-profile-avatar-preview').src = avatarSrc;
+            // Điền thông tin vào input
+            const dispInput = document.getElementById('edit-profile-displayname');
+            if (dispInput) dispInput.value = user.displayName || "";
+
+            const userInput = document.getElementById('edit-profile-username');
+            if (userInput) userInput.value = user.username || "";
+
+            const emailInput = document.getElementById('edit-profile-email');
+            if (emailInput) emailInput.value = user.email || "";
+
+            const bioInput = document.getElementById('edit-profile-bio');
+            if (bioInput) bioInput.value = user.bio || "";
+
+            const colorInput = document.getElementById('edit-profile-color');
+            if (colorInput) {
+                colorInput.value = user.bannerColor || "#5865f2";
+            }
+
+            // Điền ảnh avatar preview
+            const previewDisplay = document.getElementById('preview-displayname-text');
+            const previewUsername = document.getElementById('preview-username-text');
+
+            if (previewDisplay) previewDisplay.innerText = user.displayName || user.username;
+            if (previewUsername) previewUsername.innerText = user.username;
+
+            const avatarPreview = document.getElementById('edit-profile-avatar-preview');
+            const nameForAvatar = user.displayName || user.username || 'User';
+            if (avatarPreview) {
+                avatarPreview.src = user.avatarUrl && user.avatarUrl !== 'null'
+                    ? user.avatarUrl
+                    : `https://ui-avatars.com/api/?name=${encodeURIComponent(nameForAvatar)}&background=random&color=fff&size=128&bold=true`;
             }
 
             // Hiển thị modal
-            document.getElementById('editProfileModal').classList.add('active');
+            const modal = document.getElementById('editProfileModal');
+            if (modal) modal.classList.add('active');
+        }
+        // Hàm chuyển tab
+        function switchTab(tabId, el) {
+            // Hide all contents
+            document.querySelectorAll('.settings-content').forEach(c => c.style.display = 'none');
+            // Show target
+            const target = document.getElementById('tab-' + tabId);
+            if (target) target.style.display = 'flex'; // settings-content uses flex
+
+            // Update Sidebar Active
+            document.querySelectorAll('.settings-sidebar .sidebar-item').forEach(i => i.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        // Color Picker Logic
+        const colorInput = document.getElementById('edit-profile-color');
+        if (colorInput) {
+            colorInput.addEventListener('input', (e) => {
+                const color = e.target.value;
+                document.querySelectorAll('.card-banner').forEach(b => b.style.backgroundColor = color);
+            });
         }
     </script>
 

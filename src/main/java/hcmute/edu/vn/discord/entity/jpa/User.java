@@ -36,6 +36,9 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String bio;
 
+    @Column(name = "banner_color")
+    private String bannerColor; // Hex Color code
+
     private LocalDate birthDate;
     private String country;
     private Boolean isActive;
@@ -62,8 +65,6 @@ public class User {
     private List<ServerMember> memberships;
 
     @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "user_roles",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
     private Set<Role> roles;
 }

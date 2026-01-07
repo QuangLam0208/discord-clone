@@ -161,7 +161,8 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public User updateProfile(String username, String displayName, String bio, MultipartFile file) {
+    @org.springframework.transaction.annotation.Transactional
+    public User updateProfile(String username, String displayName, String bio, String bannerColor, MultipartFile file) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
@@ -172,6 +173,10 @@ public class UserServiceImpl implements UserService {
         // 1. Update display name
         if (displayName != null && !displayName.trim().isEmpty()) {
             user.setDisplayName(displayName.trim());
+        }
+
+        if (bannerColor != null && !bannerColor.isEmpty()) {
+            user.setBannerColor(bannerColor);
         }
 
         // 2. Upload file

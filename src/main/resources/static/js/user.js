@@ -11,6 +11,12 @@ async function loadMe() {
             const avatarUrl = user.avatarUrl
                 ? user.avatarUrl
                 : `https://ui-avatars.com/api/?name=${encodeURIComponent(nameForAvatar)}&background=random&color=fff&size=128&bold=true`;
+
+            const bannerDisplay = document.getElementById('banner-display');
+            if (bannerDisplay && user.bannerColor) {
+                bannerDisplay.style.backgroundColor = user.bannerColor;
+            }
+
             elements.userAvatars.forEach(el => {
                 el.style.backgroundImage = `url('${avatarUrl}')`;
                 el.style.backgroundSize = 'cover';
@@ -133,6 +139,10 @@ function openEditProfileModal() {
     document.getElementById('edit-profile-username').value = user.username || "";
     document.getElementById('edit-profile-email').value = user.email || "";
     document.getElementById('edit-profile-bio').value = user.bio || "";
+    const colorInput = document.getElementById('edit-profile-color');
+    if (colorInput) {
+        colorInput.value = user.bannerColor || "#5865f2";
+    }
 
     // Điền ảnh avatar
     const previewDisplay = document.getElementById('preview-displayname-text');
@@ -152,53 +162,80 @@ function openEditProfileModal() {
 }
 
 // Hàm gọi API lưu thông tin
+// Hàm gọi API lưu thông tin
 async function saveUserProfile() {
-    const newDisplayName = document.getElementById('edit-profile-displayname').value;
-    const newBio = document.getElementById('edit-profile-bio').value;
+    console.log("Saving user profile..."); // DEBUG LOG
+    const nameInput = document.getElementById('edit-profile-displayname');
+    const newDisplayName = nameInput ? nameInput.value : "";
+
+    const bioInput = document.getElementById('edit-profile-bio');
+    const newBio = bioInput ? bioInput.value : "";
+
     const fileInput = document.getElementById('edit-profile-file');
-    const file = fileInput.files[0];
+    const file = fileInput ? fileInput.files[0] : null;
+
+    console.log("Params:", { newDisplayName, newBio, file }); // DEBUG LOG
 
     const formData = new FormData();
     formData.append("displayName", newDisplayName);
     formData.append("bio", newBio);
+    const colorInput = document.getElementById('edit-profile-color');
+    if (colorInput) {
+        formData.append("bannerColor", colorInput.value);
+    }
     if (file) {
         formData.append("file", file);
     }
 
     try {
-        // Gửi request (Đảm bảo đường dẫn API đúng với Backend của bạn)
-        const response = await fetch('/api/users/profile', {
-            method: 'POST',
-            body: formData
-        });
+        // Sử dụng Api.upload để tự động kèm Token và Header phù hợp
+        const updatedUser = await Api.upload('/api/users/profile', formData);
 
-        if (response.ok) {
-            const updatedUser = await response.json();
-
+        if (updatedUser) {
             // Cập nhật lại giao diện ngay lập tức
-            state.currentUser = updatedUser;
-            if (elements.userDisplay) elements.userDisplay.innerText = updatedUser.displayName;
+            if (window.state) window.state.currentUser = updatedUser;
+
+            // Update UI elements from global elements or by ID if missing
+            const disp = document.getElementById('main-displayname');
+            if (disp) disp.innerText = updatedUser.displayName;
+
+            const bannerDisplay = document.getElementById('banner-display');
+            if (bannerDisplay && updatedUser.bannerColor) {
+                bannerDisplay.style.backgroundColor = updatedUser.bannerColor;
+            }
 
             // Reload lại avatar ở góc trái dưới
             if (typeof updateUserAvatarUI === "function") {
                 updateUserAvatarUI(updatedUser.avatarUrl, updatedUser.displayName);
+            }
+
+            // Close modal using specific ID (assuming defined in profile.html/user.js)
+            const modal = document.getElementById('editProfileModal');
+            if (modal) modal.classList.remove('active');
+
+            // Thông báo thành công và RELOAD trang
+            if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Đã cập nhật hồ sơ!',
+                    timer: 800,
+                    showConfirmButton: false,
+                    background: '#313338',
+                    color: '#fff'
+                }).then(() => {
+                    location.reload();
+                });
             } else {
-                // Nếu chưa có hàm tách riêng, reload trang cho nhanh
                 location.reload();
             }
-
-            closeModal('editProfileModal');
-
-            // Thông báo thành công (Nếu có Swal)
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({ icon: 'success', title: 'Đã cập nhật hồ sơ!', timer: 1500, showConfirmButton: false, background: '#313338', color: '#fff' });
-            }
-        } else {
-            alert("Lỗi cập nhật hồ sơ!");
         }
     } catch (e) {
-        console.error(e);
-        alert("Có lỗi xảy ra.");
+        console.error("Save profile error:", e);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire({ icon: 'error', title: 'Lỗi', text: e.message || "Có lỗi xảy ra", background: '#313338', color: '#fff' });
+        } else {
+            alert("Lỗi cập nhật hồ sơ: " + e.message);
+        }
     }
 }
 
