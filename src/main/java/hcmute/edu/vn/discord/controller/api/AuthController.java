@@ -210,7 +210,7 @@ public class AuthController {
                                         .body(OtpResponse.error("Email đã được sử dụng"));
                 }
 
-                OtpResponse response = otpService.generateAndSendOtp(email);
+                OtpResponse response = otpService.generateAndSendOtp(email, "REGISTER");
 
                 if (!response.isSuccess()) {
                         return ResponseEntity.badRequest().body(response);

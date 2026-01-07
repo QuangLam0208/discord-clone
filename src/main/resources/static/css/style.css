@@ -3398,3 +3398,396 @@ input:checked+.slider:before {
    margin: 4px -6px;
    /* Negative margin to span full width over parent padding */
 }
+/* =========================================
+   SETTINGS PAGE / USER PROFILE
+   ========================================= */
+.settings-page-body {
+    background-color: #313338;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    position: relative;
+    display: flex; /* Ensure body acts as a flex container */
+    justify-content: center; /* Center content horizontally */
+    align-items: center; /* Center content vertically */
+}
+
+.settings-container {
+    width: 100%;
+    height: 100vh;
+    background-color: #313338;
+    display: flex;
+    position: relative;
+    z-index: 100;
+}
+
+/* Sidebar (Left) */
+.settings-sidebar {
+    width: 218px; /* Standard sidebar width */
+    background-color: #2b2d31;
+    display: flex;
+    flex-direction: column;
+    padding: 60px 6px 60px 20px;
+    flex-shrink: 0;
+    overflow-y: auto;
+    /* Move sidebar to the right side of the flex container to create a centered feel if needed, 
+       but standard Discord settings has a sidebar on left. */
+    justify-content: flex-start; /* Align items to top */
+    align-items: flex-end; /* Align text/items to right side of sidebar */
+}
+
+.settings-sidebar .sidebar-header {
+    color: #96989d;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    padding: 6px 10px;
+    width: 192px; /* Fixed width for content alignment */
+}
+
+.settings-sidebar .sidebar-item {
+    width: 192px;
+    padding: 6px 10px;
+    margin-bottom: 2px;
+    border-radius: 4px;
+    color: #b9bbbe;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.1s, color 0.1s;
+    height: auto; /* Override global sidebar-item height */
+    justify-content: flex-start; /* Left align text inside item */
+}
+
+.settings-sidebar .sidebar-item:hover {
+    background-color: #35373c;
+    color: #dbdee1;
+}
+
+.settings-sidebar .sidebar-item.active {
+    background-color: #404249;
+    color: #fff;
+}
+
+.settings-sidebar .sidebar-item.danger {
+    color: #ed4245; /* Red for logout */
+}
+
+.settings-sidebar .sidebar-item.danger:hover {
+    background-color: rgba(237, 66, 69, 0.1);
+}
+
+.settings-sidebar .sidebar-separator {
+    width: 172px;
+    height: 1px;
+    background-color: #3f4147;
+    margin: 8px 10px;
+}
+
+/* Content (Right) */
+.settings-content {
+    flex: 1;
+    background-color: #313338;
+    padding: 60px 40px 80px 40px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* Align content to left */
+    max-width: 740px; /* Constrain content width */
+}
+
+.section-heading {
+    color: #f2f3f5;
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+
+/* My Account Card */
+.my-account-card {
+    background-color: #1e1f22; /* App background color */
+    border-radius: 8px;
+    width: 100%;
+    margin-bottom: 40px;
+    overflow: hidden;
+}
+
+.account-banner {
+    height: 100px;
+    width: 100%;
+    background-color: #5865F2; /* Placeholder color if no banner */
+}
+
+.account-card-body {
+    padding: 16px 16px 16px;
+    position: relative;
+}
+
+.account-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 20px;
+    margin-top: -12px; /* Overlap with banner slightly to position avatar */
+}
+
+.avatar-section {
+    display: flex;
+    align-items: center;
+    position: relative;
+    top: -30px; /* Pull avatar up into banner */
+    left: 10px;
+}
+
+.settings-avatar-wrapper {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 6px solid #1e1f22; /* Matches card background */
+    background-color: #1e1f22;
+    cursor: pointer;
+}
+
+.settings-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.avatar-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 28px;
+    height: 28px;
+    background-color: #ed4245; /* Notification badge color or status */
+    border-radius: 50%;
+    border: 4px solid #1e1f22;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 12px;
+    pointer-events: none;
+    display: none; /* Hide for now */
+}
+
+.account-username {
+    margin-left: 12px;
+    margin-top: 30px; /* Push down to align */
+}
+
+.account-username span:first-child {
+    display: block;
+    color: #f2f3f5;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.account-username .discriminator {
+    display: block;
+    color: #b5bac1;
+    font-size: 14px;
+    font-weight: 500;
+    margin-top: 4px;
+}
+
+.btn-discord-primary {
+    background-color: #5865F2;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    height: auto;
+    width: auto;
+}
+
+.btn-discord-primary:hover {
+    background-color: #4752c4;
+}
+
+.account-info-box {
+    background-color: #2b2d31;
+    border-radius: 8px;
+    padding: 16px;
+    margin-top: 8px;
+}
+
+.info-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.info-row:last-child {
+    margin-bottom: 0;
+}
+
+.info-col label {
+    display: block;
+    color: #b5bac1;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.info-col p {
+    color: #f2f3f5;
+    font-size: 16px;
+}
+
+.btn-edit {
+    background-color: #3b3d44; /* Dark gray */
+    color: #f2f3f5;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 4px; /* Standard button radius */
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    height: auto;
+    width: auto;
+}
+
+.btn-edit:hover {
+    background-color: #4e5058;
+}
+
+/* Animations */
+.fade-in {
+    animation: simpleFadeIn 0.2s ease-out;
+}
+
+@keyframes simpleFadeIn {
+    from { opacity: 0; transform: scale(1.02); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Back Button */
+.back-btn-wrapper {
+    margin-top: 20px;
+    width: 192px;
+}
+
+.back-to-chat {
+    color: #949ba4;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 4px;
+    border: 1px solid #3f4147;
+    justify-content: center;
+    transition: 0.2s;
+}
+
+.back-to-chat:hover {
+    color: #f2f3f5;
+    background-color: #35373c;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.modal-box {
+    background-color: #313338;
+    border-radius: 8px; /* Bigger radius for modal */
+    width: 440px;
+    padding: 24px;
+    box-shadow: 0 0 0 1px rgba(32,34,37,.6), 0 2px 10px 0 rgba(0,0,0,.2);
+    transform: scale(0.7);
+    transition: transform 0.2s;
+}
+
+.modal-overlay.active .modal-box {
+    transform: scale(1);
+}
+
+.close-modal-btn {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: #b5bac1;
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close-modal-btn:hover {
+    color: #dbdee1;
+}
+
+/* Modal Form Styles */
+.modal-footer {
+    background-color: #2b2d31;
+    padding: 16px;
+    border-radius: 0 0 5px 5px;
+    margin: 20px -16px -16px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-cancel {
+    color: #f2f3f5;
+    background: transparent;
+    border: none;
+    font-weight: 500;
+    font-size: 14px;
+    padding: 10px 24px;
+    cursor: pointer;
+}
+
+.btn-cancel:hover {
+    text-decoration: underline;
+}
+
+.btn-primary {
+    background-color: #5865F2;
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 3px;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    height: auto;
+    width: auto;
+}
+
+.btn-primary:hover {
+    background-color: #4752c4;
+}

@@ -5,6 +5,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (!registerForm) return;
 
+    let isOtpSent = false;
+    const otpSection = document.getElementById('otpSection');
+    const otpInput = document.getElementById('otpCode');
+    const otpError = document.getElementById('otpError');
+
     registerForm.addEventListener('submit', async (event) => {
         event.preventDefault();
 
@@ -19,10 +24,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const passwordError = document.getElementById('passwordError');
         const confirmPasswordError = document.getElementById('confirmPasswordError');
 
-        [emailError, usernameError, passwordError, confirmPasswordError].forEach(el => {
+        // Clear previous errors
+        [emailError, usernameError, passwordError, confirmPasswordError, otpError].forEach(el => {
             if (el) el.textContent = '';
         });
-        [emailInput, usernameInput, passwordInput, confirmPasswordInput].forEach(el => {
+        [emailInput, usernameInput, passwordInput, confirmPasswordInput, otpInput].forEach(el => {
             if (el) el.setAttribute('aria-invalid', 'false');
         });
 
@@ -31,7 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const displayName = (displayNameInput?.value || username);
         const password = passwordInput?.value || '';
         const confirmPassword = confirmPasswordInput?.value || '';
+        const otpCode = (otpInput?.value || '').trim();
 
+        // Basic Validation
         let hasError = false;
         if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
             if (emailError) emailError.textContent = 'Email không hợp lệ';
@@ -53,21 +61,64 @@ document.addEventListener('DOMContentLoaded', () => {
             if (confirmPasswordInput) confirmPasswordInput.setAttribute('aria-invalid', 'true');
             hasError = true;
         }
+
+        if (isOtpSent) {
+            if (!otpCode) {
+                if (otpError) otpError.textContent = 'Vui lòng nhập mã OTP';
+                if (otpInput) otpInput.setAttribute('aria-invalid', 'true');
+                hasError = true;
+            }
+        }
+
         if (hasError) return;
 
-        btnRegister.innerText = 'Đang xử lý...';
         btnRegister.disabled = true;
 
         try {
-            // Backend trả token + user và đã đăng nhập
-            await AuthService.register(username, email, password, displayName);
-            await AuthService.showToastSuccess('Đăng ký thành công');
-            window.location.href = '/';
+            if (!isOtpSent) {
+                // STEP 1: Send OTP
+                btnRegister.innerText = 'Đang gửi OTP...';
+                await AuthService.sendOtp(email);
+
+                await AuthService.showToastSuccess('Mã OTP đã được gửi đến email của bạn');
+
+                // Show OTP input
+                isOtpSent = true;
+                if (otpSection) otpSection.style.display = 'block';
+                btnRegister.innerText = 'Hoàn tất đăng ký';
+
+                // Optional: Disable other inputs
+                [emailInput, usernameInput, passwordInput, confirmPasswordInput, displayNameInput].forEach(el => {
+                    if (el) el.readOnly = true;
+                });
+
+            } else {
+                // STEP 2: Verify & Register
+                btnRegister.innerText = 'Đang đăng ký...';
+
+                await AuthService.registerWithOtp(username, email, password, displayName, otpCode);
+
+                await AuthService.showToastSuccess('Đăng ký thành công');
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1000);
+            }
         } catch (error) {
-            await AuthService.showErrorAlert(error.message, 'Đăng ký thất bại');
+            console.error(error);
+            if (!isOtpSent) {
+                // Error sending OTP
+                if (emailError) emailError.textContent = error.message;
+                btnRegister.innerText = 'Tiếp tục';
+            } else {
+                // Error registering
+                await AuthService.showErrorAlert(error.message, 'Đăng ký thất bại');
+                btnRegister.innerText = 'Hoàn tất đăng ký';
+            }
         } finally {
-            btnRegister.innerText = 'Tiếp tục';
             btnRegister.disabled = false;
         }
     });
+
+    // Helper: Allow editing email if user wants to change it before OTP? 
+    // For now, let's keep it simple. If they made a mistake, they can refresh.
 });

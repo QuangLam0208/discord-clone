@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đổi Email - Discord Clone</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .steps-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+        .steps-container::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #2f3136;
+            z-index: 0;
+            transform: translateY(-50%);
+        }
+        .step {
+            width: 30px;
+            height: 30px;
+            background: #36393f;
+            border: 2px solid #2f3136;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+            color: #72767d;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        .step.active {
+            border-color: #5865F2;
+            color: #ffffff;
+            background: #5865F2;
+        }
+        .step.completed {
+            border-color: #3ba55c;
+            background: #3ba55c;
+            color: #ffffff;
+        }
+        
+        .form-step {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        .form-step.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .otp-input-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .otp-input-group input {
+            width: 40px;
+            height: 50px;
+            text-align: center;
+            font-size: 20px;
+            border-radius: 4px;
+            background: #202225;
+            border: 1px solid #2f3136;
+            color: white;
+        }
+        .otp-input-group input:focus {
+            border-color: #5865F2;
+            outline: none;
+        }
+        
+        .user-email-display {
+            background: #2f3136;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            color: #dcddde;
+            border-left: 3px solid #5865F2;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box" style="max-width: 500px;">
+            <div class="logo">
+                <i class="fab fa-discord"></i> Discord Clone
+            </div>
+            <h2>Đổi Địa Chỉ Email</h2>
+            
+            <div class="steps-container">
+                <div class="step active" id="step1-indicator">1</div>
+                <div class="step" id="step2-indicator">2</div>
+                <div class="step" id="step3-indicator">3</div>
+            </div>
+
+            <div id="alertMessage" class="alert" style="display: none;"></div>
+
+            <!-- Bước 1: Nhập email mới -->
+            <div id="step1" class="form-step active">
+                <p class="text-secondary text-center mb-4">Nhập địa chỉ email mới mà bạn muốn sử dụng.</p>
+                <form id="requestForm">
+                    <div class="form-group">
+                        <label for="newEmail">Email mới</label>
+                        <input type="email" id="newEmail" name="newEmail" required placeholder="name@example.com">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Tiếp tục <i class="fas fa-arrow-right"></i>
+                    </button>
+                    <div class="form-footer">
+                        <a href="/profile" class="link">Quay lại hồ sơ</a>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Bước 2: Xác thực email cũ -->
+            <div id="step2" class="form-step">
+                <p class="text-secondary text-center mb-4">Chúng tôi đã gửi mã xác thực đến email hiện tại của bạn.</p>
+                
+                <div class="user-email-display">
+                    <small>Email hiện tại:</small><br>
+                    <span id="currentEmailDisplay">Đang tải...</span>
+                </div>
+
+                <form id="verifyOldForm">
+                    <div class="form-group">
+                        <label>Mã xác thực (OTP)</label>
+                        <input type="text" id="otpOld" name="otpCode" placeholder="Nhập mã 6 số" maxlength="6" style="text-align: center; letter-spacing: 5px; font-size: 1.2rem;">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">
+                        Xác nhận <i class="fas fa-check"></i>
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-block mt-2" onclick="backToStep(1)">
+                        Quay lại
+                    </button>
+                </form>
+            </div>
+
+            <!-- Bước 3: Xác thực email mới -->
+            <div id="step3" class="form-step">
+                <p class="text-secondary text-center mb-4">Mã xác thực đã được gửi đến email MỚI.</p>
+                
+                <div class="user-email-display" style="border-left-color: #3ba55c;">
+                    <small>Email mới:</small><br>
+                    <span id="newEmailDisplay">...</span>
+                </div>
+
+                <form id="verifyNewForm">
+                    <div class="form-group">
+                        <label>Mã xác thực (OTP)</label>
+                        <input type="text" id="otpNew" name="otpCode" placeholder="Nhập mã 6 số" maxlength="6" style="text-align: center; letter-spacing: 5px; font-size: 1.2rem;">
+                    </div>
+                    <button type="submit" class="btn btn-success btn-block">
+                        Hoàn tất đổi Email <i class="fas fa-check-double"></i>
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Thành công -->
+            <div id="stepSuccess" class="form-step" style="text-align: center;">
+                <div style="font-size: 50px; color: #3ba55c; margin-bottom: 20px;">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <h3>Thành công!</h3>
+                <p>Địa chỉ email của bạn đã được cập nhật thành công.</p>
+                <div class="user-email-display mt-4">
+                    <span id="finalEmailDisplay" style="font-weight: bold; font-size: 1.1em;"></span>
+                </div>
+                <a href="/profile" class="btn btn-primary btn-block mt-4">Về trang hồ sơ</a>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="/js/change-email.js"></script>
+</body>
+</html>

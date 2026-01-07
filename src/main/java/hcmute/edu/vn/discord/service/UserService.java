@@ -26,4 +26,7 @@ public interface UserService {
 
     // Change user password (encoded)
     void changePassword(Long userId, String newPassword);
+
+    // Update user email
+    void updateEmail(Long userId, String newEmail);
 }
