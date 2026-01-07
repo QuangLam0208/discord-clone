@@ -162,13 +162,21 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @org.springframework.transaction.annotation.Transactional
-    public User updateProfile(String username, String displayName, String bio, String bannerColor, MultipartFile file) {
+    public User updateProfile(String username, String displayName, String bio, String bannerColor, String workplace,
+            String address, String education, Boolean allowProfileView, MultipartFile file) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
 
-        if (bio != null) {
+        if (bio != null)
             user.setBio(bio.trim());
-        }
+        if (workplace != null)
+            user.setWorkplace(workplace.trim());
+        if (address != null)
+            user.setAddress(address.trim());
+        if (education != null)
+            user.setEducation(education.trim());
+        if (allowProfileView != null)
+            user.setAllowProfileView(allowProfileView);
 
         // 1. Update display name
         if (displayName != null && !displayName.trim().isEmpty()) {

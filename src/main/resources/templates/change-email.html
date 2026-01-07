@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,6 +14,7 @@
             margin-bottom: 2rem;
             position: relative;
         }
+
         .steps-container::before {
             content: '';
             position: absolute;
@@ -24,6 +26,7 @@
             z-index: 0;
             transform: translateY(-50%);
         }
+
         .step {
             width: 30px;
             height: 30px;
@@ -38,36 +41,47 @@
             font-weight: bold;
             transition: all 0.3s;
         }
+
         .step.active {
             border-color: #5865F2;
             color: #ffffff;
             background: #5865F2;
         }
+
         .step.completed {
             border-color: #3ba55c;
             background: #3ba55c;
             color: #ffffff;
         }
-        
+
         .form-step {
             display: none;
             animation: fadeIn 0.3s ease;
         }
+
         .form-step.active {
             display: block;
         }
-        
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
-        
+
         .otp-input-group {
             display: flex;
             gap: 10px;
             justify-content: center;
             margin: 20px 0;
         }
+
         .otp-input-group input {
             width: 40px;
             height: 50px;
@@ -78,11 +92,12 @@
             border: 1px solid #2f3136;
             color: white;
         }
+
         .otp-input-group input:focus {
             border-color: #5865F2;
             outline: none;
         }
-        
+
         .user-email-display {
             background: #2f3136;
             padding: 10px;
@@ -93,6 +108,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="auth-container">
         <div class="auth-box" style="max-width: 500px;">
@@ -100,7 +116,7 @@
                 <i class="fab fa-discord"></i> Discord Clone
             </div>
             <h2>Đổi Địa Chỉ Email</h2>
-            
+
             <div class="steps-container">
                 <div class="step active" id="step1-indicator">1</div>
                 <div class="step" id="step2-indicator">2</div>
@@ -114,14 +130,22 @@
                 <p class="text-secondary text-center mb-4">Nhập địa chỉ email mới mà bạn muốn sử dụng.</p>
                 <form id="requestForm">
                     <div class="form-group">
-                        <label for="newEmail">Email mới</label>
-                        <input type="email" id="newEmail" name="newEmail" required placeholder="name@example.com">
+                        <label for="newEmail"
+                            style="font-weight: bold; color: #b9bbbe; margin-bottom: 8px; display: block;">EMAIL
+                            MỚI</label>
+                        <input type="email" id="newEmail" name="newEmail" required placeholder="name@example.com"
+                            style="width: 100%; padding: 15px; background: #202225; border: 1px solid #202225; color: white; border-radius: 4px; font-size: 16px;">
                     </div>
-                    <button type="submit" class="btn btn-primary btn-block">
-                        Tiếp tục <i class="fas fa-arrow-right"></i>
-                    </button>
-                    <div class="form-footer">
-                        <a href="/profile" class="link">Quay lại hồ sơ</a>
+
+                    <div class="form-actions" style="display: flex; gap: 15px; margin-top: 30px;">
+                        <button type="submit" class="btn btn-primary"
+                            style="flex: 1; padding: 12px; font-weight: bold; font-size: 15px;">
+                            Tiếp tục <i class="fas fa-arrow-right" style="margin-left: 5px;"></i>
+                        </button>
+                        <a href="/profile" class="btn btn-secondary"
+                            style="flex: 1; padding: 12px; font-weight: bold; font-size: 15px; text-decoration: none; text-align: center; background: #4f545c; color: white; border-radius: 3px;">
+                            Quay lại
+                        </a>
                     </div>
                 </form>
             </div>
@@ -129,7 +153,7 @@
             <!-- Bước 2: Xác thực email cũ -->
             <div id="step2" class="form-step">
                 <p class="text-secondary text-center mb-4">Chúng tôi đã gửi mã xác thực đến email hiện tại của bạn.</p>
-                
+
                 <div class="user-email-display">
                     <small>Email hiện tại:</small><br>
                     <span id="currentEmailDisplay">Đang tải...</span>
@@ -137,22 +161,29 @@
 
                 <form id="verifyOldForm">
                     <div class="form-group">
-                        <label>Mã xác thực (OTP)</label>
-                        <input type="text" id="otpOld" name="otpCode" placeholder="Nhập mã 6 số" maxlength="6" style="text-align: center; letter-spacing: 5px; font-size: 1.2rem;">
+                        <label style="font-weight: bold; color: #b9bbbe; margin-bottom: 8px; display: block;">MÃ XÁC
+                            THỰC (OTP)</label>
+                        <input type="text" id="otpOld" name="otpCode" placeholder="Nhập mã 6 số" maxlength="6"
+                            style="width: 100%; padding: 15px; background: #202225; border: 1px solid #202225; color: white; border-radius: 4px; font-size: 18px; text-align: center; letter-spacing: 5px;">
                     </div>
-                    <button type="submit" class="btn btn-primary btn-block">
-                        Xác nhận <i class="fas fa-check"></i>
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-block mt-2" onclick="backToStep(1)">
-                        Quay lại
-                    </button>
+
+                    <div class="form-actions" style="display: flex; gap: 15px; margin-top: 30px;">
+                        <button type="submit" class="btn btn-primary"
+                            style="flex: 1; padding: 12px; font-weight: bold; font-size: 15px;">
+                            Xác nhận <i class="fas fa-check" style="margin-left: 5px;"></i>
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="backToStep(1)"
+                            style="flex: 1; padding: 12px; font-weight: bold; font-size: 15px; background: #4f545c; color: white; border-radius: 3px; border: none; cursor: pointer;">
+                            Quay lại
+                        </button>
+                    </div>
                 </form>
             </div>
 
             <!-- Bước 3: Xác thực email mới -->
             <div id="step3" class="form-step">
                 <p class="text-secondary text-center mb-4">Mã xác thực đã được gửi đến email MỚI.</p>
-                
+
                 <div class="user-email-display" style="border-left-color: #3ba55c;">
                     <small>Email mới:</small><br>
                     <span id="newEmailDisplay">...</span>
@@ -160,15 +191,21 @@
 
                 <form id="verifyNewForm">
                     <div class="form-group">
-                        <label>Mã xác thực (OTP)</label>
-                        <input type="text" id="otpNew" name="otpCode" placeholder="Nhập mã 6 số" maxlength="6" style="text-align: center; letter-spacing: 5px; font-size: 1.2rem;">
+                        <label style="font-weight: bold; color: #b9bbbe; margin-bottom: 8px; display: block;">MÃ XÁC
+                            THỰC (OTP)</label>
+                        <input type="text" id="otpNew" name="otpCode" placeholder="Nhập mã 6 số" maxlength="6"
+                            style="width: 100%; padding: 15px; background: #202225; border: 1px solid #202225; color: white; border-radius: 4px; font-size: 18px; text-align: center; letter-spacing: 5px;">
                     </div>
-                    <button type="submit" class="btn btn-success btn-block">
-                        Hoàn tất đổi Email <i class="fas fa-check-double"></i>
-                    </button>
+
+                    <div class="form-actions" style="display: flex; gap: 15px; margin-top: 30px;">
+                        <button type="submit" class="btn btn-success"
+                            style="flex: 1; padding: 12px; font-weight: bold; font-size: 15px; background-color: #3ba55c; border-color: #3ba55c;">
+                            Hoàn tất đổi Email <i class="fas fa-check-double" style="margin-left: 5px;"></i>
+                        </button>
+                    </div>
                 </form>
             </div>
-            
+
             <!-- Thành công -->
             <div id="stepSuccess" class="form-step" style="text-align: center;">
                 <div style="font-size: 50px; color: #3ba55c; margin-bottom: 20px;">
@@ -187,4 +224,5 @@
 
     <script src="/js/change-email.js"></script>
 </body>
+
 </html>

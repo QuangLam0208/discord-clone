@@ -22,6 +22,10 @@ public class UserResponse {
     private String avatarUrl;
     private String bio;
     private String bannerColor;
+    private String workplace;
+    private String address;
+    private String education;
+    private Boolean allowProfileView;
 
     private LocalDate birthDate;
     private String country;
@@ -46,6 +50,10 @@ public class UserResponse {
                 .avatarUrl(user.getAvatarUrl())
                 .bio(user.getBio())
                 .bannerColor(user.getBannerColor())
+                .workplace(user.getWorkplace())
+                .address(user.getAddress())
+                .education(user.getEducation())
+                .allowProfileView(user.getAllowProfileView())
                 .birthDate(user.getBirthDate())
                 .country(user.getCountry())
                 .isActive(user.getIsActive())

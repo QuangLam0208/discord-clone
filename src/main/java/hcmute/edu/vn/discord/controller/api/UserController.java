@@ -40,9 +40,13 @@ public class UserController {
 
     @PostMapping("/profile")
     public ResponseEntity<UserResponse> updateProfile(
-            @RequestParam("displayName") String displayName,
+            @RequestParam(value = "displayName", required = false) String displayName,
             @RequestParam(value = "bio", required = false) String bio,
             @RequestParam(value = "bannerColor", required = false) String bannerColor,
+            @RequestParam(value = "workplace", required = false) String workplace,
+            @RequestParam(value = "address", required = false) String address,
+            @RequestParam(value = "education", required = false) String education,
+            @RequestParam(value = "allowProfileView", required = false) Boolean allowProfileView,
             @RequestParam(value = "file", required = false) MultipartFile file,
             Principal principal) {
 
@@ -50,9 +54,8 @@ public class UserController {
             return ResponseEntity.status(401).build();
         }
 
-        System.out.println("Update Profile Request - User: " + principal.getName() + ", DisplayName: " + displayName
-                + ", BannerColor: " + bannerColor);
-        var updatedUser = userService.updateProfile(principal.getName(), displayName, bio, bannerColor, file);
+        var updatedUser = userService.updateProfile(principal.getName(), displayName, bio, bannerColor, workplace,
+                address, education, allowProfileView, file);
         return ResponseEntity.ok(UserResponse.from(updatedUser));
     }
 

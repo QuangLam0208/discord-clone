@@ -185,7 +185,7 @@
         <div class="settings-sidebar">
             <div class="sidebar-header">CÀI ĐẶT NGƯỜI DÙNG</div>
             <div class="sidebar-item active" onclick="switchTab('my-account', this)">Tài khoản của tôi</div>
-            <div class="sidebar-item">Hồ sơ người dùng</div>
+            <div class="sidebar-item" onclick="switchTab('user-profile', this)">Hồ sơ người dùng</div>
             <div class="sidebar-item" onclick="switchTab('privacy', this)">Quyền riêng tư & An toàn</div>
             <div class="sidebar-separator"></div>
             <div class="sidebar-item danger"><a th:href="@{/logout}" style="color:inherit;text-decoration:none">Đăng
@@ -260,6 +260,43 @@
             </div>
         </div>
 
+        <div class="settings-content" id="tab-user-profile" style="display: none;">
+            <h2 class="section-heading">Hồ sơ người dùng</h2>
+            <div class="my-account-card">
+                <div class="account-info-box" style="margin-top: 0; padding: 20px;">
+                    <h3 style="color: #b9bbbe; font-size: 12px; margin-bottom: 20px; text-transform: uppercase;">Thông
+                        tin bổ sung</h3>
+
+                    <div class="info-row">
+                        <div class="info-col" style="width: 100%;">
+                            <label>Nơi làm việc</label>
+                            <input type="text" id="ext-workplace" class="discord-input"
+                                placeholder="Nơi làm việc của bạn">
+                        </div>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-col" style="width: 100%;">
+                            <label>Địa chỉ nhà</label>
+                            <input type="text" id="ext-address" class="discord-input" placeholder="Địa chỉ sinh sống">
+                        </div>
+                    </div>
+
+                    <div class="info-row">
+                        <div class="info-col" style="width: 100%;">
+                            <label>Nơi từng học</label>
+                            <input type="text" id="ext-education" class="discord-input"
+                                placeholder="Trường học / Học vấn">
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+                        <button class="btn-discord-primary" onclick="saveExtendedProfile()">Lưu thay đổi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="settings-content" id="tab-privacy" style="display: none;">
             <h2 class="section-heading">Quyền riêng tư & An toàn</h2>
             <div style="color: #b9bbbe; line-height: 1.6;">
@@ -274,6 +311,17 @@
                     <div style="display: flex; align-items: center; justify-content: space-between;">
                         <span>Cho phép tin nhắn từ thành viên máy chủ</span>
                         <input type="checkbox" checked style="transform: scale(1.5);">
+                    </div>
+                </div>
+
+                <div style="background: #2b2d31; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h4 style="color: #f2f3f5; margin-bottom: 10px;">Quyền riêng tư hồ sơ</h4>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <span>Cho phép người khác xem hồ sơ của mình</span>
+                        <input type="checkbox" id="privacy-allow-view" style="transform: scale(1.5);">
+                    </div>
+                    <div style="margin-top: 15px; text-align: right;">
+                        <button class="btn-discord-primary" onclick="saveExtendedProfile()">Lưu cài đặt</button>
                     </div>
                 </div>
 
@@ -389,9 +437,26 @@
                 email: /*[[${user.email}]]*/ 'email@example.com',
                 bio: /*[[${user.bio}]]*/ '',
                 avatarUrl: /*[[${user.avatarUrl}]]*/ '',
-                bannerColor: /*[[${user.bannerColor}]]*/ '#5865f2'
+                bannerColor: /*[[${user.bannerColor}]]*/ '#5865f2',
+                workplace: /*[[${user.workplace}]]*/ '',
+                address: /*[[${user.address}]]*/ '',
+                education: /*[[${user.education}]]*/ '',
+                allowProfileView: /*[[${user.allowProfileView}]]*/ true
             }
         };
+
+        // Populate Extended Profile Fields on Load
+        document.addEventListener('DOMContentLoaded', () => {
+            const u = window.state.currentUser;
+            const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+
+            setVal('ext-workplace', u.workplace);
+            setVal('ext-address', u.address);
+            setVal('ext-education', u.education);
+
+            const privacyToggle = document.getElementById('privacy-allow-view');
+            if (privacyToggle) privacyToggle.checked = u.allowProfileView !== false; // Default true
+        });
 
         const elements = {
             userDisplay: document.getElementById('main-displayname'),

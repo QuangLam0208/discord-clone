@@ -39,6 +39,13 @@ public class User {
     @Column(name = "banner_color")
     private String bannerColor; // Hex Color code
 
+    private String workplace;
+    private String address;
+    private String education;
+
+    @Builder.Default
+    private Boolean allowProfileView = true;
+
     private LocalDate birthDate;
     private String country;
     private Boolean isActive;

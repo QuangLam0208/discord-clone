@@ -22,7 +22,8 @@ public interface UserService {
 
     UserDetailResponse getUserDetail(Long userId);
 
-    User updateProfile(String username, String displayName, String bio, String bannerColor, MultipartFile file);
+    User updateProfile(String username, String displayName, String bio, String bannerColor, String workplace,
+            String address, String education, Boolean allowProfileView, MultipartFile file);
 
     // Change user password (encoded)
     void changePassword(Long userId, String newPassword);
